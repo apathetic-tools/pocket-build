@@ -3,8 +3,13 @@
 
 import json
 from pathlib import Path
+from typing import Any, Dict
+
+import pytest
+from _pytest.monkeypatch import MonkeyPatch
 
 from pocket_build import pocket_build
+from pocket_build.pocket_build import BuildConfig
 
 
 # ------------------------------------------------------------
@@ -27,16 +32,16 @@ def test_load_jsonc_strips_comments_and_trailing_commas(tmp_path: Path):
 
 
 def test_parse_builds_accepts_list_and_single_object():
-    data_list = {"builds": [{"include": ["src"], "out": "dist"}]}
-    data_single = {"include": ["src"], "out": "dist"}
+    data_list: Dict[str, Any] = {"builds": [{"include": ["src"], "out": "dist"}]}
+    data_single: Dict[str, Any] = {"include": ["src"], "out": "dist"}
 
     builds_from_list = pocket_build.parse_builds(data_list)
     builds_from_single = pocket_build.parse_builds(data_single)
 
     assert isinstance(builds_from_list, list)
     assert isinstance(builds_from_single, list)
-    assert builds_from_list[0]["out"] == "dist"
-    assert builds_from_single[0]["out"] == "dist"
+    assert builds_from_list[0].get("out") == "dist"
+    assert builds_from_single[0].get("out") == "dist"
 
 
 # ------------------------------------------------------------
@@ -54,7 +59,9 @@ def test_is_excluded_matches_patterns(tmp_path: Path):
 # ------------------------------------------------------------
 # 📄 Copy helpers
 # ------------------------------------------------------------
-def test_copy_file_creates_and_copies(tmp_path: Path, capsys):
+def test_copy_file_creates_and_copies(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
     src = tmp_path / "a.txt"
     src.write_text("hi")
     dest = tmp_path / "out" / "a.txt"
@@ -66,7 +73,9 @@ def test_copy_file_creates_and_copies(tmp_path: Path, capsys):
     assert "📄" in captured
 
 
-def test_copy_directory_respects_excludes(tmp_path: Path, capsys):
+def test_copy_directory_respects_excludes(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
     src_dir = tmp_path / "src"
     src_dir.mkdir()
     (src_dir / "keep.txt").write_text("ok")
@@ -95,13 +104,15 @@ def test_copy_item_handles_file_and_dir(tmp_path: Path):
 # ------------------------------------------------------------
 # 🏗️ Build execution
 # ------------------------------------------------------------
-def test_run_build_creates_output_dir_and_copies(tmp_path: Path, capsys):
+def test_run_build_creates_output_dir_and_copies(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
     # Arrange: create a small directory structure
     src_dir = tmp_path / "src"
     src_dir.mkdir()
     (src_dir / "foo.txt").write_text("foo")
 
-    build_cfg = {
+    build_cfg: BuildConfig = {
         "include": ["src"],
         "exclude": [],
         "out": "dist",
@@ -117,8 +128,10 @@ def test_run_build_creates_output_dir_and_copies(tmp_path: Path, capsys):
     assert "✅ Build completed" in captured
 
 
-def test_run_build_handles_missing_match(tmp_path: Path, capsys):
-    cfg = {"include": ["nonexistent"], "out": "dist"}
+def test_run_build_handles_missing_match(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    cfg: BuildConfig = {"include": ["nonexistent"], "out": "dist"}
     pocket_build.run_build(cfg, tmp_path, None)
     captured = capsys.readouterr().out
     assert "⚠️" in captured
@@ -127,7 +140,9 @@ def test_run_build_handles_missing_match(tmp_path: Path, capsys):
 # ------------------------------------------------------------
 # 🎛️ Main entry
 # ------------------------------------------------------------
-def test_main_no_config(tmp_path: Path, monkeypatch, capsys):
+def test_main_no_config(
+    tmp_path: Path, monkeypatch: MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
     monkeypatch.chdir(tmp_path)
     code = pocket_build.main([])
     assert code == 1
@@ -135,7 +150,9 @@ def test_main_no_config(tmp_path: Path, monkeypatch, capsys):
     assert "No build config" in out
 
 
-def test_main_with_config(tmp_path: Path, monkeypatch, capsys):
+def test_main_with_config(
+    tmp_path: Path, monkeypatch: MonkeyPatch, capsys: pytest.CaptureFixture[str]
+):
     config = tmp_path / ".pocket-build.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
     monkeypatch.chdir(tmp_path)
