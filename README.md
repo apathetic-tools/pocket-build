@@ -1,4 +1,9 @@
 # pocket-build 🧰 
+
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+
+📘 **[Roadmap](./Roadmap.md)** · 📝 **[Release Notes](https://github.com/apathetic-tools/pocket-build/releases)**
+
 **A tiny build system that fits in your pocket.**  
 *Because not everything needs a toolchain.*
 
@@ -46,3 +51,11 @@ Pocket-build is meant to live comfortably next to your other tools — Go, Node.
 
 **Use it. Hack it. Ship it.**
 It’s MIT-licensed, minimal, and meant to stay out of your way — just with one polite request: don’t feed it to the AIs (yet).
+
+---
+
+> ✨ *ChatGPT was used to help draft language, formatting, and code — plus we just love em dashes.*
+
+<p align="center">
+  <sub>😐 <a href="https://apathetic-tools.github.io/">Apathetic Tools</a> © <a href="./LICENSE">MIT</a>-<a href="./LICENSE_NOAI">NOAI</a></sub>
+</p>
