@@ -15,7 +15,7 @@ dependencies = [
 
 # --- Development tasks ---
 [tool.poe.tasks]
-# Whole bag
+# 🧩 All-in-one
 "check:fix" = ["fix", "typecheck", "test"]
 
 # 🔍 Linting and static checks
@@ -29,7 +29,7 @@ fix = ["fix:ruff", "fix:format"]
 "fix:ruff" = "ruff check --fix ."
 "fix:format" = "ruff format ."
 
-# 🧩 Bundling and License checking
+# 🧩 Build and license
 "build:script" = "python dev/make_single.py"
 "check:license" = "bash dev/check-license.sh"
 
@@ -76,7 +76,7 @@ target-version = ['py38']
 profile = "black"
 line_length = 88
 
-# --- Build system (Poetry) ---
+# --- Poetry Build System ---
 [project.scripts]
 pocket-build = "pocket_build.__main__:main"
 

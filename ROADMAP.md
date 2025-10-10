@@ -31,7 +31,7 @@ Exploring bundling options for generating the single-file release:
 - [ ] Home grown script
 
 ## 🧪 Tests
-- [ ] Write initial test suite  
+- [ ] Flesh out tests for additional functionality after it has been added
 - [ ] `--selftest` that runs a few minimal checks internally using Python’s `unittest`—so the user can verify that the install works without needing pytest.
 
 ## 🧑‍💻 Development 
