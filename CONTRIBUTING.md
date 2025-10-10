@@ -94,6 +94,25 @@ If any linter, type check, or test fails, the commit is blocked — fix with:
 poetry run poe check.fix
 ```
 
+### 🧩 Fixing the `setlocale` Warning
+
+If your terminal or Git log shows:
+
+```
+bash: warning: setlocale: LC_ALL: cannot change locale (en_US.UTF-8)
+```
+
+it means your system doesn’t have the `en_US.UTF-8` locale generated.
+
+Run the following commands in your terminal:
+
+```bash
+sudo locale-gen en_US.UTF-8
+sudo update-locale LANG=en_US.UTF-8
+```
+
+Then restart your shell or VS Code terminal.
+
 ---
 
 ## 🧪 Testing
