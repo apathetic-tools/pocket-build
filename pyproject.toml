@@ -65,6 +65,7 @@ strict = true
 # --- pytest: testing framework ---
 [tool.pytest.ini_options]
 pythonpath = ["src"]
+addopts = "-ra"
 
 # --- Black: kept for compatibility ---
 [tool.black]

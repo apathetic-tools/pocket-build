@@ -13,6 +13,9 @@ __pycache__/
 build/
 develop-eggs/
 dist/
+tmp-dist/
+tmp/
+tmp-*/
 downloads/
 out/
 coverage/
@@ -29,6 +32,12 @@ share/python-wheels/
 .installed.cfg
 *.egg
 MANIFEST
+*.tmp
+
+# Prevent recursive test discovery inside build outputs
+!tests/              
+tmp-dist/tests/
+dist/tests/
 
 # PyInstaller
 #  Usually these files are written by a python script from a template

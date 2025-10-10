@@ -134,7 +134,9 @@ final_script = (
     f"Commit: {commit}\n"
     '"""\n\n'
     f"{sorted_imports}\n"
-    "\n" + "\n".join(parts)
+    "\n" + "\n".join(parts) + "\n\nif __name__ == '__main__':\n"
+    "    import sys\n"
+    "    sys.exit(main(sys.argv[1:]))\n"
 )
 
 OUT_FILE.parent.mkdir(parents=True, exist_ok=True)

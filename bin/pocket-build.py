@@ -4,14 +4,14 @@
 # Full text: https://github.com/apathetic-tools/pocket-build/blob/main/LICENSE
 
 # Version: 0.1.0
-# Commit: 1894643
+# Commit: 16b44a4
 # Repo: https://github.com/apathetic-tools/pocket-build
 
 """
 Pocket Build — a tiny build system that fits in your pocket.
 This single-file version is auto-generated from modular sources.
 Version: 0.1.0
-Commit: 1894643
+Commit: 16b44a4
 """
 
 from __future__ import annotations
@@ -129,6 +129,12 @@ def run_build(
         src_pattern = entry_dict.get("src")
         assert src_pattern is not None, f"Missing required 'src' in entry: {entry_dict}"
 
+        if not src_pattern or src_pattern.strip() in {".", ""}:
+            print(
+                f"{YELLOW}⚠️  Skipping invalid include pattern: {src_pattern!r}{RESET}"
+            )
+            continue
+
         dest_name = entry_dict.get("dest")
         matches = (
             list(config_dir.rglob(src_pattern))
@@ -187,3 +193,9 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     print("🎉 All builds complete.")
     return 0
+
+
+if __name__ == "__main__":
+    import sys
+
+    sys.exit(main(sys.argv[1:]))

@@ -55,6 +55,12 @@ def run_build(
         src_pattern = entry_dict.get("src")
         assert src_pattern is not None, f"Missing required 'src' in entry: {entry_dict}"
 
+        if not src_pattern or src_pattern.strip() in {".", ""}:
+            print(
+                f"{YELLOW}⚠️  Skipping invalid include pattern: {src_pattern!r}{RESET}"
+            )
+            continue
+
         dest_name = entry_dict.get("dest")
         matches = (
             list(config_dir.rglob(src_pattern))
