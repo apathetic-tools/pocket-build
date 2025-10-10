@@ -2,7 +2,7 @@
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 
-📘 **[Roadmap](./Roadmap.md)** · 📝 **[Release Notes](https://github.com/apathetic-tools/pocket-build/releases)**
+📘 **[Roadmap](./ROADMAP.md)** · 📝 **[Release Notes](https://github.com/apathetic-tools/pocket-build/releases)**
 
 **A tiny build system that fits in your pocket.**  
 *Because not everything needs a toolchain.*
