@@ -1,109 +1,141 @@
 # 🧩 Contributing Guide
 
-Thanks for your interest in contributing to **pocket-build** — a tiny build system that fits in your pocket.  
-This document explains how to set up your environment, run checks, and contribute safely.
+Thanks for your interest in contributing to **pocket-build** — the tiny build system that fits in your pocket.  
+This guide explains how to set up your environment, run checks, and safely contribute code.
 
 ---
 
-## 🐍 Python Version
+## 🐍 Supported Python Versions
 
-We currently target **Python 3.10** as the minimum supported version.
-
-As of **2025-10-10**, here’s the Python landscape across common systems:
+Pocket-build targets **Python 3.10+**.  
+That keeps compatibility with Ubuntu 22.04 (the baseline CI OS) while staying modern.
 
 | Platform | Default Python | Notes |
 |-----------|----------------|-------|
-| **Ubuntu 20.04 LTS** (EOL April 2025) | **3.8** | Now out of standard support. |
-| **Ubuntu 22.04 LTS** (widely used, esp. CI) | **3.10** | Default interpreter; supported until 2027. |
-| **Ubuntu 24.04 LTS** (current default) | **3.12** | Default on new installations. |
-| **macOS** (Homebrew / Python.org / CLT) | **3.12** | Must be user-installed — not preinstalled. |
-| **Windows (Microsoft Store)** | **3.12** | Microsoft’s officially recommended LTS line. |
-| **GitHub Actions `ubuntu-latest`** | **3.10 → 3.12** | Currently transitioning; both available. |
-| **Python.org LTS** | **3.12** | Mainstream support → 2028  ·  Security → 2030 |
+| Ubuntu 22.04 LTS | 3.10 | Minimum supported baseline. |
+| Ubuntu 24.04 LTS | 3.12 | Current CI default. |
+| macOS (Homebrew / Python.org) | 3.12 | Must be user-installed. |
+| Windows (Microsoft Store) | 3.12 | Microsoft’s LTS release. |
+| GitHub Actions `ubuntu-latest` | 3.10 → 3.12 | Both available during transition. |
 
-> ℹ️ Note: `pytest` and most modern tools now require Python 3.9 or newer.
+> The build itself has **no runtime dependencies** — only dev tools use Poetry.
 
 ---
 
-## 🧰 Poetry Setup
+## 🧰 Setting Up the Environment
 
-We use **[Poetry](https://python-poetry.org/)** to manage the development environment and dependencies.  
-The *production script itself has zero runtime dependencies.*
+We use **[Poetry](https://python-poetry.org/)** for dependency and task management.
 
-### Install Poetry
+### 1️⃣ Install Poetry
 
 ```bash
 curl -sSL https://install.python-poetry.org | python3 -
 poetry --version
 ```
 
-If you get `poetry: command not found`, ensure it’s on your `PATH`.  
-Append this to your shell config (`~/.bashrc` or `~/.bash_profile`):
+If Poetry isn’t on your `PATH`, add it to your shell configuration (usually `~/.bashrc` or `~/.zshrc`):
 
 ```bash
-# poetry
-export POETRY_HOME="$HOME/.local/bin"
-case ":$PATH:" in
-  *":$POETRY_HOME:"*) ;;
-  *) export PATH="$POETRY_HOME:$PATH" ;;
-esac
-# poetry end
+export PATH="$HOME/.local/bin:$PATH"
 ```
 
----
-
-## ⚙️ Development Dependencies
-
-All development tools are isolated in the **dev group**.  
-To install them:
+### 2️⃣ Install Dependencies
 
 ```bash
 poetry install --with dev
 ```
 
-No dependencies are required for users of the final `pocket-build.py` script — only for maintainers.
+This creates an isolated virtual environment with Ruff, Mypy, pytest, and Poe tasks.
 
 ---
 
-## 🧪 Development Workflow
+## ⚙️ Development Commands
 
-Run static checks, type checking, and formatting:
+All key workflows are defined in **`[tool.poe.tasks]`** inside `pyproject.toml`.
+
+| Command | Description |
+|----------|-------------|
+| `poetry run poe check.fix` | Auto-fix issues, re-format, type-check, and re-test. |
+| `poetry run poe check` | Run linting (`ruff`), type checks (`mypy`), and tests (`pytest`). |
+| `poetry run poe fix` | Run all auto-fixers (Ruff + formatter). |
+| `poetry run poe build.single` | Bundle the project into a single portable script in `bin/`. |
+
+Example workflow:
 
 ```bash
+# Run full check
 poetry run poe check
-```
 
-Attempt to fix errors and format code automatically:
-
-```bash
-poetry run poe fix
-```
-
-Bundle:
-
-```bash
-poetry run poe bundle
+# Auto-fix & re-check
+poetry run poe check.fix
 ```
 
 ---
 
-## 🪶 Contribution Notes
+## 🔗 Pre-commit Hook
 
-- Follow [PEP 8](https://peps.python.org/pep-0008/) style (enforced by Ruff).  
-- Keep the **main script dependency-free** — dev tools only in Poetry’s `dev` group.  
-- Run `poetry run poe check` before committing.  
-- Open pull requests against the **`main`** branch.
+Pre-commit is configured to run `poe check` before every commit.
+
+Install the hook once:
+
+```bash
+poetry run pre-commit install
+```
+
+Manually trigger it on all files anytime:
+
+```bash
+poetry run pre-commit run --all-files
+```
+
+If any linter, type check, or test fails, the commit is blocked — fix with:
+
+```bash
+poetry run poe check.fix
+```
 
 ---
 
-**Thank you for helping keep `pocket-build` tiny, portable, and delightful.**
+## 🧪 Testing
 
+Run the test suite directly:
 
-## to-add
-
-we want both a PyPI and a bin/ executable script using `poetry run po bundle`
-
+```bash
+poetry run poe test
 ```
+
+Pytest will discover all files in `tests/` automatically.
+
+---
+
+## 📦 Building and Publishing (for maintainers)
+
+Pocket-build ships two forms:
+
+| Target | Command | Output |
+|---------|----------|--------|
+| **Single-file script** | `poetry run poe build.single` | Creates `bin/pocket-build.py` |
+| **PyPI package** | `poetry build && poetry publish` | Builds and uploads wheel & sdist |
+
+To publish:
+
+```bash
 poetry build
-poetry publish
+poetry publish --username __token__ --password <your-pypi-token>
 ```
+
+> Verify the package on [Test PyPI](https://test.pypi.org/) before publishing live.
+
+---
+
+## 🪶 Contribution Rules
+
+- Follow [PEP 8](https://peps.python.org/pep-0008/) (enforced via Ruff).  
+- Keep the **core script dependency-free** — dev tooling lives only in `pyproject.toml`’s `dev` group.  
+- Run `poetry run poe check` before committing.  
+- Open PRs against the **`main`** branch.  
+- Be kind: small tools should have small egos.
+
+---
+
+**Thank you for helping keep pocket-build tiny, dependency-free, and delightful.**

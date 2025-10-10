@@ -16,7 +16,7 @@ dependencies = [
 # --- Development tasks ---
 [tool.poe.tasks]
 # Whole bag
-check.fix = ["fix", "typecheck", "test"]
+"check:fix" = ["fix", "typecheck", "test"]
 
 # 🔍 Linting and static checks
 check = ["lint", "typecheck", "test"]
@@ -25,13 +25,13 @@ typecheck = "mypy src"
 test = "pytest -q"
 
 # 🧹 Automated fixing / formatting
-fix = ["fix.ruff", "fix.format"]
-fix.ruff = "ruff check --fix ."
-fix.format = "ruff format ."
+fix = ["fix:ruff", "fix:format"]
+"fix:ruff" = "ruff check --fix ."
+"fix:format" = "ruff format ."
 
 # 🧩 Bundling and License checking
-build.script = "python dev/make_single.py"
-check.license = "bash dev/check-license.sh"
+"build:script" = "python dev/make_single.py"
+"check:license" = "bash dev/check-license.sh"
 
 # --- Development dependencies ---
 [dependency-groups]
