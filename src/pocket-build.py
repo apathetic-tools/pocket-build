@@ -6,27 +6,37 @@ Because not everything needs a toolchain.
 """
 
 from __future__ import annotations
-import argparse, json, re, shutil, sys
-from pathlib import Path
-from fnmatch import fnmatch
-from typing import Any, Dict, List, Optional, TypedDict, NotRequired, Union, cast
 
+import argparse
+import json
+import re
+import shutil
+import sys
+from fnmatch import fnmatch
+from pathlib import Path
+from typing import Any, Dict, List, Optional, TypedDict, Union, cast
+
+from typing_extensions import NotRequired
 
 # -----------------------------------------------------------
 # Types
 # -----------------------------------------------------------
 
+
 class IncludeEntry(TypedDict, total=False):
     src: str
     dest: NotRequired[str]
+
 
 class BuildConfig(TypedDict, total=False):
     include: List[Union[str, IncludeEntry]]
     exclude: List[str]
     out: str
 
+
 class RootConfig(TypedDict, total=False):
     builds: List[BuildConfig]
+
 
 # -----------------------------------------------------------
 # Terminal Vars
@@ -40,6 +50,7 @@ RESET = "\033[0m"
 # -----------------------------------------------------------
 # Config loaders
 # -----------------------------------------------------------
+
 
 # JSONC comments + trailing commas
 def load_jsonc(path: Path) -> Dict[str, Any]:
@@ -55,7 +66,8 @@ def load_jsonc(path: Path) -> Dict[str, Any]:
     # 3. Remove trailing commas before closing } or ]
     text = re.sub(r",(\s*[}\]])", r"\1", text)
 
-    return json.loads(text)
+    return cast(Dict[str, Any], json.loads(text))
+
 
 def parse_builds(raw_config: Dict[str, Any]) -> List[BuildConfig]:
     builds = raw_config.get("builds")
@@ -81,7 +93,9 @@ def copy_file(src: Path, dest: Path, root: Path) -> None:
     print(f"📄 {src.relative_to(root)} → {dest.relative_to(root)}")
 
 
-def copy_directory(src: Path, dest: Path, exclude_patterns: List[str], root: Path) -> None:
+def copy_directory(
+    src: Path, dest: Path, exclude_patterns: List[str], root: Path
+) -> None:
     """Copy a directory recursively, skipping excluded files."""
     for item in src.rglob("*"):
         if is_excluded(item, exclude_patterns, root):
@@ -109,12 +123,11 @@ def copy_item(src: Path, dest: Path, exclude_patterns: List[str], root: Path) ->
 # -----------------------------------------------------------
 # Build execution
 # -----------------------------------------------------------
-def run_build(build_cfg: BuildConfig, config_dir: Path, out_override: Optional[str]) -> None:
-    includes_raw = build_cfg.get("include", [])
-    includes = includes_raw if isinstance(includes_raw, list) else [includes_raw]
-
-    excludes_raw = build_cfg.get("exclude", [])
-    excludes = excludes_raw if isinstance(excludes_raw, list) else [excludes_raw]
+def run_build(
+    build_cfg: BuildConfig, config_dir: Path, out_override: Optional[str]
+) -> None:
+    includes = build_cfg.get("include", [])
+    excludes = build_cfg.get("exclude", [])
     out_dir: Path = config_dir / (out_override or build_cfg.get("out", "dist"))
 
     if out_dir.exists():
@@ -127,9 +140,6 @@ def run_build(build_cfg: BuildConfig, config_dir: Path, out_override: Optional[s
         assert src_pattern is not None, f"Missing required 'src' in entry: {entry_dict}"
 
         dest_name: Optional[str] = entry_dict.get("dest")
-        has_glob: bool = any(c in src_pattern for c in "*?[]")
-
-        # matches: List[Path] = list(config_dir.glob(src_pattern)) if has_glob else [config_dir / src_pattern]
         matches = (
             list(config_dir.rglob(src_pattern))
             if "**" in src_pattern
@@ -153,7 +163,7 @@ def run_build(build_cfg: BuildConfig, config_dir: Path, out_override: Optional[s
 # -----------------------------------------------------------
 # Entry point
 # -----------------------------------------------------------
-def main() -> None:
+def main() -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", help="Override output directory")
     args = parser.parse_args()
@@ -161,16 +171,19 @@ def main() -> None:
     cwd = Path.cwd().resolve()
     config_path: Optional[Path] = None
 
-    # Prefer .simple-build.json, fallback to .site-repo.json
-    for candidate in [".simple-build.json", ".site-repo.json"]:
+    if sys.version_info < (3, 10):
+        sys.exit("❌ pocket-build requires Python 3.10 or newer.")
+
+    # Prefer .pocket-build.json, fallback to .site-repo.json
+    for candidate in [".pocket-build.json"]:
         cwd_candidate = cwd / candidate
         if cwd_candidate.exists():
             config_path = cwd_candidate
             break
 
     if not config_path:
-        print(f"{YELLOW}⚠️  No build config found (.simple-build.json or .site-repo.json).{RESET}")
-        return
+        print(f"{YELLOW}⚠️  No build config found (.pocket-build.json).{RESET}")
+        return 1
 
     config_dir = config_path.parent.resolve()
     print(f"🔧 Using config: {config_path.name}")

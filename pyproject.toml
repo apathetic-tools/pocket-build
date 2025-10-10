@@ -1,0 +1,76 @@
+# pyproject.toml
+
+[project]
+name = "pocket-build"
+version = "0.1.0"
+description = "A tiny build system that fits in your pocket"
+authors = [
+    {name = "Apathetic Tools"}
+]
+readme = "README.md"
+license = { file = "LICENSE" }
+requires-python = ">=3.10"
+dependencies = [
+]
+
+# --- Development tasks ---
+[tool.poe.tasks]
+# 🔍 Linting and static checks
+check = ["lint-ruff", "typecheck-mypy", "format-ruff"]
+lint-ruff = "ruff check ."
+typecheck-mypy = "mypy src"
+
+# 🧹 Automated fixing / formatting
+fix = ["fix-ruff", "format-ruff"]
+fix-ruff = "ruff check --fix ."
+format-ruff = "ruff format ."
+
+# 🧩 Bundling and License checking
+bundle = "python dev/make_single.py"
+check-license = "bash dev/check-license.sh"
+
+# --- Development dependencies ---
+[dependency-groups]
+dev = [
+    "ruff (>=0.14.0,<0.15.0)",
+    "mypy (>=1.18.2,<2.0.0)",
+    "pytest (>=8.4.2,<9.0.0)",
+    "poethepoet (>=0.37.0,<0.38.0)"
+]
+
+# --- Ruff: formatter and linter ---
+[tool.ruff]
+line-length = 88
+fix = true
+
+[tool.ruff.lint]
+select = ["E", "F", "W", "I"]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+
+# --- Mypy: stricter typing options ---
+[tool.mypy]
+python_version = "3.10"
+ignore_missing_imports = true
+strict = true
+
+# --- Black: kept for compatibility ---
+[tool.black]
+line-length = 88
+target-version = ['py38']
+
+# --- isort: kept for compatibility ---
+[tool.isort]
+profile = "black"
+line_length = 88
+
+# --- Build system (Poetry) ---
+[build-system]
+requires = ["poetry-core>=2.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.poetry]
+package-mode = false

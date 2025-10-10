@@ -35,8 +35,6 @@ Exploring bundling options for generating the single-file release:
 - [ ] Add CI for basic sanity checks (copy, exclude, include)
 
 ## 🧑‍💻 Development 
-- [ ] Bring in common Python development niceties (e.g. **black**, **isort**, **ruff**)  
-- [ ] Add a simple Makefile or task runner for common dev commands  
 
 ## 💡 Ideas & Experiments
 Potential quality-of-life features:
@@ -44,3 +42,4 @@ Potential quality-of-life features:
 - [ ] Inject version into final bundled script  
 - [ ] Add SHA-256 hashing to skip unchanged files  
 - [ ] Implement `--watch` mode for live rebuilds  
+- [ ] publish to PyPI, NPM, PACKAGIST, others?

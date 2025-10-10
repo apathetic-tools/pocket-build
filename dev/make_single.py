@@ -3,8 +3,8 @@
 Concatenate all source modules into one readable pocket-build.py file.
 """
 
-from pathlib import Path
 import re
+from pathlib import Path
 
 root = Path(__file__).resolve().parent.parent
 src_dir = root / "src"
@@ -18,6 +18,7 @@ ORDER = [
     "main.py",
 ]
 
+
 def strip_imports(text: str) -> str:
     """Remove internal imports between modules."""
     lines = text.splitlines()
@@ -27,6 +28,7 @@ def strip_imports(text: str) -> str:
             continue
         result.append(line)
     return "\n".join(result)
+
 
 parts = []
 for filename in ORDER:

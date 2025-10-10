@@ -43,7 +43,7 @@ You can even drop it somewhere on your `PATH` for easy use.
 ## 💡 Why Python? Other Language Versions?
 
 You don’t need a native build.  
-Python 3 ships with macOS and most Linux distributions. On Windows, running the script automatically prompts the user to install Python from the Microsoft Store.
+Python 3 ships with most Linux distributions. On Mac, it's one homebrew command away. On Windows, running the script automatically prompts the user to install Python from the Microsoft Store.
 
 Pocket-build is meant to live comfortably next to your other tools — Go, Node.js, Rust, whatever — when all you need is a simple, dependency-free way to copy and package files.
 
