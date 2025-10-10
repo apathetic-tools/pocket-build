@@ -1,0 +1,9 @@
+repos:
+  - repo: local
+    hooks:
+      - id: poe-check
+        name: Run Poe 'check:fix'
+        entry: poetry run poe check:fix
+        language: system
+        pass_filenames: false
+        stages: [commit]

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# scripts/pocket-build.py
+# bin/pocket-build.py
 """
 A tiny build system that fits in your pocket.
 Because not everything needs a toolchain.

@@ -97,3 +97,13 @@ poetry run poe bundle
 ---
 
 **Thank you for helping keep `pocket-build` tiny, portable, and delightful.**
+
+
+## to-add
+
+we want both a PyPI and a bin/ executable script using `poetry run po bundle`
+
+```
+poetry build
+poetry publish
+```

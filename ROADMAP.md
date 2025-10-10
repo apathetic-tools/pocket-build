@@ -33,8 +33,11 @@ Exploring bundling options for generating the single-file release:
 ## 🧪 Tests
 - [ ] Write initial test suite  
 - [ ] Add CI for basic sanity checks (copy, exclude, include)
+- [ ] `--selftest` that runs a few minimal checks internally using Python’s `unittest`—so the user can verify that the install works without needing pytest.
+- [ ] Add pre-commit
 
 ## 🧑‍💻 Development 
+
 
 ## 💡 Ideas & Experiments
 Potential quality-of-life features:
