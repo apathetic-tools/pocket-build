@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# bin/pocket-build.py
+# src/pocket_build/pocket_build.py
 """
 A tiny build system that fits in your pocket.
 Because not everything needs a toolchain.
@@ -57,13 +57,13 @@ def load_jsonc(path: Path) -> Dict[str, Any]:
     """Load JSONC (comments + trailing commas) using built-in json."""
     text = path.read_text(encoding="utf-8")
 
-    # 1. Strip line comments (// or # at start of line)
-    text = re.sub(r"(?m)^\s*(?:(?://)|#).*?$", "", text)
+    # Remove // or # comments anywhere (but not in strings)
+    text = re.sub(r"(?<!:)//.*|#.*", "", text)
 
-    # 2. Strip block comments (/* ... */) safely, even across newlines
+    # Remove block comments (/* ... */)
     text = re.sub(r"/\*[\s\S]*?\*/", "", text)
 
-    # 3. Remove trailing commas before closing } or ]
+    # Remove trailing commas before closing braces/brackets
     text = re.sub(r",(\s*[}\]])", r"\1", text)
 
     return cast(Dict[str, Any], json.loads(text))
@@ -163,10 +163,10 @@ def run_build(
 # -----------------------------------------------------------
 # Entry point
 # -----------------------------------------------------------
-def main() -> int:
+def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser()
     parser.add_argument("--out", help="Override output directory")
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     cwd = Path.cwd().resolve()
     config_path: Optional[Path] = None
@@ -203,4 +203,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    sys.exit(main(sys.argv[1:]))
