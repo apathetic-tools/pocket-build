@@ -1,20 +1,3 @@
-MIT License — with No-AI Use Rider
----
-
-Copyright (c) 2025 Apathetic Tools
-
-This repository’s code is licensed under the MIT License, with an additional
-rider restricting AI/ML training use. See LICENSE-NOAI for details.
-
-The rider may modify certain rights otherwise granted under the MIT license.
-You can find the rider’s full text in:
-
-    LICENSE-NOAI
-
-By using this repository, you agree to the terms of both the MIT License and the accompanying No-AI Use Rider.
-
----
-
 MIT License
 
 Copyright (c) 2025 Apathetic Tools
@@ -36,3 +19,9 @@ AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
 LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
+
+------------------------------------------------------------
+Additional Terms – No-AI Use Rider
+You may not use this repository, in whole or in part, to train, fine-tune,
+or otherwise improve any machine-learning or artificial-intelligence system.
+See LICENSE-NOAI for details.
