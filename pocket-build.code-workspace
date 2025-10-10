@@ -1,0 +1,8 @@
+// pocket-build.code-workspace
+{
+	"folders": [
+		{
+			"path": ".",
+		},
+	],	
+}

@@ -1,0 +1,47 @@
+# .editorconfig
+
+# inspired by Apathetic-Tools · MIT
+# https://github.com/apathetic-tools/snippets/blob/main/docs/windows/development-setup
+
+# vscode now comes with built-in .editorconfig support
+#   it does not support [{.*,*.md,*.mdx,*.json,*.toml,*.yml,}] so you have to split them out
+
+# EditorConfig is awesome: https://EditorConfig.org
+
+# top-most EditorConfig file
+root = true
+
+[*]
+charset = utf-8
+end_of_line = lf
+indent_size = 2
+indent_style = tab
+insert_final_newline = true
+trim_trailing_whitespace = false
+
+# Python: 4-space indents
+[*.py]
+indent_size = 4
+indent_style = space
+
+# Config, Markdown, and dotfiles: spaces
+[.*]
+indent_style = space
+
+[*.md]
+indent_style = space
+
+[*.mdx]
+indent_style = space
+
+[*.json]
+indent_style = space
+
+[*.toml]
+indent_style = space
+
+[*.yml]
+indent_style = space
+
+[*.yaml]
+indent_style = space
