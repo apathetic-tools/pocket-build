@@ -3,6 +3,9 @@
 [![CI](https://github.com/apathetic-tools/pocket-build/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/goldilocks/pocket-build/actions/workflows/ci.yml)
 [![License: MIT-NOAI](https://img.shields.io/badge/License-MIT--NOAI-yellow.svg?style=flat-square)](LICENSE)
 
+[![License: MIT-NOAI](https://img.shields.io/badge/license-MIT--NOAI-blueviolet.svg?style=flat-square)](LICENSE)
+[![MIT-NOAI License](https://img.shields.io/badge/MIT--NOAI-License-orange.svg?style=flat-square)](LICENSE)
+
 
 📘 **[Roadmap](./ROADMAP.md)** · 📝 **[Release Notes](https://github.com/apathetic-tools/pocket-build/releases)**
 
