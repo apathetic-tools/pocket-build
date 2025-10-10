@@ -42,3 +42,21 @@ def test_main_with_config(
 
     assert code == 0
     assert "Build completed" in out
+
+
+def test_help_flag(
+    capsys: pytest.CaptureFixture[str],
+    pocket_build_env: PocketBuildLike,
+) -> None:
+    """Should print usage information and exit cleanly when --help is passed."""
+    # Capture SystemExit since argparse exits after printing help.
+    with pytest.raises(SystemExit) as e:
+        pocket_build_env.main(["--help"])
+
+    # Argparse exits with code 0 for --help
+    assert e.value.code == 0
+
+    out = capsys.readouterr().out
+    assert "usage:" in out.lower()
+    assert "pocket-build" in out
+    assert "--out" in out

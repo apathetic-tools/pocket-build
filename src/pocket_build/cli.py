@@ -1,3 +1,4 @@
+# src/pocket_build/cli.py
 import argparse
 import sys
 from pathlib import Path
@@ -9,8 +10,17 @@ from .utils import RESET, YELLOW, load_jsonc
 
 
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(prog="pocket-build")
+    parser = argparse.ArgumentParser(
+        prog="pocket-build",
+        description="Pocket Build — a tiny build system that fits in your pocket.",
+        add_help=False,  # We'll define our own to customize formatting
+    )
     parser.add_argument("--out", help="Override output directory")
+    parser.add_argument(
+        "--help",
+        action="help",
+        help="Display usage information and exit",
+    )
     args = parser.parse_args(argv)
 
     if sys.version_info < (3, 10):
