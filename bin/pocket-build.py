@@ -4,14 +4,14 @@
 # Full text: https://github.com/apathetic-tools/pocket-build/blob/main/LICENSE
 
 # Version: 0.1.0
-# Commit: 6807509
+# Commit: a4e006e
 # Repo: https://github.com/apathetic-tools/pocket-build
 
 """
 Pocket Build — a tiny build system that fits in your pocket.
 This single-file version is auto-generated from modular sources.
 Version: 0.1.0
-Commit: 6807509
+Commit: a4e006e
 """
 
 from __future__ import annotations
@@ -20,6 +20,7 @@ import argparse
 import json
 import re
 import shutil
+import subprocess
 import sys
 from fnmatch import fnmatch
 from pathlib import Path
@@ -160,19 +161,79 @@ def run_build(
 # src/pocket_build/cli.py
 
 
+def get_metadata_from_header(script_path: Path) -> tuple[str, str]:
+    """Extract version and commit from bundled header if present."""
+    version = "unknown"
+    commit = "unknown"
+
+    try:
+        text = script_path.read_text(encoding="utf-8")
+        for line in text.splitlines():
+            if line.startswith("# Version:"):
+                version = line.split(":", 1)[1].strip()
+            elif line.startswith("# Commit:"):
+                commit = line.split(":", 1)[1].strip()
+    except Exception:
+        pass
+
+    return version, commit
+
+
+def get_metadata() -> tuple[str, str]:
+    """
+    Return (version, commit) tuple for Pocket Build.
+    - Bundled script → parse from header
+    - Source package → read pyproject.toml + git
+    """
+    script_path = Path(__file__)
+    # Bundled single-file case
+    if script_path.name == "pocket-build.py":
+        return get_metadata_from_header(script_path)
+
+    # Source package case
+    version = "unknown"
+    commit = "unknown"
+
+    # Try pyproject.toml for version
+    root = Path(__file__).resolve().parent.parent.parent
+    pyproject = root / "pyproject.toml"
+    if pyproject.exists():
+        match = re.search(
+            r'(?m)^\s*version\s*=\s*["\']([^"\']+)["\']', pyproject.read_text()
+        )
+        if match:
+            version = match.group(1)
+
+    # Try git for commit
+    try:
+        result = subprocess.run(
+            ["git", "rev-parse", "--short", "HEAD"],
+            cwd=root,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        commit = result.stdout.strip()
+    except Exception:
+        pass
+
+    return version, commit
+
+
 def main(argv: Optional[List[str]] = None) -> int:
-    parser = argparse.ArgumentParser(
-        prog="pocket-build",
-        description="Pocket Build — a tiny build system that fits in your pocket.",
-        add_help=False,  # We'll define our own to customize formatting
-    )
+    parser = argparse.ArgumentParser(prog="pocket-build")
     parser.add_argument("--out", help="Override output directory")
     parser.add_argument(
-        "--help",
-        action="help",
-        help="Display usage information and exit",
+        "--version",
+        action="store_true",
+        help="Show version information and exit",
     )
     args = parser.parse_args(argv)
+
+    if args.version:
+        version, commit = get_metadata()
+        print(f"Pocket Build {version} ({commit})")
+        return 0
 
     if sys.version_info < (3, 10):
         sys.exit("❌ pocket-build requires Python 3.10 or newer.")

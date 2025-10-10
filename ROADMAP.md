@@ -5,7 +5,6 @@ Planned command-line flags for future releases:
 
 - `--quiet` — suppress non-error output  
 - `--verbose` — show detailed logs  
-- `--version`
 - `--out` — override output directory  
 - `--config` — specify custom config path  
 - `--self-update` — update pocket-build itself  

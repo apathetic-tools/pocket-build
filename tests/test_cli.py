@@ -1,8 +1,10 @@
+# tests/test_cli.py
 """Tests for pocket_build.cli (module and single-file versions)."""
 
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -60,3 +62,17 @@ def test_help_flag(
     assert "usage:" in out.lower()
     assert "pocket-build" in out
     assert "--out" in out
+
+
+def test_version_flag(
+    capsys: pytest.CaptureFixture[str],
+    pocket_build_env: PocketBuildLike,
+) -> None:
+    """Should print version and commit info cleanly."""
+    code = pocket_build_env.main(["--version"])
+    out = capsys.readouterr().out
+
+    assert code == 0
+    assert "Pocket Build" in out
+    assert re.search(r"\d+\.\d+\.\d+", out) or "unknown" in out
+    assert re.search(r"\([0-9a-f]{4,}\)", out) or "(unknown)" in out

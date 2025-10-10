@@ -62,12 +62,13 @@ def extract_commit() -> str:
 
 
 def split_imports(text: str) -> tuple[list[str], str]:
-    """Split module text into (imports, rest)."""
+    """Split module text into (imports, rest), normalizing indentation."""
     imports: list[str] = []
     body_lines: list[str] = []
     for line in text.splitlines():
-        if re.match(r"^\s*(?:import|from)\s+\S+", line):
-            imports.append(line)
+        stripped = line.lstrip()
+        if re.match(r"^(?:import|from)\s+\S+", stripped):
+            imports.append(stripped)  # ✅ strip indentation
         else:
             body_lines.append(line)
     return imports, "\n".join(body_lines)
