@@ -15,6 +15,6 @@ jobs:
           python-version: "3.12"
       - uses: abatilo/actions-poetry@v2
       - run: poetry install
-      - run: poetry run pytest -vv --capture=tee-sys --show-capture=all --log-cli-level=INFO # debug
+      - run: poetry run pytest -vv -s # debug
       - run: poetry run poe check
 
