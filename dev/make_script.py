@@ -148,3 +148,20 @@ print(
     f"✅ Built {OUT_FILE.relative_to(ROOT)} ({len(parts)} modules) — "
     f"version {version} ({commit})."
 )
+
+# ------------------------------------------------------------
+# 🧹 Auto-format via Poetry/Poe tasks (if available)
+# ------------------------------------------------------------
+try:
+    result = subprocess.run(
+        ["poetry", "run", "poe", "fix"],
+        cwd=ROOT,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode == 0:
+        print("✨ Auto-formatted using 'poe fix'.")
+    else:
+        print(f"⚠️  'poe fix' failed:\n{result.stderr.strip()}")
+except FileNotFoundError:
+    print("⚠️  Poetry or Poe not found — skipping auto-formatting.")

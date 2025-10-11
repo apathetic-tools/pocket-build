@@ -4,14 +4,14 @@
 # Full text: https://github.com/apathetic-tools/pocket-build/blob/main/LICENSE
 
 # Version: 0.1.0
-# Commit: 74250bc
+# Commit: bcfe806
 # Repo: https://github.com/apathetic-tools/pocket-build
 
 """
 Pocket Build — a tiny build system that fits in your pocket.
 This single-file version is auto-generated from modular sources.
 Version: 0.1.0
-Commit: 74250bc
+Commit: bcfe806
 """
 
 from __future__ import annotations
@@ -261,6 +261,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="pocket-build")
     parser.add_argument("-o", "--out", help="Override output directory")
     parser.add_argument(
+        # -v already used by verbose
         "--version",
         action="store_true",
         help="Show version information and exit",
