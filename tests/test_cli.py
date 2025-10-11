@@ -164,3 +164,34 @@ def test_custom_config_path(
     out = capsys.readouterr().out
     assert code == 0
     assert "Using config: custom.json" in out
+
+
+def test_out_flag_overrides_config(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    pocket_build_env: PocketBuildLike,
+):
+    """Should use the --out flag instead of the config-defined output path."""
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "foo.txt").write_text("hello")
+
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(
+        json.dumps(
+            {"builds": [{"include": ["src/**"], "exclude": [], "out": "ignored"}]}
+        )
+    )
+
+    monkeypatch.chdir(tmp_path)
+    code = pocket_build_env.main(["--out", "override-dist"])
+    out = capsys.readouterr().out
+
+    assert code == 0
+    # Confirm it built into the override directory
+    override_dir = tmp_path / "override-dist"
+    assert override_dir.exists()
+    assert (override_dir / "src" / "foo.txt").exists()
+    # Optional: check output logs
+    assert "override-dist" in out

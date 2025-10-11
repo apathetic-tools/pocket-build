@@ -9,6 +9,7 @@ All internal and relative imports are stripped, and all remaining imports are
 collected, deduplicated, and placed neatly at the top.
 """
 
+import os
 import re
 import subprocess
 from pathlib import Path
@@ -48,6 +49,9 @@ def extract_version() -> str:
 
 
 def extract_commit() -> str:
+    # Only embed commit hash if in CI or release tag context
+    if not (os.getenv("CI") or os.getenv("GIT_TAG") or os.getenv("GITHUB_REF")):
+        return "unknown (local build)"
     try:
         result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],

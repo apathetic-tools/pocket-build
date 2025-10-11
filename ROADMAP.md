@@ -3,8 +3,6 @@
 ## 🧰 CLI Parameters
 Planned command-line flags for future releases:
 
-- `--out` — override output directory  
-- `--config` — specify custom config path  
 - `--self-update` — update pocket-build itself  
 - `--no-update-check` — skip automatic update check  
 - `--no-colors` — disable ANSI color output  
@@ -32,7 +30,7 @@ Exploring bundling options for generating the single-file release:
 - [ ] `--selftest` that runs a few minimal checks internally using Python’s `unittest`—so the user can verify that the install works without needing pytest.
 
 ## 🧑‍💻 Development 
-
+- [ ] Deploy action when I tag a release should create a release and attach it to the tagged release.
 
 ## 💡 Ideas & Experiments
 Potential quality-of-life features:
