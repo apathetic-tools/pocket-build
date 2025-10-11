@@ -117,10 +117,9 @@ def ensure_bundled_script_up_to_date(root: Path) -> Path:
     # If the output file doesn't exist or is older than any source file → rebuild.
     needs_rebuild = not bin_path.exists()
     if not needs_rebuild:
-        bin_mtime = bin_path.stat().st_mtime
+        bin_mtime_ns = bin_path.stat().st_mtime_ns
         for src_file in src_dir.rglob("*.py"):
-            # add half-second tolerance for coarse mtime filesystems
-            if src_file.stat().st_mtime > bin_mtime + 0.5:
+            if src_file.stat().st_mtime_ns > bin_mtime_ns:
                 needs_rebuild = True
                 break
 

@@ -76,11 +76,17 @@ def get_metadata() -> tuple[str, str]:
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="pocket-build")
-    parser.add_argument("--out", help="Override output directory")
+    parser.add_argument("-o", "--out", help="Override output directory")
     parser.add_argument(
+        # -v already used by verbose
         "--version",
         action="store_true",
         help="Show version information and exit",
+    )
+    parser.add_argument(
+        "-c",
+        "--config",
+        help="Path to custom build config file (default: .pocket-build.json in cwd)",
     )
 
     # Quiet and verbose cannot coexist
@@ -110,13 +116,20 @@ def main(argv: Optional[List[str]] = None) -> int:
         sys.exit("❌ pocket-build requires Python 3.10 or newer.")
 
     cwd = Path.cwd().resolve()
-    config_path: Optional[Path] = None
 
-    for candidate in [".pocket-build.json"]:
-        p = cwd / candidate
-        if p.exists():
-            config_path = p
-            break
+    # --- Config path handling ---
+    config_path: Optional[Path] = None
+    if args.config:
+        config_path = Path(args.config).expanduser().resolve()
+        if not config_path.exists():
+            print(f"{YELLOW}⚠️  Config file not found: {config_path}{RESET}")
+            return 1
+    else:
+        for candidate in [".pocket-build.json"]:
+            p = cwd / candidate
+            if p.exists():
+                config_path = p
+                break
 
     # --- Handle missing config ---
     if not config_path:

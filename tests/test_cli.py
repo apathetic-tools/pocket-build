@@ -149,3 +149,18 @@ def test_verbose_and_quiet_mutually_exclusive(
     combined = captured.out + captured.err
     assert "not allowed with argument" in combined or "mutually exclusive" in combined
     assert "--quiet" in combined and "--verbose" in combined
+
+
+def test_custom_config_path(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    pocket_build_env: PocketBuildLike,
+):
+    cfg = tmp_path / "custom.json"
+    cfg.write_text('{"builds": [{"include": [], "out": "dist"}]}')
+    monkeypatch.chdir(tmp_path)
+    code = pocket_build_env.main(["--config", str(cfg)])
+    out = capsys.readouterr().out
+    assert code == 0
+    assert "Using config: custom.json" in out

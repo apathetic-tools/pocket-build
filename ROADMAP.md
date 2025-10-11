@@ -3,7 +3,6 @@
 ## 🧰 CLI Parameters
 Planned command-line flags for future releases:
 
-- `--verbose` — show detailed logs  
 - `--out` — override output directory  
 - `--config` — specify custom config path  
 - `--self-update` — update pocket-build itself  
