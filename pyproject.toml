@@ -20,13 +20,20 @@ dependencies = [
 
 # 🔍 Linting and static checks
 check = ["lint", "typecheck", "test"]
-lint = "ruff check ."
+lint = ["lint:isort", "lint:ruff"]
+"lint:ruff" = "ruff check ."
+"lint:isort" = ["lint:isort:reg", "lint:isort:script"]
+"lint:isort:reg" = "isort . --check-only --color"
+"lint:isort:script" = {shell = "if [ -f bin/pocket-build.py ]; then isort bin/pocket-build.py --check-only --color; fi" }
 typecheck = "mypy src"
-test = "pytest -q"
+test = "pytest -q --color=yes"
 
 # 🧹 Automated fixing / formatting
-fix = ["fix:ruff", "fix:format"]
-"fix:ruff" = "ruff check --fix ."
+fix = ["fix:isort", "fix:ruff", "fix:format"]
+"fix:isort" = ["fix:isort:reg", "fix:isort:script"]
+"fix:isort:reg" = "isort . --color"
+"fix:isort:script" = {shell = "if [ -f bin/pocket-build.py ]; then isort bin/pocket-build.py --color; fi" }
+"fix:ruff" = "ruff check . --fix"
 "fix:format" = "ruff format ."
 
 # 🧩 Build and license
@@ -40,21 +47,34 @@ dev = [
     "mypy (>=1.18.2,<2.0.0)",
     "pytest (>=8.4.2,<9.0.0)",
     "poethepoet (>=0.37.0,<0.38.0)",
-    "pre-commit (>=4.3.0,<5.0.0)"
+    "pre-commit (>=4.3.0,<5.0.0)",
+    "isort (>=7.0.0,<8.0.0)"
 ]
 
 # --- Ruff: formatter and linter ---
 [tool.ruff]
+# target-version = # project.requires-python instead
 line-length = 88
 fix = true
 
 [tool.ruff.lint]
-select = ["E", "F", "W", "I"]
-ignore = []
+select = ["E", "F", "W"]
+ignore = ["I"] # isort will do "I"
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
+# --- isort: formatter import sorting (and merging, which ruff doesn't do) ---
+[tool.isort]
+profile = "black"
+line_length = 88
+multi_line_output = 3
+include_trailing_comma = true
+force_grid_wrap = 0
+combine_as_imports = true
+known_first_party = ["pocket_build"]
+skip_gitignore = true
 
 # --- Mypy: stricter typing options ---
 [tool.mypy]
@@ -67,15 +87,12 @@ strict = true
 pythonpath = ["src"]
 addopts = "-ra"
 
-# --- Black: kept for compatibility ---
+# --- Black: kept in case someone runs it by accident in their editor ---
 [tool.black]
+# target-version = [] # project.requires-python instead
 line-length = 88
-target-version = ['py38']
+skip-string-normalization = false
 
-# --- isort: kept for compatibility ---
-[tool.isort]
-profile = "black"
-line_length = 88
 
 # --- Poetry Build System ---
 [project.scripts]
