@@ -1,3 +1,4 @@
+# tests/test_bundled_metadata.py
 """
 Verify that the bundled single-file version (`bin/pocket-build.py`)
 was generated correctly — includes metadata, license header,

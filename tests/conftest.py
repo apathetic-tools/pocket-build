@@ -59,13 +59,20 @@ class PocketBuildLike(Protocol):
     def parse_builds(self, raw_config: Dict[str, Any]) -> List[BuildConfig]: ...
 
     # --- build ---
-    def copy_file(self, src: Path, dest: Path, root: Path) -> None: ...
+    def copy_file(
+        self,
+        src: Path,
+        dest: Path,
+        root: Path,
+        verbose: bool = True,
+    ) -> None: ...
     def copy_directory(
         self,
         src: Path,
         dest: Path,
         exclude_patterns: List[str],
         root: Path,
+        verbose: bool = True,
     ) -> None: ...
     def copy_item(
         self,
@@ -73,12 +80,14 @@ class PocketBuildLike(Protocol):
         dest: Path,
         exclude_patterns: List[str],
         root: Path,
+        verbose: bool = True,
     ) -> None: ...
     def run_build(
         self,
         build_cfg: BuildConfig,  # ✅ use the proper TypedDict
         config_dir: Path,
         out_override: Optional[str],
+        verbose: bool = True,
     ) -> None: ...
 
     # --- CLI ---
@@ -110,13 +119,16 @@ def ensure_bundled_script_up_to_date(root: Path) -> Path:
     if not needs_rebuild:
         bin_mtime = bin_path.stat().st_mtime
         for src_file in src_dir.rglob("*.py"):
-            if src_file.stat().st_mtime > bin_mtime:
+            # add half-second tolerance for coarse mtime filesystems
+            if src_file.stat().st_mtime > bin_mtime + 0.5:
                 needs_rebuild = True
                 break
 
     if needs_rebuild:
         print("⚙️  Rebuilding single-file bundle (make_script.py)...")
         subprocess.run([sys.executable, str(builder)], check=True)
+        # force mtime update in case contents identical
+        bin_path.touch()
         assert bin_path.exists(), "❌ Failed to generate bundled script."
 
     return bin_path

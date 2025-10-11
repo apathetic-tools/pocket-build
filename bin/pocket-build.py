@@ -4,14 +4,14 @@
 # Full text: https://github.com/apathetic-tools/pocket-build/blob/main/LICENSE
 
 # Version: 0.1.0
-# Commit: f7e8c12
+# Commit: 2437a89
 # Repo: https://github.com/apathetic-tools/pocket-build
 
 """
 Pocket Build — a tiny build system that fits in your pocket.
 This single-file version is auto-generated from modular sources.
 Version: 0.1.0
-Commit: f7e8c12
+Commit: 2437a89
 """
 
 from __future__ import annotations
@@ -30,8 +30,10 @@ from typing import Any, Dict, List, Optional, TypedDict, Union, cast
 
 from typing_extensions import NotRequired
 
-
 # === types.py ===
+# src/pocket_build/types.py
+
+
 class IncludeEntry(TypedDict, total=False):
     src: str
     dest: NotRequired[str]
@@ -48,6 +50,8 @@ class RootConfig(TypedDict, total=False):
 
 
 # === utils.py ===
+# src/pocket_build/utils.py
+
 # Terminal colors (ANSI)
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
@@ -75,6 +79,9 @@ def is_excluded(path: Path, exclude_patterns: List[str], root: Path) -> bool:
 
 
 # === config.py ===
+# src/pocket_build/config.py
+
+
 def parse_builds(raw_config: Dict[str, Any]) -> List[BuildConfig]:
     builds = raw_config.get("builds")
     if isinstance(builds, list):
@@ -83,19 +90,28 @@ def parse_builds(raw_config: Dict[str, Any]) -> List[BuildConfig]:
 
 
 # === build.py ===
-def copy_file(src: Path, dest: Path, root: Path) -> None:
+# src/pocket_build/build.py
+
+
+def copy_file(src: Path, dest: Path, root: Path, verbose: bool = False) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dest)
-    print(f"📄 {src.relative_to(root)} → {dest.relative_to(root)}")
+    if verbose:
+        print(f"📄 {src.relative_to(root)} → {dest.relative_to(root)}")
 
 
 def copy_directory(
-    src: Path, dest: Path, exclude_patterns: List[str], root: Path
+    src: Path,
+    dest: Path,
+    exclude_patterns: List[str],
+    root: Path,
+    verbose: bool = False,
 ) -> None:
     """Recursively copy directory contents, skipping excluded files."""
     for item in src.rglob("*"):
         if is_excluded(item, exclude_patterns, root):
-            print(f"🚫 Skipped: {item.relative_to(root)}")
+            if verbose:
+                print(f"🚫 Skipped: {item.relative_to(root)}")
             continue
         target = dest / item.relative_to(src)
         if item.is_dir():
@@ -103,21 +119,32 @@ def copy_directory(
         else:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(item, target)
-            print(f"{GREEN}📄{RESET} {item.relative_to(root)}")
+            if verbose:
+                print(f"{GREEN}📄{RESET} {item.relative_to(root)}")
 
 
-def copy_item(src: Path, dest: Path, exclude_patterns: List[str], root: Path) -> None:
+def copy_item(
+    src: Path,
+    dest: Path,
+    exclude_patterns: List[str],
+    root: Path,
+    verbose: bool = False,
+) -> None:
     if is_excluded(src, exclude_patterns, root):
-        print(f"🚫 Skipped (excluded): {src.relative_to(root)}")
+        if verbose:
+            print(f"🚫 Skipped (excluded): {src.relative_to(root)}")
         return
     if src.is_dir():
-        copy_directory(src, dest, exclude_patterns, root)
+        copy_directory(src, dest, exclude_patterns, root, verbose)
     else:
-        copy_file(src, dest, root)
+        copy_file(src, dest, root, verbose)
 
 
 def run_build(
-    build_cfg: BuildConfig, config_dir: Path, out_override: Optional[str]
+    build_cfg: BuildConfig,
+    config_dir: Path,
+    out_override: Optional[str],
+    verbose: bool = False,
 ) -> None:
     includes = build_cfg.get("include", [])
     excludes = build_cfg.get("exclude", [])
@@ -133,28 +160,36 @@ def run_build(
         assert src_pattern is not None, f"Missing required 'src' in entry: {entry_dict}"
 
         if not src_pattern or src_pattern.strip() in {".", ""}:
-            print(
-                f"{YELLOW}⚠️  Skipping invalid include pattern: {src_pattern!r}{RESET}"
-            )
+            if verbose:
+                print(
+                    f"{YELLOW}⚠️  Skipping invalid include pattern: "
+                    f"{src_pattern!r}{RESET}"
+                )
             continue
 
         dest_name = entry_dict.get("dest")
-        matches = (
-            list(config_dir.rglob(src_pattern))
-            if "**" in src_pattern
-            else list(config_dir.glob(src_pattern))
-        )
+        if Path(config_dir / src_pattern).is_dir():
+            matches = [config_dir / src_pattern]
+        else:
+            matches = (
+                list(config_dir.rglob(src_pattern))
+                if "**" in src_pattern
+                else list(config_dir.glob(src_pattern))
+            )
+
         if not matches:
-            print(f"{YELLOW}⚠️  No matches for {src_pattern}{RESET}")
+            if verbose:
+                print(f"{YELLOW}⚠️  No matches for {src_pattern}{RESET}")
             continue
 
         for src in matches:
             if not src.exists():
-                print(f"{YELLOW}⚠️  Missing: {src}{RESET}")
+                if verbose:
+                    print(f"{YELLOW}⚠️  Missing: {src}{RESET}")
                 continue
 
             dest: Path = out_dir / (dest_name or src.name)
-            copy_item(src, dest, excludes, config_dir)
+            copy_item(src, dest, excludes, config_dir, verbose)
 
     print(f"✅ Build completed → {out_dir}\n")
 
@@ -230,11 +265,20 @@ def main(argv: Optional[List[str]] = None) -> int:
         action="store_true",
         help="Show version information and exit",
     )
-    parser.add_argument(
+
+    # Quiet and verbose cannot coexist
+    noise_group = parser.add_mutually_exclusive_group()
+    noise_group.add_argument(
         "-q",
         "--quiet",
         action="store_true",
         help="Suppress non-error output",
+    )
+    noise_group.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show detailed logs for each file operation",
     )
     args = parser.parse_args(argv)
 
@@ -274,11 +318,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         # everything printed inside this block is discarded
         with contextlib.redirect_stdout(buffer):
             for i, build_cfg in enumerate(builds, 1):
-                run_build(build_cfg, config_dir, args.out)
+                run_build(
+                    build_cfg, config_dir, args.out, verbose=args.verbose or False
+                )
         # still return 0 to indicate success
         return 0
 
-    # --- Normal mode ---
+    # --- Normal / verbose mode ---
     print(f"🔧 Using config: {config_path.name}")
     print(f"📁 Config base: {config_dir}")
     print(f"📂 Invoked from: {cwd}\n")
@@ -286,7 +332,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     for i, build_cfg in enumerate(builds, 1):
         print(f"▶️  Build {i}/{len(builds)}")
-        run_build(build_cfg, config_dir, args.out)
+        run_build(build_cfg, config_dir, args.out, verbose=args.verbose or False)
 
     print("🎉 All builds complete.")
     return 0

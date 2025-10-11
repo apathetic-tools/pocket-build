@@ -1,3 +1,4 @@
+# tests/test_config.py
 """Tests for pocket_build.config (module and single-file versions)."""
 
 from __future__ import annotations

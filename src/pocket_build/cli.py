@@ -82,11 +82,20 @@ def main(argv: Optional[List[str]] = None) -> int:
         action="store_true",
         help="Show version information and exit",
     )
-    parser.add_argument(
+
+    # Quiet and verbose cannot coexist
+    noise_group = parser.add_mutually_exclusive_group()
+    noise_group.add_argument(
         "-q",
         "--quiet",
         action="store_true",
         help="Suppress non-error output",
+    )
+    noise_group.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        help="Show detailed logs for each file operation",
     )
     args = parser.parse_args(argv)
 
@@ -126,11 +135,13 @@ def main(argv: Optional[List[str]] = None) -> int:
         # everything printed inside this block is discarded
         with contextlib.redirect_stdout(buffer):
             for i, build_cfg in enumerate(builds, 1):
-                run_build(build_cfg, config_dir, args.out)
+                run_build(
+                    build_cfg, config_dir, args.out, verbose=args.verbose or False
+                )
         # still return 0 to indicate success
         return 0
 
-    # --- Normal mode ---
+    # --- Normal / verbose mode ---
     print(f"🔧 Using config: {config_path.name}")
     print(f"📁 Config base: {config_dir}")
     print(f"📂 Invoked from: {cwd}\n")
@@ -138,7 +149,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     for i, build_cfg in enumerate(builds, 1):
         print(f"▶️  Build {i}/{len(builds)}")
-        run_build(build_cfg, config_dir, args.out)
+        run_build(build_cfg, config_dir, args.out, verbose=args.verbose or False)
 
     print("🎉 All builds complete.")
     return 0

@@ -1,3 +1,4 @@
+# tests/test_build.py
 """Tests for pocket_build.build (module and single-file versions)."""
 
 from pathlib import Path
@@ -17,8 +18,9 @@ def test_copy_file_creates_and_copies(
     src = tmp_path / "a.txt"
     src.write_text("hi")
     dest = tmp_path / "out" / "a.txt"
+    verbose = True
 
-    pocket_build_env.copy_file(src, dest, tmp_path)
+    pocket_build_env.copy_file(src, dest, tmp_path, verbose)
 
     out = dest.read_text()
     assert out == "hi"
@@ -38,7 +40,8 @@ def test_copy_directory_respects_excludes(
     (src_dir / "skip.txt").write_text("no")
 
     dest = tmp_path / "out"
-    pocket_build_env.copy_directory(src_dir, dest, ["**/skip.txt"], tmp_path)
+    verbose = True
+    pocket_build_env.copy_directory(src_dir, dest, ["**/skip.txt"], tmp_path, verbose)
 
     assert (dest / "keep.txt").exists()
     assert not (dest / "skip.txt").exists()
@@ -57,7 +60,8 @@ def test_copy_item_handles_file_and_dir(
     (src_dir / "a.txt").write_text("data")
 
     dest = tmp_path / "out"
-    pocket_build_env.copy_item(src_dir, dest, [], tmp_path)
+    verbose = False
+    pocket_build_env.copy_item(src_dir, dest, [], tmp_path, verbose)
     assert (dest / "a.txt").exists()
 
 
@@ -73,7 +77,8 @@ def test_run_build_creates_output_dir_and_copies(
 
     build_cfg: BuildConfig = {"include": ["src"], "exclude": [], "out": "dist"}
 
-    pocket_build_env.run_build(build_cfg, tmp_path, None)
+    verbose = False
+    pocket_build_env.run_build(build_cfg, tmp_path, None, verbose)
 
     dist = tmp_path / "dist"
     assert (dist / "src" / "foo.txt").exists()
@@ -89,6 +94,7 @@ def test_run_build_handles_missing_match(
 ) -> None:
     """Ensure run_build gracefully handles missing sources."""
     cfg: BuildConfig = {"include": ["nonexistent"], "out": "dist"}
-    pocket_build_env.run_build(cfg, tmp_path, None)
+    verbose = True
+    pocket_build_env.run_build(cfg, tmp_path, None, verbose)
     captured = capsys.readouterr().out
     assert "⚠️" in captured

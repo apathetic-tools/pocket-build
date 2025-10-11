@@ -142,6 +142,7 @@ final_script = (
 
 OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
 OUT_FILE.write_text(final_script, encoding="utf-8")
+OUT_FILE.touch()
 
 print(
     f"✅ Built {OUT_FILE.relative_to(ROOT)} ({len(parts)} modules) — "

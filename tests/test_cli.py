@@ -96,3 +96,56 @@ def test_quiet_flag(
     # should not contain normal messages
     assert "Build completed" not in out
     assert "All builds complete" not in out
+
+
+def test_verbose_flag(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    pocket_build_env: PocketBuildLike,
+) -> None:
+    """Should print detailed file-level logs when --verbose is used."""
+    # create a tiny input directory with a file to copy
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "foo.txt").write_text("hello")
+
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(
+        json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]})
+    )
+    monkeypatch.chdir(tmp_path)
+
+    code = pocket_build_env.main(["--verbose"])
+    captured = capsys.readouterr()
+    out = captured.out + captured.err
+
+    assert code == 0
+    # Verbose mode should show per-file details
+    assert "📄" in out or "🚫" in out
+    # It should still include summary
+    assert "Build completed" in out
+    assert "All builds complete" in out
+
+
+def test_verbose_and_quiet_mutually_exclusive(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    pocket_build_env: PocketBuildLike,
+) -> None:
+    """Should fail when both --verbose and --quiet are provided."""
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
+    monkeypatch.chdir(tmp_path)
+
+    # argparse should exit with SystemExit(2)
+    with pytest.raises(SystemExit) as e:
+        pocket_build_env.main(["--quiet", "--verbose"])
+
+    assert e.value.code == 2  # argparse error exit code
+
+    captured = capsys.readouterr()
+    combined = captured.out + captured.err
+    assert "not allowed with argument" in combined or "mutually exclusive" in combined
+    assert "--quiet" in combined and "--verbose" in combined
