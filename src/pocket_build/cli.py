@@ -2,6 +2,9 @@
 import argparse
 import contextlib
 import io
+import os
+import re
+import subprocess
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -52,8 +55,6 @@ def get_metadata() -> tuple[str, str]:
 
     pyproject = root / "pyproject.toml"
     if pyproject.exists():
-        import re
-
         text = pyproject.read_text()
         match = re.search(r'(?m)^\s*version\s*=\s*["\']([^"\']+)["\']', text)
         if match:
@@ -61,8 +62,11 @@ def get_metadata() -> tuple[str, str]:
 
     # Try git for commit
     try:
-        import subprocess
-
+        print(
+            f"[DEBUG] ROOT={root},"
+            f" .git exists? {(root / '.git').exists()},"
+            f" CI={os.getenv('CI')}"
+        )
         result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
             cwd=root,

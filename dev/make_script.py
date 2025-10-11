@@ -54,6 +54,11 @@ def extract_commit() -> str:
     if not (os.getenv("CI") or os.getenv("GIT_TAG") or os.getenv("GITHUB_REF")):
         return "unknown (local build)"
     try:
+        print(
+            f"[DEBUG] ROOT={ROOT},"
+            f" .git exists? {(ROOT / '.git').exists()},"
+            f" CI={os.getenv('CI')}"
+        )
         result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
             cwd=ROOT,
