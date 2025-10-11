@@ -62,8 +62,13 @@ def extract_commit() -> str:
             check=True,
         )
         return result.stdout.strip()
-    except Exception:
-        return "unknown"
+
+    except subprocess.CalledProcessError as e:
+        print(f"[warn] git rev-parse failed: {e.stderr.strip()}")
+    except FileNotFoundError:
+        print("[warn] git not available in environment")
+
+    return "unknown"
 
 
 def split_imports(text: str) -> tuple[list[str], str]:
