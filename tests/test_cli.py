@@ -267,3 +267,70 @@ def test_config_out_relative_to_config_file(
     assert (dist_dir / "src" / "file.txt").exists()
     # Ensure it didn't build relative to the CWD
     assert not (cwd / "dist").exists()
+
+
+def test_include_flag_overrides_config(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    pocket_build_env: PocketBuildLike,
+) -> None:
+    """--include should override config include patterns."""
+    # Prepare files
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "foo.txt").write_text("ok")
+
+    other_dir = tmp_path / "other"
+    other_dir.mkdir()
+    (other_dir / "bar.txt").write_text("nope")
+
+    # Config originally points to wrong folder
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(
+        json.dumps(
+            {"builds": [{"include": ["other/**"], "exclude": [], "out": "dist"}]}
+        )
+    )
+
+    monkeypatch.chdir(tmp_path)
+    # Override include at CLI level
+    code = pocket_build_env.main(["--include", "src/**"])
+    out = capsys.readouterr().out
+
+    assert code == 0
+    dist_dir = tmp_path / "dist"
+    # Should copy src contents, not 'other'
+    assert (dist_dir / "src" / "foo.txt").exists()
+    assert not (dist_dir / "other").exists()
+    assert "Build completed" in out
+
+
+def test_exclude_flag_overrides_config(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    pocket_build_env: PocketBuildLike,
+) -> None:
+    """--exclude should override config exclude patterns."""
+    # Create input directory with two files
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "keep.txt").write_text("keep me")
+    (src_dir / "ignore.tmp").write_text("ignore me")
+
+    # Config has no exclude rules
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(json.dumps({"builds": [{"include": ["src/**"], "out": "dist"}]}))
+
+    monkeypatch.chdir(tmp_path)
+    # Pass exclude override on CLI
+    code = pocket_build_env.main(["--exclude", "*.tmp"])
+    out = capsys.readouterr().out
+
+    assert code == 0
+    dist_dir = tmp_path / "dist"
+    # The .tmp file should be excluded now
+    assert (dist_dir / "src" / "keep.txt").exists()
+    assert not (dist_dir / "src" / "ignore.tmp").exists()
+    assert "Build completed" in out

@@ -77,6 +77,16 @@ def get_metadata() -> tuple[str, str]:
 
 def main(argv: Optional[List[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="pocket-build")
+    parser.add_argument(
+        "--include",
+        nargs="+",
+        help="Override include patterns (space-separated).",
+    )
+    parser.add_argument(
+        "--exclude",
+        nargs="+",
+        help="Override exclude patterns (space-separated).",
+    )
     parser.add_argument("-o", "--out", help="Override output directory")
     parser.add_argument(
         # -v already used by verbose
@@ -142,6 +152,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     # --- Load configuration (shared) ---
     raw_config: Dict[str, Any] = load_jsonc(config_path)
     builds = parse_builds(raw_config)
+
+    # --- Apply include/exclude overrides ---
+    for b in builds:
+        if args.include:
+            b["include"] = args.include
+        if args.exclude:
+            b["exclude"] = args.exclude
 
     # --- Quiet mode: temporarily suppress stdout ---
     if args.quiet:

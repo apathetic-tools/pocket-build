@@ -5,7 +5,6 @@ Planned command-line flags for future releases:
 
 - `--self-update` — update pocket-build itself  
 - `--no-update-check` — skip automatic update check  
-- `--include` / `--exclude` — override config include/exclude patterns
 
 ## ⚙️ Config File Enhancements
 
