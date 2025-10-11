@@ -7,6 +7,7 @@ and matches the declared version from pyproject.toml.
 
 from __future__ import annotations
 
+import os
 import re
 import subprocess
 import tempfile
@@ -51,7 +52,14 @@ def test_bundled_script_metadata_and_execution() -> None:
 
     # --- Version and commit format checks ---
     version_match = re.search(r"^# Version:\s*([\w.\-]+)", text, re.MULTILINE)
-    commit_match = re.search(r"^# Commit:\s*([0-9a-f]{4,})", text, re.MULTILINE)
+
+    if os.getenv("CI") or os.getenv("GIT_TAG") or os.getenv("GITHUB_REF"):
+        commit_match = re.search(r"^# Commit:\s*([0-9a-f]{4,})", text, re.MULTILINE)
+    else:
+        commit_match = re.search(
+            r"^# Commit:\s*unknown \(local build\)", text, re.MULTILINE
+        )
+
     assert version_match, "Missing version stamp"
     assert commit_match, "Missing commit stamp"
 

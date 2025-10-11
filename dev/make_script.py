@@ -9,6 +9,7 @@ All internal and relative imports are stripped, and all remaining imports are
 collected, deduplicated, and placed neatly at the top.
 """
 
+import argparse
 import os
 import re
 import subprocess
@@ -19,7 +20,7 @@ from pathlib import Path
 # ------------------------------------------------------------
 ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = ROOT / "src" / "pocket_build"
-OUT_FILE = ROOT / "bin" / "pocket-build.py"
+DEFAULT_OUT_FILE = ROOT / "bin" / "pocket-build.py"
 PYPROJECT = ROOT / "pyproject.toml"
 
 ORDER = [
@@ -72,7 +73,7 @@ def split_imports(text: str) -> tuple[list[str], str]:
     for line in text.splitlines():
         stripped = line.lstrip()
         if re.match(r"^(?:import|from)\s+\S+", stripped):
-            imports.append(stripped)  # ✅ strip indentation
+            imports.append(stripped)
         else:
             body_lines.append(line)
     return imports, "\n".join(body_lines)
@@ -84,7 +85,6 @@ def strip_internal_imports(lines: list[str]) -> list[str]:
     for line in lines:
         if re.match(r"^\s*(?:from|import)\s+pocket_build(\.|$)", line):
             continue
-        # relative import (e.g. from .types import X)
         if re.match(r"^\s*from\s+\.", line):
             continue
         filtered.append(line)
@@ -101,71 +101,90 @@ def strip_redundant_blocks(text: str) -> str:
 # ------------------------------------------------------------
 # Build process
 # ------------------------------------------------------------
-version = extract_version()
-commit = extract_commit()
+def build_single_file(out_path: Path) -> None:
+    version = extract_version()
+    commit = extract_commit()
 
-all_imports: set[str] = set()
-parts: list[str] = []
+    all_imports: set[str] = set()
+    parts: list[str] = []
 
-for filename in ORDER:
-    path = SRC_DIR / filename
-    if not path.exists():
-        print(f"⚠️  Skipping missing module: {filename}")
-        continue
+    for filename in ORDER:
+        path = SRC_DIR / filename
+        if not path.exists():
+            print(f"⚠️  Skipping missing module: {filename}")
+            continue
 
-    text = path.read_text(encoding="utf-8")
-    text = strip_redundant_blocks(text)
+        text = path.read_text(encoding="utf-8")
+        text = strip_redundant_blocks(text)
 
-    imports, body = split_imports(text)
-    imports = strip_internal_imports(imports)
-    all_imports.update(imports)
+        imports, body = split_imports(text)
+        imports = strip_internal_imports(imports)
+        all_imports.update(imports)
 
-    header = f"# === {filename} ==="
-    parts.append(f"\n{header}\n{body.strip()}\n")
+        header = f"# === {filename} ==="
+        parts.append(f"\n{header}\n{body.strip()}\n")
 
-sorted_imports = "\n".join(sorted(all_imports))
+    sorted_imports = "\n".join(sorted(all_imports))
 
-final_script = (
-    "#!/usr/bin/env python3\n"
-    f"{LICENSE_HEADER}\n"
-    f"# Version: {version}\n"
-    f"# Commit: {commit}\n"
-    f"# Repo: https://github.com/apathetic-tools/pocket-build\n"
-    "\n"
-    '"""\n'
-    "Pocket Build — a tiny build system that fits in your pocket.\n"
-    "This single-file version is auto-generated from modular sources.\n"
-    f"Version: {version}\n"
-    f"Commit: {commit}\n"
-    '"""\n\n'
-    f"{sorted_imports}\n"
-    "\n" + "\n".join(parts) + "\n\nif __name__ == '__main__':\n"
-    "    import sys\n"
-    "    sys.exit(main(sys.argv[1:]))\n"
-)
-
-OUT_FILE.parent.mkdir(parents=True, exist_ok=True)
-OUT_FILE.write_text(final_script, encoding="utf-8")
-OUT_FILE.touch()
-
-print(
-    f"✅ Built {OUT_FILE.relative_to(ROOT)} ({len(parts)} modules) — "
-    f"version {version} ({commit})."
-)
-
-# ------------------------------------------------------------
-# 🧹 Auto-format via Poetry/Poe tasks (if available)
-# ------------------------------------------------------------
-try:
-    result = subprocess.run(
-        ["poetry", "run", "poe", "fix"],
-        cwd=ROOT,
-        capture_output=True,
-        text=True,
+    final_script = (
+        "#!/usr/bin/env python3\n"
+        f"{LICENSE_HEADER}\n"
+        f"# Version: {version}\n"
+        f"# Commit: {commit}\n"
+        f"# Repo: https://github.com/apathetic-tools/pocket-build\n"
+        "\n"
+        '"""\n'
+        "Pocket Build — a tiny build system that fits in your pocket.\n"
+        "This single-file version is auto-generated from modular sources.\n"
+        f"Version: {version}\n"
+        f"Commit: {commit}\n"
+        '"""\n\n'
+        f"{sorted_imports}\n"
+        "\n" + "\n".join(parts) + "\n\nif __name__ == '__main__':\n"
+        "    import sys\n"
+        "    sys.exit(main(sys.argv[1:]))\n"
     )
-    if result.returncode == 0:
-        print("✨ Auto-formatted using 'poe fix'.")
-    else:
-        print(f"⚠️  'poe fix' failed:\n{result.stderr.strip()}")
-except FileNotFoundError:
-    print("⚠️  Poetry or Poe not found — skipping auto-formatting.")
+
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_text(final_script, encoding="utf-8")
+    out_path.touch()
+
+    rel_path = out_path.relative_to(ROOT) if out_path.is_relative_to(ROOT) else out_path
+    print(f"✅ Built {rel_path} ({len(parts)} modules) — version {version} ({commit}).")
+
+    # 🧹 Auto-format if possible
+    try:
+        result = subprocess.run(
+            ["poetry", "run", "poe", "fix"],
+            cwd=ROOT,
+            capture_output=True,
+            text=True,
+        )
+        if result.returncode == 0:
+            print("✨ Auto-formatted using 'poe fix'.")
+        else:
+            print(f"⚠️  'poe fix' failed:\n{result.stderr.strip()}")
+    except FileNotFoundError:
+        print("⚠️  Poetry or Poe not found — skipping auto-formatting.")
+
+
+# ------------------------------------------------------------
+# CLI entry point
+# ------------------------------------------------------------
+def main() -> None:
+    parser = argparse.ArgumentParser(
+        description="Bundle Pocket Build into a single script."
+    )
+    parser.add_argument(
+        "--out",
+        type=str,
+        help="Custom output path for generated script (default: bin/pocket-build.py)",
+    )
+    args = parser.parse_args()
+
+    out_path = Path(args.out).expanduser().resolve() if args.out else DEFAULT_OUT_FILE
+    build_single_file(out_path)
+
+
+if __name__ == "__main__":
+    main()

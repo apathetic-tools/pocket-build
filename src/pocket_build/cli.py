@@ -36,23 +36,26 @@ def get_metadata() -> tuple[str, str]:
     - Source package → read pyproject.toml + git
     """
     script_path = Path(__file__)
-    # Bundled single-file case
-    if script_path.name == "pocket-build.py":
+
+    # --- Heuristic: bundled script lives outside `src/` ---
+    if "src" not in str(script_path):
         return get_metadata_from_header(script_path)
+
+    # --- Modular / source package case ---
 
     # Source package case
     version = "unknown"
     commit = "unknown"
 
     # Try pyproject.toml for version
-    root = Path(__file__).resolve().parent.parent.parent
+    root = Path(__file__).resolve().parents[2]
+
     pyproject = root / "pyproject.toml"
     if pyproject.exists():
         import re
 
-        match = re.search(
-            r'(?m)^\s*version\s*=\s*["\']([^"\']+)["\']', pyproject.read_text()
-        )
+        text = pyproject.read_text()
+        match = re.search(r'(?m)^\s*version\s*=\s*["\']([^"\']+)["\']', text)
         if match:
             version = match.group(1)
 

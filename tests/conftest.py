@@ -15,6 +15,7 @@ it is automatically rebuilt using `dev/make_script.py`.
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -125,7 +126,11 @@ def ensure_bundled_script_up_to_date(root: Path) -> Path:
 
     if needs_rebuild:
         print("⚙️  Rebuilding single-file bundle (make_script.py)...")
-        subprocess.run([sys.executable, str(builder)], check=True)
+        env = dict(os.environ)
+        for key in ("CI", "GIT_TAG", "GITHUB_REF"):
+            env.pop(key, None)
+
+        subprocess.run([sys.executable, str(builder)], check=True, env=env)
         # force mtime update in case contents identical
         bin_path.touch()
         assert bin_path.exists(), "❌ Failed to generate bundled script."

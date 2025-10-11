@@ -4,8 +4,11 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 from pathlib import Path
+from types import ModuleType
+from typing import cast
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
@@ -74,8 +77,19 @@ def test_version_flag(
 
     assert code == 0
     assert "Pocket Build" in out
-    assert re.search(r"\d+\.\d+\.\d+", out) or "unknown" in out
-    assert re.search(r"\([0-9a-f]{4,}\)", out) or "(unknown)" in out
+
+    assert re.search(r"\d+\.\d+\.\d+", out)
+
+    env_mod = cast(ModuleType, pocket_build_env)
+    if "pocket_build_single" in env_mod.__name__:
+        # Single-file build case
+        if os.getenv("CI") or os.getenv("GIT_TAG") or os.getenv("GITHUB_REF"):
+            assert re.search(r"\([0-9a-f]{4,}\)", out)
+        else:
+            assert "(unknown (local build))" in out
+    else:
+        # Modular source version — uses live Git
+        assert re.search(r"\([0-9a-f]{4,}\)", out)
 
 
 def test_quiet_flag(
@@ -195,3 +209,61 @@ def test_out_flag_overrides_config(
     assert (override_dir / "src" / "foo.txt").exists()
     # Optional: check output logs
     assert "override-dist" in out
+
+
+def test_out_flag_relative_to_cwd(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    pocket_build_env: PocketBuildLike,
+):
+    """--out should be relative to where the command is run (cwd)."""
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "src").mkdir()
+    (project / "src" / "file.txt").write_text("data")
+
+    config = project / ".pocket-build.json"
+    config.write_text(
+        json.dumps({"builds": [{"include": ["src/**"], "out": "ignored"}]})
+    )
+
+    cwd = tmp_path / "runner"
+    cwd.mkdir()
+
+    monkeypatch.chdir(cwd)
+    code = pocket_build_env.main(["--config", str(config), "--out", "output"])
+    assert code == 0
+
+    output_dir = cwd / "output"
+    assert (output_dir / "src" / "file.txt").exists()
+    # Ensure it didn't build near the config file
+    assert not (project / "output").exists()
+
+
+def test_config_out_relative_to_config_file(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    pocket_build_env: PocketBuildLike,
+):
+    """Out path in config should be relative to the config file itself."""
+    project = tmp_path / "project"
+    project.mkdir()
+    (project / "src").mkdir()
+    (project / "src" / "file.txt").write_text("data")
+
+    config = project / ".pocket-build.json"
+    config.write_text(json.dumps({"builds": [{"include": ["src/**"], "out": "dist"}]}))
+
+    cwd = tmp_path / "runner"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+
+    code = pocket_build_env.main(["--config", str(config)])
+    assert code == 0
+
+    dist_dir = project / "dist"
+    assert (dist_dir / "src" / "file.txt").exists()
+    # Ensure it didn't build relative to the CWD
+    assert not (cwd / "dist").exists()

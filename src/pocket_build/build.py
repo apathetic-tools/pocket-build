@@ -62,7 +62,10 @@ def run_build(
 ) -> None:
     includes = build_cfg.get("include", [])
     excludes = build_cfg.get("exclude", [])
-    out_dir: Path = config_dir / (out_override or build_cfg.get("out", "dist"))
+    if out_override:
+        out_dir = Path(out_override).expanduser().resolve()
+    else:
+        out_dir = config_dir / build_cfg.get("out", "dist")
 
     if out_dir.exists():
         shutil.rmtree(out_dir)
