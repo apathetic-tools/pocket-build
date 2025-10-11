@@ -3,7 +3,6 @@
 ## 🧰 CLI Parameters
 Planned command-line flags for future releases:
 
-- `--quiet` — suppress non-error output  
 - `--verbose` — show detailed logs  
 - `--out` — override output directory  
 - `--config` — specify custom config path  

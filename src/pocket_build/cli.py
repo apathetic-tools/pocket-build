@@ -1,5 +1,7 @@
 # src/pocket_build/cli.py
 import argparse
+import contextlib
+import io
 import sys
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -80,13 +82,21 @@ def main(argv: Optional[List[str]] = None) -> int:
         action="store_true",
         help="Show version information and exit",
     )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        action="store_true",
+        help="Suppress non-error output",
+    )
     args = parser.parse_args(argv)
 
+    # --- Version flag ---
     if args.version:
         version, commit = get_metadata()
         print(f"Pocket Build {version} ({commit})")
         return 0
 
+    # --- Python version check ---
     if sys.version_info < (3, 10):
         sys.exit("❌ pocket-build requires Python 3.10 or newer.")
 
@@ -99,17 +109,31 @@ def main(argv: Optional[List[str]] = None) -> int:
             config_path = p
             break
 
+    # --- Handle missing config ---
     if not config_path:
         print(f"{YELLOW}⚠️  No build config found (.pocket-build.json).{RESET}")
         return 1
 
     config_dir = config_path.parent.resolve()
+
+    # --- Load configuration (shared) ---
+    raw_config: Dict[str, Any] = load_jsonc(config_path)
+    builds = parse_builds(raw_config)
+
+    # --- Quiet mode: temporarily suppress stdout ---
+    if args.quiet:
+        buffer = io.StringIO()
+        # everything printed inside this block is discarded
+        with contextlib.redirect_stdout(buffer):
+            for i, build_cfg in enumerate(builds, 1):
+                run_build(build_cfg, config_dir, args.out)
+        # still return 0 to indicate success
+        return 0
+
+    # --- Normal mode ---
     print(f"🔧 Using config: {config_path.name}")
     print(f"📁 Config base: {config_dir}")
     print(f"📂 Invoked from: {cwd}\n")
-
-    raw_config: Dict[str, Any] = load_jsonc(config_path)
-    builds = parse_builds(raw_config)
     print(f"🔧 Running {len(builds)} build(s)\n")
 
     for i, build_cfg in enumerate(builds, 1):

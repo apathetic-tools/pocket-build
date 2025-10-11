@@ -76,3 +76,23 @@ def test_version_flag(
     assert "Pocket Build" in out
     assert re.search(r"\d+\.\d+\.\d+", out) or "unknown" in out
     assert re.search(r"\([0-9a-f]{4,}\)", out) or "(unknown)" in out
+
+
+def test_quiet_flag(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    pocket_build_env: PocketBuildLike,
+) -> None:
+    """Should suppress most output but still succeed."""
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
+    monkeypatch.chdir(tmp_path)
+
+    code = pocket_build_env.main(["--quiet"])
+    out = capsys.readouterr().out
+
+    assert code == 0
+    # should not contain normal messages
+    assert "Build completed" not in out
+    assert "All builds complete" not in out
