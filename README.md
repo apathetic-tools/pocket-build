@@ -1,7 +1,9 @@
 # pocket-build 🧰 
 
+
 [![CI](https://github.com/apathetic-tools/pocket-build/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/goldilocks/pocket-build/actions/workflows/ci.yml)
-[![License: MIT-NOAI](https://img.shields.io/badge/License-MIT--NOAI-blueviolet.svg?style=flat-square)](LICENSE)
+[![License: MIT-NOAI](https://img.shields.io/badge/License-MIT--NOAI-blueviolet.svg)](LICENSE)
+[![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white)](https://discord.gg/PW6GahZ7)
 
 📘 **[Roadmap](./ROADMAP.md)** · 📝 **[Release Notes](https://github.com/apathetic-tools/pocket-build/releases)**
 

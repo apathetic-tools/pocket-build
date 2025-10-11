@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional
 
 from .build import run_build
 from .config import parse_builds
-from .utils import RESET, YELLOW, load_jsonc
+from .utils import YELLOW, colorize, load_jsonc
 
 
 def get_metadata_from_header(script_path: Path) -> tuple[str, str]:
@@ -123,7 +123,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.config:
         config_path = Path(args.config).expanduser().resolve()
         if not config_path.exists():
-            print(f"{YELLOW}⚠️  Config file not found: {config_path}{RESET}")
+            print(colorize(f"⚠️  Config file not found: {config_path}", YELLOW))
             return 1
     else:
         for candidate in [".pocket-build.json"]:
@@ -134,7 +134,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # --- Handle missing config ---
     if not config_path:
-        print(f"{YELLOW}⚠️  No build config found (.pocket-build.json).{RESET}")
+        print(colorize("⚠️  No build config found (.pocket-build.json).", YELLOW))
         return 1
 
     config_dir = config_path.parent.resolve()

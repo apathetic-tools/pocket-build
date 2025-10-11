@@ -8,6 +8,8 @@ from typing import Any, Dict
 
 from conftest import PocketBuildLike
 
+GREEN = "\x1b[32m"
+
 
 def test_load_jsonc_strips_comments_and_trailing_commas(
     tmp_path: Path,

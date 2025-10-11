@@ -47,6 +47,8 @@ class PocketBuildLike(Protocol):
     """Subset of functions shared by both implementations."""
 
     # --- utils ---
+    RESET: str
+
     def load_jsonc(self, path: Path) -> Dict[str, Any]: ...
     def is_excluded(
         self,
@@ -54,6 +56,8 @@ class PocketBuildLike(Protocol):
         exclude_patterns: List[str],
         root: Path,
     ) -> bool: ...
+    def should_use_color(self) -> bool: ...
+    def colorize(self, text: str, color: str, use_color: bool | None = None) -> str: ...
 
     # --- config ---
     def parse_builds(self, raw_config: Dict[str, Any]) -> List[BuildConfig]: ...

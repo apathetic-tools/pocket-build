@@ -9,16 +9,24 @@ from .build import copy_directory, copy_file, copy_item, run_build
 from .cli import main
 from .config import parse_builds
 from .types import BuildConfig
-from .utils import is_excluded, load_jsonc
+from .utils import RESET, colorize, is_excluded, load_jsonc, should_use_color
 
 __all__ = [
-    "copy_file",
+    # --- build ---
     "copy_directory",
+    "copy_file",
     "copy_item",
     "run_build",
+    # --- cli ---
     "main",
+    # --- config ---
     "parse_builds",
+    # --- types ---
+    "BuildConfig",
+    # --- utils ---
+    "RESET",
+    "colorize",
     "is_excluded",
     "load_jsonc",
-    "BuildConfig",
+    "should_use_color",
 ]

@@ -4,14 +4,14 @@ from pathlib import Path
 from typing import List, Optional
 
 from .types import BuildConfig, IncludeEntry
-from .utils import GREEN, RESET, YELLOW, is_excluded
+from .utils import GREEN, YELLOW, colorize, is_excluded
 
 
 def copy_file(src: Path, dest: Path, root: Path, verbose: bool = False) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dest)
     if verbose:
-        print(f"📄 {src.relative_to(root)} → {dest.relative_to(root)}")
+        print(colorize(f"📄 {src.relative_to(root)} → {dest.relative_to(root)}", GREEN))
 
 
 def copy_directory(
@@ -34,7 +34,7 @@ def copy_directory(
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(item, target)
             if verbose:
-                print(f"{GREEN}📄{RESET} {item.relative_to(root)}")
+                print(colorize(f"📄 {item.relative_to(root)}", GREEN))
 
 
 def copy_item(
@@ -79,8 +79,10 @@ def run_build(
         if not src_pattern or src_pattern.strip() in {".", ""}:
             if verbose:
                 print(
-                    f"{YELLOW}⚠️  Skipping invalid include pattern: "
-                    f"{src_pattern!r}{RESET}"
+                    colorize(
+                        (f"⚠️  Skipping invalid include pattern: {src_pattern!r}"),
+                        YELLOW,
+                    )
                 )
             continue
 
@@ -96,13 +98,13 @@ def run_build(
 
         if not matches:
             if verbose:
-                print(f"{YELLOW}⚠️  No matches for {src_pattern}{RESET}")
+                print(colorize(f"⚠️  No matches for {src_pattern}", YELLOW))
             continue
 
         for src in matches:
             if not src.exists():
                 if verbose:
-                    print(f"{YELLOW}⚠️  Missing: {src}{RESET}")
+                    print(colorize(f"⚠️  Missing: {src}", YELLOW))
                 continue
 
             dest: Path = out_dir / (dest_name or src.name)
