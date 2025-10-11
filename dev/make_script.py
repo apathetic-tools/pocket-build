@@ -13,6 +13,7 @@ import argparse
 import os
 import re
 import subprocess
+import sys
 from pathlib import Path
 
 # ------------------------------------------------------------
@@ -53,7 +54,8 @@ def extract_commit() -> str:
     print(
         f"[DEBUG extract_commit] make_script: ROOT={ROOT},"
         f" .git exists? {(ROOT / '.git').exists()},"
-        f" CI={os.getenv('CI')}"
+        f" CI={os.getenv('CI')}",
+        file=sys.stderr,
     )
 
     # Only embed commit hash if in CI or release tag context

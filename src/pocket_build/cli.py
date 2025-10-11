@@ -69,7 +69,8 @@ def get_metadata() -> tuple[str, str]:
         print(
             f"[DEBUG get_metadata] ROOT={root},"
             f" .git exists? {(root / '.git').exists()},"
-            f" CI={os.getenv('CI')}"
+            f" CI={os.getenv('CI')}",
+            file=sys.stderr,
         )
         result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
