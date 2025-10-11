@@ -16,6 +16,7 @@ Planned command-line flags for future releases:
 - [ ] Add key to run quiet directly in config
 - [ ] Add key to run verbose directly in config
 - [ ] Provide a JSON Schema for validation and autocomplete  
+- [ ] make sure config allows `[]` (inlcudes), `{}` (single build), `{builds:[]}` (multiple builds)
 
 ## 🧩 Joiner Scripts (Build System)
 Exploring bundling options for generating the single-file release:
