@@ -50,15 +50,16 @@ def extract_version() -> str:
 
 
 def extract_commit() -> str:
+    print(
+        f"[DEBUG extract_commit] make_script: ROOT={ROOT},"
+        f" .git exists? {(ROOT / '.git').exists()},"
+        f" CI={os.getenv('CI')}"
+    )
+
     # Only embed commit hash if in CI or release tag context
     if not (os.getenv("CI") or os.getenv("GIT_TAG") or os.getenv("GITHUB_REF")):
         return "unknown (local build)"
     try:
-        print(
-            f"[DEBUG] ROOT={ROOT},"
-            f" .git exists? {(ROOT / '.git').exists()},"
-            f" CI={os.getenv('CI')}"
-        )
         result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
             cwd=ROOT,

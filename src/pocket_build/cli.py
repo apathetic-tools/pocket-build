@@ -42,6 +42,10 @@ def get_metadata() -> tuple[str, str]:
 
     # --- Heuristic: bundled script lives outside `src/` ---
     if "src" not in str(script_path):
+        print(
+            f"[DEBUG get_metadata] Detected bundled script: {script_path}",
+            file=sys.stderr,
+        )
         return get_metadata_from_header(script_path)
 
     # --- Modular / source package case ---
@@ -63,7 +67,7 @@ def get_metadata() -> tuple[str, str]:
     # Try git for commit
     try:
         print(
-            f"[DEBUG] ROOT={root},"
+            f"[DEBUG get_metadata] ROOT={root},"
             f" .git exists? {(root / '.git').exists()},"
             f" CI={os.getenv('CI')}"
         )
