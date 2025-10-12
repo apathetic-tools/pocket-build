@@ -19,17 +19,19 @@ dependencies = [
 "check:fix" = ["fix", "typecheck", "test"]
 
 # 🔍 Linting and static checks
-check = ["lint", "typecheck", "test"]
-lint = ["lint:isort", "lint:ruff"]
+check = ["lint", "typecheck",  "test"]
+lint = ["lint:isort", "lint:ruff", "lint:compile"]
 "lint:ruff" = "ruff check ."
 "lint:isort" = ["lint:isort:reg", "lint:isort:script"]
 "lint:isort:reg" = "isort . --check-only --color"
 "lint:isort:script" = {shell = "if [ -f bin/pocket-build.py ]; then isort bin/pocket-build.py --check-only --color; fi" }
+"lint:compile" = ["lint:compile:script"]
+"lint:compile:script" = { shell = "if [ -f bin/pocket-build.py ]; then python -m py_compile bin/pocket-build.py; fi" }
 typecheck = "mypy src"
 test = "pytest -q --color=yes"
 
 # 🧹 Automated fixing / formatting
-fix = ["fix:isort", "fix:ruff", "fix:format"]
+fix = ["fix:isort", "fix:ruff", "lint:compile", "fix:format"]
 "fix:isort" = ["fix:isort:reg", "fix:isort:script"]
 "fix:isort:reg" = "isort . --color"
 "fix:isort:script" = {shell = "if [ -f bin/pocket-build.py ]; then isort bin/pocket-build.py --color; fi" }

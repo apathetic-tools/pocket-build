@@ -3,12 +3,14 @@
 ## 🧰 CLI Parameters
 Planned command-line flags for future releases:
 
+- `--add-include` and `--add-exclude`
+- `--respect-gitignore` and `--no-gitignore`
 - `--self-update` — update pocket-build itself  
-- `--no-update-check` — skip automatic update check  
+- `--no-update-check` — skip automatic update check 
 
 ## ⚙️ Config File Enhancements
 
-- [ ] Allow config to be a **`.py`** file, not just JSON  
+- [ ] Ensure all CLI parameters are covered in config
 - [ ] Add key to disable update checks directly in config
 - [ ] Add key to disable colors directly in config
 - [ ] Add key to run quiet directly in config
@@ -19,10 +21,8 @@ Planned command-line flags for future releases:
 ## 🧩 Joiner Scripts (Build System)
 Exploring bundling options for generating the single-file release:
 
-- [ ] **tiny-python-bundler**  
-- [ ] **pycat**  
-- [ ] **unimport**
-- [ ] Home grown script
+- [ ] `pinliner` single file bundler
+- [ ] zip file: zipapp / shiv / pyinstaller --onefile
 
 ## 🧪 Tests
 - [ ] Flesh out tests for additional functionality after it has been added
@@ -38,3 +38,11 @@ Potential quality-of-life features:
 - [ ] Add SHA-256 hashing to skip unchanged files  
 - [ ] Implement `--watch` mode for live rebuilds  
 - [ ] publish to PyPI, NPM, PACKAGIST, others?
+
+---
+
+> ✨ *ChatGPT was used to help draft language, formatting, and code — plus we just love em dashes.*
+
+<p align="center">
+  <sub>😐 <a href="https://apathetic-tools.github.io/">Apathetic Tools</a> © <a href="./LICENSE">MIT-NOAI</a></sub>
+</p>
