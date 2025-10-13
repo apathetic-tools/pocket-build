@@ -126,12 +126,68 @@ Each tier serves a distinct user persona while sharing the same tested, modular 
 - **PyInstaller**, **Shiv**, and **Pex** remain viable for downstream consumers who need binary-like distribution, but won’t be part of the core project.  
 - This approach maintains transparency, reproducibility, and the “fits-in-your-pocket” philosophy while scaling to professional workflows.
 
+
 <br/><br/>
 
 ---
 ---
 
 <br/><br/>
+
+
+# Target Python Version 3.10 — 2025-10-13
+
+## Context
+
+Pocket-build is a lightweight build system designed to remain compatible with common developer environments and continuous integration (CI) runners.  
+We needed to decide which Python versions to officially support to balance modern features, runtime stability, and wide usability.
+
+## Options Considered
+
+- **Support 3.8+**  
+  - ✅ Works on very old systems and some embedded CI containers.  
+  - ❌ Lacks modern typing (`|` unions, `match`, `typing.Self`) used throughout the codebase.  
+  - ❌ Adds maintenance overhead for obsolete Python releases.
+
+- **Support 3.10+**  
+  - ✅ Matches Ubuntu 22.04 LTS (the baseline CI OS).  
+  - ✅ Includes structural pattern matching, modern typing syntax, and context manager improvements.  
+  - ⚠️ Slightly narrower audience, but still covers all current LTS platforms.
+
+- **Support 3.12+**  
+  - ✅ Always the latest standard library and type system.  
+  - ❌ Too restrictive; would exclude many production and CI environments.
+
+## Platforms
+
+| Platform | Default Python | Notes |
+|-----------|----------------|-------|
+| Ubuntu 22.04 LTS | 3.10 | Minimum supported baseline. |
+| Ubuntu 24.04 LTS | 3.12 | Current CI default. |
+| macOS (Homebrew / Python.org) | 3.12 | Must be user-installed. |
+| Windows (Microsoft Store) | 3.12 | Microsoft’s LTS release. |
+| GitHub Actions `ubuntu-latest` | 3.10 → 3.12 | Both available during transition. |
+
+## Decision
+
+Pocket-build targets **Python 3.10 and newer**.  
+This ensures the codebase can use modern language features while staying compatible with Ubuntu 22.04 LTS (the lowest common denominator for CI).
+
+## Consequences
+
+- The project can confidently rely on post–3.10 typing features and standard library APIs.  
+- No need for compatibility shims for 3.8/3.9.  
+- CI runs on Python 3.10–3.12 to ensure forward compatibility.  
+- Users running legacy interpreters must upgrade to Python 3.10+.
+
+
+<br/><br/>
+
+---
+---
+
+<br/><br/>
+
 
 # Template
 

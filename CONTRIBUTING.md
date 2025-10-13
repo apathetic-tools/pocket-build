@@ -9,14 +9,7 @@ This guide explains how to set up your environment, run checks, and safely contr
 
 Pocket-build targets **Python 3.10+**.  
 That keeps compatibility with Ubuntu 22.04 (the baseline CI OS) while staying modern.
-
-| Platform | Default Python | Notes |
-|-----------|----------------|-------|
-| Ubuntu 22.04 LTS | 3.10 | Minimum supported baseline. |
-| Ubuntu 24.04 LTS | 3.12 | Current CI default. |
-| macOS (Homebrew / Python.org) | 3.12 | Must be user-installed. |
-| Windows (Microsoft Store) | 3.12 | Microsoft’s LTS release. |
-| GitHub Actions `ubuntu-latest` | 3.10 → 3.12 | Both available during transition. |
+See the [decision record](DECISIONS.md#2025-10-13-python-version.md) for background on this choice.
 
 > The build itself has **no runtime dependencies** — only dev tools use Poetry.
 
