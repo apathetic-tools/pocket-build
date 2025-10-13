@@ -6,7 +6,7 @@ This lets all tests transparently run against both:
 1. The modular package (`src/pocket_build`)
 2. The bundled single-file script (`bin/pocket-build.py`)
 
-Each test receives a `pocket_build_env` fixture that behaves like the module.
+Each test receives a `runtime_env` fixture that behaves like the module.
 
 If the bundled script is missing or older than the source files,
 it is automatically rebuilt using `dev/make_script.py`.
@@ -18,95 +18,11 @@ import importlib.util
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, Generator, List, Optional, Protocol
+from typing import Generator
 
 import pytest
 
-# Ensure the src/ folder is on sys.path (so "import pocket_build" works)
-ROOT = Path(__file__).resolve().parent.parent
-SRC_DIR = ROOT / "src"
-if SRC_DIR.exists():
-    sys.path.insert(0, str(SRC_DIR))
-
-# ruff: noqa: E402 — import after sys.path modification
-from pocket_build.types import BuildConfig
-
-# --- Prevent pytest from scanning build output folders ---
-# These directories can contain auto-generated code or duplicated tests.
-BAD_DIRS = ["dist", "tmp-dist", "bin"]
-
-for bad in BAD_DIRS:
-    bad_path = Path(bad).resolve()
-    sys.path = [p for p in sys.path if bad not in p]
-
-
-# ------------------------------------------------------------
-# 🧩 Protocol for type safety & editor autocompletion
-# ------------------------------------------------------------
-class PocketBuildLike(Protocol):
-    """Subset of functions shared by both implementations."""
-
-    # --- utils ---
-    RESET: str
-
-    def load_jsonc(self, path: Path) -> Dict[str, Any]: ...
-    def is_excluded(
-        self,
-        path: Path,
-        exclude_patterns: List[str],
-        root: Path,
-    ) -> bool: ...
-    def should_use_color(self) -> bool: ...
-    def colorize(self, text: str, color: str, use_color: bool | None = None) -> str: ...
-
-    # --- config ---
-    def parse_builds(self, raw_config: Dict[str, Any]) -> List[BuildConfig]: ...
-
-    # --- build ---
-    def copy_file(
-        self,
-        src: Path,
-        dest: Path,
-        root: Path,
-        verbose: bool = True,
-    ) -> None: ...
-    def copy_directory(
-        self,
-        src: Path,
-        dest: Path,
-        exclude_patterns: List[str],
-        root: Path,
-        verbose: bool = True,
-    ) -> None: ...
-    def copy_item(
-        self,
-        src: Path,
-        dest: Path,
-        exclude_patterns: List[str],
-        root: Path,
-        verbose: bool = True,
-    ) -> None: ...
-    def run_build(
-        self,
-        build_cfg: BuildConfig,  # ✅ use the proper TypedDict
-        config_dir: Path,
-        out_override: Optional[str],
-        verbose: bool = True,
-    ) -> None: ...
-
-    # --- CLI ---
-    def main(self, argv: Optional[List[str]] = None) -> int: ...
-
-
-def pytest_ignore_collect(collection_path: Path, config):  # type: ignore[override]
-    """
-    Hook called by pytest for each discovered path.
-    Returning True tells pytest to skip collecting tests from it.
-    """
-    for bad in BAD_DIRS:
-        if bad in str(collection_path):
-            return True
-    return False
+from tests.fixtures.runtime_protocol import RuntimeLike
 
 
 # ------------------------------------------------------------
@@ -141,9 +57,9 @@ def ensure_bundled_script_up_to_date(root: Path) -> Path:
 # 🔁 Fixture: load either the package or the bundled script
 # ------------------------------------------------------------
 @pytest.fixture(scope="session", params=["module", "singlefile"])
-def pocket_build_env(
+def runtime_env(
     request: pytest.FixtureRequest,
-) -> Generator[PocketBuildLike, None, None]:
+) -> Generator[RuntimeLike, None, None]:
     """Yield a loaded pocket_build environment (module or bundled single-file)."""
     root = Path(__file__).resolve().parent.parent
 

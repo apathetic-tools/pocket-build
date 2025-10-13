@@ -8,7 +8,8 @@ import types
 from typing import Generator
 
 import pytest
-from conftest import PocketBuildLike
+
+from tests.conftest import RuntimeLike
 
 GREEN = "\x1b[32m"
 
@@ -22,43 +23,43 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
 
 
 def test_should_use_color_no_color(
-    pocket_build_env: PocketBuildLike,
+    runtime_env: RuntimeLike,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Disables color if NO_COLOR is present in environment."""
     monkeypatch.setenv("NO_COLOR", "1")
-    assert pocket_build_env.should_use_color() is False
+    assert runtime_env.should_use_color() is False
 
 
 @pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes", "Yes"])
 def test_should_use_color_force_color(
-    pocket_build_env: PocketBuildLike,
+    runtime_env: RuntimeLike,
     monkeypatch: pytest.MonkeyPatch,
     value: str,
 ) -> None:
     """Enables color when FORCE_COLOR is set to truthy value."""
     monkeypatch.setenv("FORCE_COLOR", value)
-    assert pocket_build_env.should_use_color() is True
+    assert runtime_env.should_use_color() is True
 
 
 def test_should_use_color_tty(
-    pocket_build_env: PocketBuildLike,
+    runtime_env: RuntimeLike,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Falls back to TTY detection when no env vars set."""
     fake_stdout = types.SimpleNamespace(isatty=lambda: True)
     monkeypatch.setattr(sys, "stdout", fake_stdout)
-    assert pocket_build_env.should_use_color() is True
+    assert runtime_env.should_use_color() is True
 
     fake_stdout = types.SimpleNamespace(isatty=lambda: False)
     monkeypatch.setattr(sys, "stdout", fake_stdout)
-    assert pocket_build_env.should_use_color() is False
+    assert runtime_env.should_use_color() is False
 
 
-def test_colorize_explicit_true_false(pocket_build_env: PocketBuildLike) -> None:
+def test_colorize_explicit_true_false(runtime_env: RuntimeLike) -> None:
     """Explicit use_color argument forces color on or off."""
-    colorize = pocket_build_env.colorize
-    RESET = pocket_build_env.RESET
+    colorize = runtime_env.colorize
+    RESET = runtime_env.RESET
     test_string = "test string"
     assert (
         colorize(test_string, GREEN, use_color=True) == f"{GREEN}{test_string}{RESET}"
@@ -67,17 +68,17 @@ def test_colorize_explicit_true_false(pocket_build_env: PocketBuildLike) -> None
 
 
 def test_colorize_caches_system_default(
-    pocket_build_env: PocketBuildLike,
+    runtime_env: RuntimeLike,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Caches system color decision on first call."""
-    colorize = pocket_build_env.colorize
+    colorize = runtime_env.colorize
     # Reset cache for deterministic behavior
     if hasattr(colorize, "_system_default"):
         delattr(colorize, "_system_default")
 
     # Determine correct patch target
-    if getattr(pocket_build_env, "__name__", "") == "pocket_build_single":
+    if getattr(runtime_env, "__name__", "") == "pocket_build_single":
         target = "pocket_build_single.should_use_color"
     else:
         target = "pocket_build.utils.should_use_color"
@@ -91,14 +92,14 @@ def test_colorize_caches_system_default(
 
 
 def test_colorize_respects_reset(
-    pocket_build_env: PocketBuildLike,
+    runtime_env: RuntimeLike,
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Recomputes cache if manually cleared."""
-    colorize = pocket_build_env.colorize
+    colorize = runtime_env.colorize
 
     # Determine correct patch target
-    if getattr(pocket_build_env, "__name__", "") == "pocket_build_single":
+    if getattr(runtime_env, "__name__", "") == "pocket_build_single":
         target = "pocket_build_single.should_use_color"
     else:
         target = "pocket_build.utils.should_use_color"

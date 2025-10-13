@@ -4,15 +4,15 @@
 from pathlib import Path
 
 import pytest
-from conftest import PocketBuildLike
 
-from pocket_build.types import BuildConfig
+from pocket_build.types import BuildConfig, MetaBuildConfig
+from tests.conftest import RuntimeLike
 
 
 def test_copy_file_creates_and_copies(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
-    pocket_build_env: PocketBuildLike,
+    runtime_env: RuntimeLike,
 ) -> None:
     """Ensure copy_file creates directories and copies file content."""
     src = tmp_path / "a.txt"
@@ -20,7 +20,7 @@ def test_copy_file_creates_and_copies(
     dest = tmp_path / "out" / "a.txt"
     verbose = True
 
-    pocket_build_env.copy_file(src, dest, tmp_path, verbose)
+    runtime_env.copy_file(src, dest, tmp_path, verbose)
 
     out = dest.read_text()
     assert out == "hi"
@@ -31,7 +31,7 @@ def test_copy_file_creates_and_copies(
 def test_copy_directory_respects_excludes(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
-    pocket_build_env: PocketBuildLike,
+    runtime_env: RuntimeLike,
 ) -> None:
     """Ensure copy_directory skips excluded files."""
     src_dir = tmp_path / "src"
@@ -41,7 +41,7 @@ def test_copy_directory_respects_excludes(
 
     dest = tmp_path / "out"
     verbose = True
-    pocket_build_env.copy_directory(src_dir, dest, ["**/skip.txt"], tmp_path, verbose)
+    runtime_env.copy_directory(src_dir, dest, ["**/skip.txt"], tmp_path, verbose)
 
     assert (dest / "keep.txt").exists()
     assert not (dest / "skip.txt").exists()
@@ -52,7 +52,7 @@ def test_copy_directory_respects_excludes(
 
 def test_copy_item_handles_file_and_dir(
     tmp_path: Path,
-    pocket_build_env: PocketBuildLike,
+    runtime_env: RuntimeLike,
 ) -> None:
     """Ensure copy_item handles directories and individual files."""
     src_dir = tmp_path / "dir"
@@ -61,26 +61,47 @@ def test_copy_item_handles_file_and_dir(
 
     dest = tmp_path / "out"
     verbose = False
-    pocket_build_env.copy_item(src_dir, dest, [], tmp_path, verbose)
+
+    meta: MetaBuildConfig = {
+        "include_base": str(tmp_path),
+        "exclude_base": str(tmp_path),
+        "out_base": str(tmp_path),
+        "origin": str(tmp_path),
+    }
+
+    runtime_env.copy_item(src_dir, dest, [], meta, verbose)
     assert (dest / "a.txt").exists()
 
 
 def test_run_build_creates_output_dir_and_copies(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
-    pocket_build_env: PocketBuildLike,
+    runtime_env: RuntimeLike,
 ) -> None:
     """Validate full build execution flow."""
-    src_dir = tmp_path / "src"
+    project_root = tmp_path
+    src_dir = project_root / "src"
     src_dir.mkdir()
     (src_dir / "foo.txt").write_text("foo")
 
-    build_cfg: BuildConfig = {"include": ["src"], "exclude": [], "out": "dist"}
+    # Create meta info similar to what resolve_build_config() would produce
+    meta: MetaBuildConfig = {
+        "include_base": str(project_root),
+        "exclude_base": str(project_root),
+        "out_base": str(project_root),
+        "origin": str(project_root),
+    }
 
+    build_cfg: BuildConfig = {
+        "include": [str(src_dir)],
+        "exclude": [],
+        "out": str(project_root / "dist"),
+        "__meta__": meta,
+    }
     verbose = False
-    pocket_build_env.run_build(build_cfg, tmp_path, None, verbose)
+    runtime_env.run_build(build_cfg, verbose)
 
-    dist = tmp_path / "dist"
+    dist = project_root / "dist"
     assert (dist / "src" / "foo.txt").exists()
 
     captured = capsys.readouterr().out
@@ -90,11 +111,26 @@ def test_run_build_creates_output_dir_and_copies(
 def test_run_build_handles_missing_match(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
-    pocket_build_env: PocketBuildLike,
+    runtime_env: RuntimeLike,
 ) -> None:
     """Ensure run_build gracefully handles missing sources."""
-    cfg: BuildConfig = {"include": ["nonexistent"], "out": "dist"}
+    project_root = tmp_path
+    meta: MetaBuildConfig = {
+        "include_base": str(project_root),
+        "exclude_base": str(project_root),
+        "out_base": str(project_root),
+        "origin": str(project_root),
+    }
+
+    nonexistent_path = project_root / "nonexistent"
+
+    cfg: BuildConfig = {
+        "include": [str(nonexistent_path)],
+        "exclude": [],
+        "out": str(project_root / "dist"),
+        "__meta__": meta,
+    }
     verbose = True
-    pocket_build_env.run_build(cfg, tmp_path, None, verbose)
+    runtime_env.run_build(cfg, verbose)
     captured = capsys.readouterr().out
     assert "⚠️" in captured

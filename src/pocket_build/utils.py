@@ -5,13 +5,37 @@ import re
 import sys
 from fnmatch import fnmatch
 from pathlib import Path
-from typing import Any, Dict, List, cast
+from typing import Any, Dict, List, TextIO, cast
 
 # Terminal colors (ANSI)
 GREEN = "\033[92m"
 YELLOW = "\033[93m"
 RED = "\033[91m"
 RESET = "\033[0m"
+
+DEBUG_MODE = os.environ.get("RUNTIME_DEBUG") == "1"
+
+
+def debug_print(
+    *args: object,
+    sep: str = " ",
+    end: str = "\n",
+    file: TextIO | None = None,
+    flush: bool = True,
+) -> None:
+    """Emit debug output even under pytest or redirected stderr.
+
+    Always writes to the original stderr, bypassing pytest capture.
+    Controlled by the RUNTIME_DEBUG=1 environment variable.
+    """
+    if not DEBUG_MODE:
+        return
+
+    stream = getattr(sys, "__stderr__", sys.stderr)
+    if file is None:
+        file = stream
+
+    print(*args, sep=sep, end=end, file=file, flush=flush)
 
 
 def load_jsonc(path: Path) -> Dict[str, Any]:
@@ -31,6 +55,20 @@ def load_jsonc(path: Path) -> Dict[str, Any]:
 def is_excluded(path: Path, exclude_patterns: List[str], root: Path) -> bool:
     rel = str(path.relative_to(root)).replace("\\", "/")
     return any(fnmatch(rel, pattern) for pattern in exclude_patterns)
+
+
+def has_glob_chars(s: str) -> bool:
+    return any(c in s for c in "*?[]")
+
+
+def get_glob_root(pattern: str) -> Path:
+    """Return the non-glob portion of a path like 'src/**/*.txt'."""
+    parts: List[str] = []  # ✅ explicitly typed
+    for part in Path(pattern).parts:
+        if re.search(r"[*?\[\]]", part):
+            break
+        parts.append(part)
+    return Path(*parts) if parts else Path(".")
 
 
 def should_use_color() -> bool:

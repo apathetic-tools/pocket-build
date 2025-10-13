@@ -28,7 +28,7 @@ lint = ["lint:isort", "lint:ruff", "lint:compile"]
 "lint:compile" = ["lint:compile:script"]
 "lint:compile:script" = { shell = "if [ -f bin/pocket-build.py ]; then python -m py_compile bin/pocket-build.py; fi" }
 typecheck = "mypy src"
-test = "pytest -q --color=yes"
+test = "pytest"
 
 # 🧹 Automated fixing / formatting
 fix = ["fix:isort", "fix:ruff", "lint:compile", "fix:format"]
@@ -40,7 +40,12 @@ fix = ["fix:isort", "fix:ruff", "lint:compile", "fix:format"]
 
 # 🧩 Build and license
 "build:script" = "python dev/make_script.py"
+"gen:test:protocol" = "python dev/generate_test_protocol.py"
 "check:license" = "bash dev/check-license.sh"
+
+[tool.poe.tasks."verify:pytest"]
+cmd = "pytest tests/test_pytest.py"
+env = { RUNTIME_DEBUG = "1" }
 
 # --- Development dependencies ---
 [dependency-groups]
@@ -51,7 +56,8 @@ dev = [
     "poethepoet (>=0.37.0,<0.38.0)",
     "pre-commit (>=4.3.0,<5.0.0)",
     "isort (>=7.0.0,<8.0.0)",
-    "colorama (>=0.4.6,<0.5.0)"
+    "colorama (>=0.4.6,<0.5.0)",
+    "pinliner @ git+https://github.com/The-city-not-present/pinliner.git",
 ]
 
 # --- Ruff: formatter and linter ---
@@ -86,9 +92,10 @@ ignore_missing_imports = true
 strict = true
 
 # --- pytest: testing framework ---
-[tool.pytest.ini_options]
-pythonpath = ["src"]
-addopts = "-ra"
+# see pytest.ini
+#   it has a alrge number of ignores
+#   so we keep it separate
+# [tool.pytest.ini_options]
 
 # --- Black: kept in case someone runs it by accident in their editor ---
 [tool.black]

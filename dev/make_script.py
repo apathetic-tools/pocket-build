@@ -10,9 +10,11 @@ collected, deduplicated, and placed neatly at the top.
 """
 
 import argparse
+import ast
 import os
 import re
 import subprocess
+from collections import OrderedDict
 from pathlib import Path
 
 # ------------------------------------------------------------
@@ -30,6 +32,7 @@ ORDER = [
     "build.py",
     "cli.py",
 ]
+# ORDER = [p.name for p in SRC_DIR.glob("*.py") if p.name != "__init__.py"]
 
 LICENSE_HEADER = """\
 # Pocket Build — a tiny build system that fits in your pocket.
@@ -71,46 +74,86 @@ def extract_commit() -> str:
     return "unknown"
 
 
-def split_imports(text: str) -> tuple[list[str], str]:
-    """Split module text into (imports, rest), normalizing indentation."""
-    imports: list[str] = []
-    body_lines: list[str] = []
-    for line in text.splitlines():
-        stripped = line.lstrip()
-        if re.match(r"^(?:import|from)\s+\S+", stripped):
-            imports.append(stripped)
-        else:
-            body_lines.append(line)
-    return imports, "\n".join(body_lines)
+def split_imports(
+    text: str,
+    package_name: str,
+) -> tuple[list[str], str]:
+    """Return (external_imports, body_text) using AST for accuracy."""
+    try:
+        tree = ast.parse(text)
+    except SyntaxError as e:
+        print(f"❌ Failed to parse file: {e}")
+        return [], text
 
+    lines = text.splitlines(keepends=True)
+    external_imports: list[str] = []
+    all_import_ranges: list[tuple[int, int]] = []
 
-def strip_internal_imports(lines: list[str]) -> list[str]:
-    """Remove intra-package (`pocket_build.*`) and relative (`.foo`) imports."""
-    filtered: list[str] = []
-    for line in lines:
-        if re.match(r"^\s*(?:from|import)\s+pocket_build(\.|$)", line):
+    for node in tree.body:
+        if not isinstance(node, (ast.Import, ast.ImportFrom)):
             continue
-        if re.match(r"^\s*from\s+\.", line):
-            continue
-        filtered.append(line)
-    return filtered
+
+        start = node.lineno - 1
+        end = getattr(node, "end_lineno", node.lineno)
+        snippet = "".join(lines[start:end])
+
+        # --- Determine whether it's internal ---
+        is_internal = False
+        if isinstance(node, ast.ImportFrom):
+            mod = node.module or ""
+            if node.level > 0 or mod.startswith(package_name):
+                is_internal = True
+        elif isinstance(node, ast.Import):
+            if any(alias.name.startswith(package_name) for alias in node.names):
+                is_internal = True
+
+        # Always skip import lines from body, internal or not
+        all_import_ranges.append((start, end))
+
+        # Only keep non-internal imports for the top section
+        if not is_internal:
+            external_imports.append(snippet)
+
+    # --- Remove *all* import lines from the body ---
+    skip = {i for s, e in all_import_ranges for i in range(s, e)}
+    body = "".join(line for i, line in enumerate(lines) if i not in skip)
+
+    return external_imports, body
 
 
 def strip_redundant_blocks(text: str) -> str:
     """Remove shebangs and __main__ guards."""
     text = re.sub(r"^#!.*\n", "", text)
-    text = re.sub(r'if\s+__name__\s*==\s*[\'"]__main__[\'"]\s*:\n\s*.*', "", text)
+    text = re.sub(
+        r"(?s)\n?if\s+__name__\s*==\s*[\"']__main__[\"']\s*:\s*\n.*?$", "", text
+    )
+
     return text.strip()
+
+
+def verify_compiles(path: Path) -> None:
+    """Ensure the generated script compiles cleanly."""
+    import py_compile
+
+    try:
+        py_compile.compile(str(path), doraise=True)
+        print("✅ Compiled successfully.")
+    except py_compile.PyCompileError as e:
+        print(f"❌ Syntax error in generated script: {e.msg}")
+        raise SystemExit(1)
 
 
 # ------------------------------------------------------------
 # Build process
 # ------------------------------------------------------------
-def build_single_file(out_path: Path) -> None:
+def build_single_file(
+    out_path: Path,
+    package_name: str,
+) -> None:
     version = extract_version()
     commit = extract_commit()
 
-    all_imports: set[str] = set()
+    all_imports: "OrderedDict[str, None]" = OrderedDict()
     parts: list[str] = []
 
     for filename in ORDER:
@@ -122,14 +165,14 @@ def build_single_file(out_path: Path) -> None:
         text = path.read_text(encoding="utf-8")
         text = strip_redundant_blocks(text)
 
-        imports, body = split_imports(text)
-        imports = strip_internal_imports(imports)
-        all_imports.update(imports)
+        imports, body = split_imports(text, package_name)
+        for imp in imports:
+            all_imports.setdefault(imp, None)
 
         header = f"# === {filename} ==="
-        parts.append(f"\n{header}\n{body.strip()}\n")
+        parts.append(f"\n{header}\n{body.strip()}\n\n")
 
-    sorted_imports = "\n".join(sorted(all_imports))
+    import_block = "".join(all_imports.keys())
 
     final_script = (
         "#!/usr/bin/env python3\n"
@@ -144,7 +187,7 @@ def build_single_file(out_path: Path) -> None:
         f"Version: {version}\n"
         f"Commit: {commit}\n"
         '"""\n\n'
-        f"{sorted_imports}\n"
+        f"{import_block}\n"
         "\n" + "\n".join(parts) + "\n\nif __name__ == '__main__':\n"
         "    import sys\n"
         "    sys.exit(main(sys.argv[1:]))\n"
@@ -164,6 +207,7 @@ def build_single_file(out_path: Path) -> None:
             cwd=ROOT,
             capture_output=True,
             text=True,
+            check=False,
         )
         if result.returncode == 0:
             print("✨ Auto-formatted using 'poe fix'.")
@@ -181,6 +225,11 @@ def main() -> None:
         description="Bundle Pocket Build into a single script."
     )
     parser.add_argument(
+        "--package",
+        default="pocket_build",
+        help="Root package name (default: pocket_build)",
+    )
+    parser.add_argument(
         "--out",
         type=str,
         help="Custom output path for generated script (default: bin/pocket-build.py)",
@@ -188,7 +237,12 @@ def main() -> None:
     args = parser.parse_args()
 
     out_path = Path(args.out).expanduser().resolve() if args.out else DEFAULT_OUT_FILE
-    build_single_file(out_path)
+    build_single_file(out_path, package_name=args.package)
+
+    verify_compiles(out_path)
+
+    size = out_path.stat().st_size / 1024
+    print(f"📦 Output size: {size:.1f} KB")
 
 
 if __name__ == "__main__":

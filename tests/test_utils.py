@@ -6,14 +6,14 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Any, Dict
 
-from conftest import PocketBuildLike
+from tests.conftest import RuntimeLike
 
 GREEN = "\x1b[32m"
 
 
 def test_load_jsonc_strips_comments_and_trailing_commas(
     tmp_path: Path,
-    pocket_build_env: PocketBuildLike,
+    runtime_env: RuntimeLike,
 ) -> None:
     """Ensure JSONC loader removes comments and trailing commas."""
     cfg = tmp_path / "config.jsonc"
@@ -28,13 +28,13 @@ def test_load_jsonc_strips_comments_and_trailing_commas(
         """
     )
 
-    result: Dict[str, Any] = pocket_build_env.load_jsonc(cfg)
+    result: Dict[str, Any] = runtime_env.load_jsonc(cfg)
     assert result == {"foo": 123}
 
 
 def test_is_excluded_matches_patterns(
     tmp_path: Path,
-    pocket_build_env: PocketBuildLike,
+    runtime_env: RuntimeLike,
 ) -> None:
     """Verify exclude pattern matching works correctly."""
     root = tmp_path
@@ -42,5 +42,5 @@ def test_is_excluded_matches_patterns(
     file.parent.mkdir(parents=True)
     file.touch()
 
-    assert pocket_build_env.is_excluded(file, ["foo/*"], root)
-    assert not pocket_build_env.is_excluded(file, ["baz/*"], root)
+    assert runtime_env.is_excluded(file, ["foo/*"], root)
+    assert not runtime_env.is_excluded(file, ["baz/*"], root)

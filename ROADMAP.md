@@ -21,7 +21,6 @@ Planned command-line flags for future releases:
 ## 🧩 Joiner Scripts (Build System)
 Exploring bundling options for generating the single-file release:
 
-- [ ] `pinliner` single file bundler
 - [ ] zip file: zipapp / shiv / pyinstaller --onefile
 
 ## 🧪 Tests
@@ -38,6 +37,7 @@ Potential quality-of-life features:
 - [ ] Add SHA-256 hashing to skip unchanged files  
 - [ ] Implement `--watch` mode for live rebuilds  
 - [ ] publish to PyPI, NPM, PACKAGIST, others?
+- [ ] Automatically update module API for conftest.py
 
 ---
 

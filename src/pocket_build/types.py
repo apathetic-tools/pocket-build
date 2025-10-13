@@ -12,10 +12,18 @@ class IncludeEntry(TypedDict, total=False):
     dest: NotRequired[str]
 
 
+class MetaBuildConfig(TypedDict, total=False):
+    include_base: str
+    exclude_base: str
+    out_base: str
+    origin: str
+
+
 class BuildConfig(TypedDict, total=False):
     include: List[Union[str, IncludeEntry]]
     exclude: List[str]
     out: str
+    __meta__: MetaBuildConfig
 
 
 class RootConfig(TypedDict, total=False):

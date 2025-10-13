@@ -232,6 +232,22 @@ files = [
 ]
 
 [[package]]
+name = "pinliner"
+version = "0.2.0"
+description = "Python Inliner merges in a single file all files from a Python package."
+optional = false
+python-versions = "*"
+groups = ["dev"]
+files = []
+develop = false
+
+[package.source]
+type = "git"
+url = "https://github.com/The-city-not-present/pinliner.git"
+reference = "HEAD"
+resolved_reference = "25de8d713a695bc4a25a694f37334ea8b4283465"
+
+[[package]]
 name = "platformdirs"
 version = "4.5.0"
 description = "A small Python package for determining appropriate platform-specific dirs, e.g. a `user data dir`."

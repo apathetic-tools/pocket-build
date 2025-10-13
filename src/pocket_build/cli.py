@@ -6,11 +6,12 @@ import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, List, Optional, cast
 
 from .build import run_build
 from .config import parse_builds
-from .utils import YELLOW, colorize, load_jsonc
+from .types import BuildConfig, MetaBuildConfig
+from .utils import RED, YELLOW, colorize, debug_print, load_jsonc
 
 
 def get_metadata_from_header(script_path: Path) -> tuple[str, str]:
@@ -75,45 +76,131 @@ def get_metadata() -> tuple[str, str]:
     return version, commit
 
 
-def main(argv: Optional[List[str]] = None) -> int:
+def setup_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="pocket-build")
-    parser.add_argument(
-        "--include",
-        nargs="+",
-        help="Override include patterns (space-separated).",
-    )
-    parser.add_argument(
-        "--exclude",
-        nargs="+",
-        help="Override exclude patterns (space-separated).",
-    )
-    parser.add_argument("-o", "--out", help="Override output directory")
-    parser.add_argument(
-        # -v already used by verbose
-        "--version",
-        action="store_true",
-        help="Show version information and exit",
-    )
-    parser.add_argument(
-        "-c",
-        "--config",
-        help="Path to custom build config file (default: .pocket-build.json in cwd)",
-    )
+    parser.add_argument("--include", nargs="+", help="Override include patterns.")
+    parser.add_argument("--exclude", nargs="+", help="Override exclude patterns.")
+    parser.add_argument("-o", "--out", help="Override output directory.")
+    parser.add_argument("-c", "--config", help="Path to build config file.")
 
-    # Quiet and verbose cannot coexist
-    noise_group = parser.add_mutually_exclusive_group()
-    noise_group.add_argument(
-        "-q",
-        "--quiet",
-        action="store_true",
-        help="Suppress non-error output",
-    )
-    noise_group.add_argument(
-        "-v",
-        "--verbose",
-        action="store_true",
-        help="Show detailed logs for each file operation",
-    )
+    parser.add_argument("--version", action="store_true", help="Show version info.")
+
+    noise = parser.add_mutually_exclusive_group()
+    noise.add_argument("-q", "--quiet", action="store_true", help="Suppress output.")
+    noise.add_argument("-v", "--verbose", action="store_true", help="Verbose logs.")
+    return parser
+
+
+def find_config(args: argparse.Namespace, cwd: Path) -> Optional[Path]:
+    if args.config:
+        config = Path(args.config).expanduser().resolve()
+        if not config.exists():
+            print(colorize(f"⚠️  Config file not found: {config}", YELLOW))
+            return None
+        return config
+
+    candidates = [
+        cwd / ".pocket-build.py",
+        cwd / ".pocket-build.jsonc",
+        cwd / ".pocket-build.json",
+    ]
+    found = [p for p in candidates if p.exists()]
+
+    if found:
+        if len(found) > 1:
+            names = ", ".join(p.name for p in found)
+            print(
+                colorize(
+                    (
+                        f"⚠️  Multiple config files detected ({names});"
+                        f" using {found[0].name}."
+                    ),
+                    YELLOW,
+                )
+            )
+        return found[0]
+
+    return None
+
+
+def load_config(config_path: Path) -> dict[str, Any]:
+    if config_path.suffix == ".py":
+        config_globals: dict[str, Any] = {}
+        sys.path.insert(0, str(config_path.parent))
+        try:
+            exec(config_path.read_text(), config_globals)
+            debug_print(
+                f"[DEBUG EXEC] globals after exec: {list(config_globals.keys())}"
+            )
+            debug_print(f"[DEBUG EXEC] builds: {config_globals.get('builds')}")
+        finally:
+            sys.path.pop(0)
+
+        if "config" in config_globals:
+            return cast(dict[str, Any], config_globals["config"])
+        if "builds" in config_globals:
+            return {"builds": config_globals["builds"]}
+
+        raise ValueError(f"{config_path.name} did not define `config` or `builds`")
+    else:
+        return load_jsonc(config_path)
+
+
+def resolve_build_config(
+    build_cfg: BuildConfig, args: argparse.Namespace, config_dir: Path, cwd: Path
+) -> BuildConfig:
+    """Merge CLI overrides and normalize paths."""
+    # Make a mutable copy
+    resolved: dict[str, Any] = dict(build_cfg)
+
+    meta = cast(MetaBuildConfig, dict(resolved.get("__meta__", {})))
+    meta["origin"] = str(config_dir)
+
+    # Normalize includes
+    includes: list[str] = []
+    if args.include:
+        # CLI paths → relative to cwd
+        meta["include_base"] = str(cwd)
+        for i in cast(list[str], args.include):
+            includes.append(str((cwd / i).resolve()))
+    elif "include" in build_cfg:
+        meta["include_base"] = str(config_dir)
+        for i in cast(list[str], build_cfg.get("include")):
+            includes.append(str((config_dir / i).resolve()))
+    resolved["include"] = includes
+
+    # Normalize excludes
+    excludes: list[str] = []
+    if args.exclude:
+        meta["exclude_base"] = str(cwd)
+        # Keep CLI-provided exclude patterns as-is (do not resolve),
+        # since glob patterns like "*.tmp" should match relative paths
+        # beneath the include base, not absolute paths.
+        for e in cast(list[str], args.exclude):
+            excludes.append(e)
+    elif "exclude" in build_cfg:
+        meta["exclude_base"] = str(config_dir)
+        # For config-based excludes, we still resolve relative to config_dir
+        for e in build_cfg.get("exclude", []):
+            excludes.append(str((config_dir / e).resolve()))
+    resolved["exclude"] = excludes
+
+    # Normalize output path
+    out_dir = args.out or resolved.get("out", "dist")
+    if args.out:
+        meta["out_base"] = str(cwd)
+        resolved["out"] = str((cwd / out_dir).resolve())
+    else:
+        meta["out_base"] = str(config_dir)
+        resolved["out"] = str((config_dir / out_dir).resolve())
+
+    # Explicitly cast back to BuildConfig for return
+    resolved["__meta__"] = meta
+    return cast(BuildConfig, resolved)
+
+
+def main(argv: Optional[List[str]] = None) -> int:
+    parser = setup_parser()
     args = parser.parse_args(argv)
 
     # --- Version flag ---
@@ -124,63 +211,42 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # --- Python version check ---
     if sys.version_info < (3, 10):
-        sys.exit("❌ pocket-build requires Python 3.10 or newer.")
-
-    cwd = Path.cwd().resolve()
+        print(colorize("❌ pocket-build requires Python 3.10 or newer.", RED))
+        return 1
 
     # --- Config path handling ---
-    config_path: Optional[Path] = None
-    if args.config:
-        config_path = Path(args.config).expanduser().resolve()
-        if not config_path.exists():
-            print(colorize(f"⚠️  Config file not found: {config_path}", YELLOW))
-            return 1
-    else:
-        for candidate in [".pocket-build.json"]:
-            p = cwd / candidate
-            if p.exists():
-                config_path = p
-                break
-
-    # --- Handle missing config ---
+    cwd = Path.cwd().resolve()
+    config_path = find_config(args, cwd)
     if not config_path:
         print(colorize("⚠️  No build config found (.pocket-build.json).", YELLOW))
         return 1
 
+    # --- Config + Build handling ---
     config_dir = config_path.parent.resolve()
-
-    # --- Load configuration (shared) ---
-    raw_config: Dict[str, Any] = load_jsonc(config_path)
+    raw_config = load_config(config_path)
+    debug_print(f"[DEBUG RAW CONFIG] {raw_config}")
     builds = parse_builds(raw_config)
+    debug_print(f"[DEBUG BUILDS AFTER PARSE] {builds}")
 
-    # --- Apply include/exclude overrides ---
-    for b in builds:
-        if args.include:
-            b["include"] = args.include
-        if args.exclude:
-            b["exclude"] = args.exclude
+    resolved_builds = [resolve_build_config(b, args, config_dir, cwd) for b in builds]
 
     # --- Quiet mode: temporarily suppress stdout ---
     if args.quiet:
-        buffer = io.StringIO()
         # everything printed inside this block is discarded
-        with contextlib.redirect_stdout(buffer):
-            for i, build_cfg in enumerate(builds, 1):
-                run_build(
-                    build_cfg, config_dir, args.out, verbose=args.verbose or False
-                )
-        # still return 0 to indicate success
+        with contextlib.redirect_stdout(io.StringIO()):
+            for build_cfg in resolved_builds:
+                run_build(build_cfg, verbose=args.verbose or False)
         return 0
 
     # --- Normal / verbose mode ---
     print(f"🔧 Using config: {config_path.name}")
     print(f"📁 Config base: {config_dir}")
     print(f"📂 Invoked from: {cwd}\n")
-    print(f"🔧 Running {len(builds)} build(s)\n")
+    print(f"🔧 Running {len(resolved_builds)} build(s)\n")
 
-    for i, build_cfg in enumerate(builds, 1):
-        print(f"▶️  Build {i}/{len(builds)}")
-        run_build(build_cfg, config_dir, args.out, verbose=args.verbose or False)
+    for i, build_cfg in enumerate(resolved_builds, 1):
+        print(f"▶️  Build {i}/{len(resolved_builds)}")
+        run_build(build_cfg, verbose=args.verbose or False)
 
     print("🎉 All builds complete.")
     return 0

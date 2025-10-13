@@ -24,15 +24,16 @@ We wanted a **syntax-aware**, low-maintenance bundler that kept the output **hum
 
 All these tools unless marked will merge several `.py` files (sometimes even a complete module) into a single `.py` file of valid python that behaves in the same way.
 
-| Tool | Pros | Cons |
-|------|------|------|
+| Tool | Pros | Cons | Note |
+|------|------|------|------|
 | **Custom script (current regex based)** | ✅ Full control<br>✅ Easy to inject metadata<br>✅ Minimal deps | ❌ Fragile with multiline imports<br/>❌ Regex-based parsing is unreliable<br>❌ Hard to maintain |
 | **Custom script (AST Based)**<br/>`ast.parse()` or `libcst` | ✅ Full control<br>✅ Easy to inject metadata<br>✅ Minimal deps | ❌ Complex tool to develop and maintain<br>❌Distracts resources from main project
-| **[`pinliner`](https://pypi.org/project/pinliner/)** | ✅ Preserves internal imports<br>✅ Keeps code readable<br>✅ Syntax-aware |❌ Adds a small runtime import shim<br>❌ Slightly more complex than plain concatenation |
+| ~~**[`pinliner`](https://pypi.org/project/pinliner/)**~~| ✅ Preserves internal imports<br>✅ Keeps code readable<br>✅ Syntax-aware |❌ No longer maintained (~7 years)<br>❌Does not work on Python 3.12+<br>❌ Adds a small runtime import shim<br>❌ Slightly more complex than plain concatenation | Attempted won't run on 3.12+ |
+| ~~**[`pinliner city fork`](https://github.com/The-city-not-present/pinliner)**~~ | ✅ Works on Python 3.12<br>✅ Same as pinliner | ❌ Not actively maintained (~9 months)<br>❌ Fixed just enough to work<br>❌ Same as Pinliner | Attempted, hangs tests,<br> back to regex duct tape |
 | **[`compyner`](https://pypi.org/project/compyner/)** | ✅ Lightweight<br>✅ Flat, readable output<br>✅ Works recursively through imports | ❌ Targeted at MicroPython<br>❌ Limited testing<br>❌ Loses *import* semantics |
-| **[`PyBreeder`](https://github.com/pagekite/PyBreeder)** | ✅ Simple concatenator<br>✅ Minimal dependencies | ❌ No longer maintained (~5yrs)<br>❌ Targets Python 2.x<br>❌ Not syntax-aware<br>❌ Breaks easily on complex imports or formatting<br>❌ No license |
-| **[`PyBake`](https://pypi.org/project/pybake/)** | ✅ Can bundle code *and* data with embedded filesystem | ❌ Heavier than needed for pure code<br>❌ Not meant for source-level readability |
-| **[`pybundler`](https://pypi.org/project/pybundler/)** | ✅ Preserves importable package structure<br>✅ Great for dual CLI/library tools | ❌ Adds ~100 lines bootstrap<br>❌ May be overkill for CLI |
+| **[`PyBreeder`](https://github.com/pagekite/PyBreeder)** | ✅ Simple concatenator<br>✅ Minimal dependencies | ❌ No longer maintained (~5 years)<br>❌ Targets Python 2.x<br>❌ Not syntax-aware<br>❌ Breaks easily on complex imports or formatting<br>❌ No license |
+| **[`PyBake`](https://pypi.org/project/pybake/)** | ✅ Can bundle code *and* data with embedded filesystem | ❌ No longer maintained (~4 years)<br>❌ Early stage Python 3.x migration<br>❌ Heavier than needed for pure code<br>❌ Not meant for source-level readability |
+| **[`pybundler`](https://pypi.org/project/pybundler/)** | ✅ Preserves importable package structure<br>✅ Great for dual CLI/library tools | ❌ No longer maintained (~6 years)<br>❌ Adds ~100 lines bootstrap<br>❌ May be overkill for CLI |
 | **Executable bundlers**<br> ([`zipapp`](https://docs.python.org/3/library/zipapp.html), [`shiv`](https://pypi.org/project/shiv/), [`pex`](https://pypi.org/project/pex/), [`PyInstaller`](https://pyinstaller.org/en/stable/)) | ✅ Ideal for binary-like releases or hermetic CI packaging<br>✅ Well-supported and production-grade | ❌ Produce `.pyz` or binaries (not plain Python)<br>❌ Not human-readable<br>❌ Can have larger artifact size |
 
 ### Code sample with `libcst`
