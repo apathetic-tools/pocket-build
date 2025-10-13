@@ -55,44 +55,34 @@ All key workflows are defined in **`[tool.poe.tasks]`** inside `pyproject.toml`.
 
 | Command | Description |
 |----------|-------------|
-| `poetry run poe check.fix` | Auto-fix issues, re-format, type-check, and re-test. |
-| `poetry run poe check` | Run linting (`ruff`), type checks (`mypy`), and tests (`pytest`). |
-| `poetry run poe fix` | Run all auto-fixers (Ruff + formatter). |
-| `poetry run poe build.single` | Bundle the project into a single portable script in `bin/`. |
+| `poetry run poe check:fix` | Auto-fix issues, re-format, type-check, and re-test. |
+| `poetry run poe check` | Run linting (`isort`, `ruff`), type checks (`mypy`), and tests (`pytest`). |
+| `poetry run poe fix` | Run all auto-fixers (`isort` + `ruff`). |
+| `poetry run poe build:script` | Bundle the project into a single portable script in `bin/`. |
 
 Example workflow:
 
 ```bash
-# Run full check
-poetry run poe check
-
 # Auto-fix & re-check
-poetry run poe check.fix
+poetry run poe check:fix
 ```
 
 ---
 
 ## 🔗 Pre-commit Hook
 
-Pre-commit is configured to run `poe check` before every commit.
+Pre-commit is configured to run **`poe fix`** on each commit,  
+and **`poe check`** before every push.  
+This keeps your local commits tidy and ensures CI stays green.
 
 Install the hook once:
 
 ```bash
-poetry run pre-commit install
+poetry run pre-commit install --install-hooks
+poetry run pre-commit install --hook-type pre-push
 ```
 
-Manually trigger it on all files anytime:
-
-```bash
-poetry run pre-commit run --all-files
-```
-
-If any linter, type check, or test fails, the commit is blocked — fix with:
-
-```bash
-poetry run poe check.fix
-```
+If any linter, type check, or test fails, the commit is blocked. It may have auto-fixed the problem, try commiting again before troubleshooting.
 
 ### 🧩 Fixing the `setlocale` Warning
 

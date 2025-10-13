@@ -1,9 +1,18 @@
 repos:
   - repo: local
     hooks:
-      - id: poe-check
-        name: Run Poe 'check:fix'
-        entry: bash -c 'export PATH="$HOME/.local/bin:$PATH"; poetry run poe check:fix'
+      # Run fixers automatically before each commit
+      - id: poe-fix
+        name: Run Poe 'fix'
+        entry: bash -c 'export PATH="$HOME/.local/bin:$PATH"; poetry run poe fix'
         language: system
         pass_filenames: false
         stages: [pre-commit]
+
+      # Run checks (no auto-fixing) before pushing
+      - id: poe-check
+        name: Run Poe 'check'
+        entry: bash -c 'export PATH="$HOME/.local/bin:$PATH"; poetry run poe check'
+        language: system
+        pass_filenames: false
+        stages: [pre-push]
