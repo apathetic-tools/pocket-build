@@ -424,3 +424,80 @@ def test_json_and_jsonc_config_supported(
     dist = tmp_path / "dist"
     assert (dist / "hello.txt").exists()
     assert "Build completed" in out
+
+
+def test_add_include_extends_config(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    runtime_env: RuntimeLike,
+) -> None:
+    """--add-include should extend config include patterns, not override them."""
+    # Prepare directories and files
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "a.txt").write_text("A")
+
+    extra_dir = tmp_path / "extra"
+    extra_dir.mkdir()
+    (extra_dir / "b.txt").write_text("B")
+
+    # Config includes only src/**
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(
+        json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]})
+    )
+
+    # Run with --add-include extra/**
+    monkeypatch.chdir(tmp_path)
+    code = runtime_env.main(["--add-include", "extra/**"])
+    out = capsys.readouterr().out
+
+    assert code == 0
+    dist = tmp_path / "dist"
+
+    # ✅ Both directories should be included
+    assert (dist / "a.txt").exists()
+    assert (dist / "b.txt").exists()
+
+    # Output should confirm the build
+    assert "Build completed" in out
+
+
+def test_add_exclude_extends_config(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    runtime_env: RuntimeLike,
+) -> None:
+    """--add-exclude should extend config exclude patterns, not override them."""
+    # Setup source directory with various files
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "keep.txt").write_text("keep")
+    (src_dir / "ignore.tmp").write_text("ignore")
+    (src_dir / "ignore.log").write_text("ignore2")
+
+    # Config excludes *.log files
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(
+        json.dumps(
+            {"builds": [{"include": ["src/**"], "exclude": ["*.log"], "out": "dist"}]}
+        )
+    )
+
+    # Add an extra exclude via CLI
+    monkeypatch.chdir(tmp_path)
+    code = runtime_env.main(["--add-exclude", "*.tmp"])
+    out = capsys.readouterr().out
+
+    assert code == 0
+    dist = tmp_path / "dist"
+
+    # ✅ keep.txt should survive
+    assert (dist / "keep.txt").exists()
+    # 🚫 both excluded files should be missing
+    assert not (dist / "ignore.tmp").exists()
+    assert not (dist / "ignore.log").exists()
+
+    assert "Build completed" in out

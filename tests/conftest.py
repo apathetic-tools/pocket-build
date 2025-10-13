@@ -21,6 +21,7 @@ from pathlib import Path
 from typing import Generator
 
 import pytest
+from _pytest.python import Metafunc
 
 from tests.fixtures.runtime_protocol import RuntimeLike
 
@@ -56,7 +57,7 @@ def ensure_bundled_script_up_to_date(root: Path) -> Path:
 # ------------------------------------------------------------
 # 🔁 Fixture: load either the package or the bundled script
 # ------------------------------------------------------------
-@pytest.fixture(scope="session", params=["module", "singlefile"])
+@pytest.fixture(scope="session")
 def runtime_env(
     request: pytest.FixtureRequest,
 ) -> Generator[RuntimeLike, None, None]:
@@ -77,3 +78,28 @@ def runtime_env(
         sys.modules["pocket_build_single"] = mod
         spec.loader.exec_module(mod)
         yield mod  # type: ignore[return-value]
+
+
+def pytest_generate_tests(metafunc: Metafunc) -> None:
+    """Attach dependency markers automatically for the two runtimes."""
+    if "runtime_env" in metafunc.fixturenames:
+        metafunc.parametrize(
+            "runtime_env",
+            [
+                pytest.param(
+                    "module",
+                    id="module",
+                    marks=pytest.mark.dependency(
+                        name=f"{metafunc.function.__name__}[module]"
+                    ),
+                ),
+                pytest.param(
+                    "singlefile",
+                    id="singlefile",
+                    marks=pytest.mark.dependency(
+                        depends=[f"{metafunc.function.__name__}[module]"]
+                    ),
+                ),
+            ],
+            indirect=True,
+        )

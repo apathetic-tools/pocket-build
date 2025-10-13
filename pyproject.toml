@@ -58,6 +58,7 @@ dev = [
     "isort (>=7.0.0,<8.0.0)",
     "colorama (>=0.4.6,<0.5.0)",
     "pinliner @ git+https://github.com/The-city-not-present/pinliner.git",
+    "pytest-dependency (>=0.6.0,<0.7.0)",
 ]
 
 # --- Ruff: formatter and linter ---

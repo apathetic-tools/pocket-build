@@ -80,6 +80,16 @@ def setup_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="pocket-build")
     parser.add_argument("--include", nargs="+", help="Override include patterns.")
     parser.add_argument("--exclude", nargs="+", help="Override exclude patterns.")
+    parser.add_argument(
+        "--add-include",
+        nargs="+",
+        help="Additional include paths (relative to cwd). Extends config includes.",
+    )
+    parser.add_argument(
+        "--add-exclude",
+        nargs="+",
+        help="Additional exclude patterns (relative to cwd). Extends config excludes.",
+    )
     parser.add_argument("-o", "--out", help="Override output directory.")
     parser.add_argument("-c", "--config", help="Path to build config file.")
 
@@ -159,19 +169,28 @@ def resolve_build_config(
     # Normalize includes
     includes: list[str] = []
     if args.include:
-        # CLI paths → relative to cwd
+        # Full override → relative to cwd
         meta["include_base"] = str(cwd)
         for i in cast(list[str], args.include):
             includes.append(str((cwd / i).resolve()))
     elif "include" in build_cfg:
+        # From config → relative to config_dir
         meta["include_base"] = str(config_dir)
         for i in cast(list[str], build_cfg.get("include")):
             includes.append(str((config_dir / i).resolve()))
+
+    # Add-on includes (extend, not override)
+    if args.add_include:
+        meta["include_add_base"] = str(cwd)
+        for i in cast(list[str], args.add_include):
+            includes.append(str((cwd / i).resolve()))
+
     resolved["include"] = includes
 
     # Normalize excludes
     excludes: list[str] = []
     if args.exclude:
+        # Full override → relative to cwd
         meta["exclude_base"] = str(cwd)
         # Keep CLI-provided exclude patterns as-is (do not resolve),
         # since glob patterns like "*.tmp" should match relative paths
@@ -179,18 +198,27 @@ def resolve_build_config(
         for e in cast(list[str], args.exclude):
             excludes.append(e)
     elif "exclude" in build_cfg:
+        # From config → relative to config_dir
         meta["exclude_base"] = str(config_dir)
-        # For config-based excludes, we still resolve relative to config_dir
         for e in build_cfg.get("exclude", []):
-            excludes.append(str((config_dir / e).resolve()))
+            excludes.append(e)
+
+    # Add-on excludes (extend, not override)
+    if args.add_exclude:
+        meta["exclude_add_base"] = str(cwd)
+        for e in cast(list[str], args.add_exclude):
+            excludes.append(e)
+
     resolved["exclude"] = excludes
 
     # Normalize output path
     out_dir = args.out or resolved.get("out", "dist")
     if args.out:
+        # Full override → relative to cwd
         meta["out_base"] = str(cwd)
         resolved["out"] = str((cwd / out_dir).resolve())
     else:
+        # From config → relative to config_dir
         meta["out_base"] = str(config_dir)
         resolved["out"] = str((config_dir / out_dir).resolve())
 

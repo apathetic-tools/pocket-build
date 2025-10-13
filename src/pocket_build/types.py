@@ -14,7 +14,9 @@ class IncludeEntry(TypedDict, total=False):
 
 class MetaBuildConfig(TypedDict, total=False):
     include_base: str
+    include_add_base: str
     exclude_base: str
+    exclude_add_base: str
     out_base: str
     origin: str
 
