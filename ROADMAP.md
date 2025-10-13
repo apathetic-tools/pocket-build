@@ -3,7 +3,6 @@
 ## 🧰 CLI Parameters
 Planned command-line flags for future releases:
 
-- `--respect-gitignore` and `--no-gitignore`
 - `--self-update` — update pocket-build itself  
 - `--no-update-check` — skip automatic update check 
 - dry-run or `--list` mode

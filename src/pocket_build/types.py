@@ -27,6 +27,12 @@ class BuildConfig(TypedDict, total=False):
     out: str
     __meta__: MetaBuildConfig
 
+    # optional per-build override
+    respect_gitignore: bool
+
 
 class RootConfig(TypedDict, total=False):
     builds: List[BuildConfig]
+
+    # global default
+    respect_gitignore: bool

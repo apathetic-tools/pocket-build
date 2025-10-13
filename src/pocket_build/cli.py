@@ -10,7 +10,7 @@ from typing import Any, List, Optional, cast
 
 from .build import run_build
 from .config import parse_builds
-from .types import BuildConfig, MetaBuildConfig
+from .types import BuildConfig, MetaBuildConfig, RootConfig
 from .utils import RED, YELLOW, colorize, debug_print, load_jsonc
 
 
@@ -80,6 +80,9 @@ def setup_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="pocket-build")
     parser.add_argument("--include", nargs="+", help="Override include patterns.")
     parser.add_argument("--exclude", nargs="+", help="Override exclude patterns.")
+    parser.add_argument("-o", "--out", help="Override output directory.")
+    parser.add_argument("-c", "--config", help="Path to build config file.")
+
     parser.add_argument(
         "--add-include",
         nargs="+",
@@ -90,8 +93,21 @@ def setup_parser() -> argparse.ArgumentParser:
         nargs="+",
         help="Additional exclude patterns (relative to cwd). Extends config excludes.",
     )
-    parser.add_argument("-o", "--out", help="Override output directory.")
-    parser.add_argument("-c", "--config", help="Path to build config file.")
+
+    gitignore = parser.add_mutually_exclusive_group()
+    gitignore.add_argument(
+        "--gitignore",
+        dest="respect_gitignore",
+        action="store_true",
+        help="Respect .gitignore when selecting files (default).",
+    )
+    gitignore.add_argument(
+        "--no-gitignore",
+        dest="respect_gitignore",
+        action="store_false",
+        help="Ignore .gitignore and include all files.",
+    )
+    gitignore.set_defaults(respect_gitignore=None)
 
     parser.add_argument("--version", action="store_true", help="Show version info.")
 
@@ -156,8 +172,22 @@ def load_config(config_path: Path) -> dict[str, Any]:
         return load_jsonc(config_path)
 
 
+def load_gitignore_patterns(path: Path) -> list[str]:
+    patterns: list[str] = []
+    if path.exists():
+        for line in path.read_text().splitlines():
+            line = line.strip()
+            if line and not line.startswith("#"):
+                patterns.append(line)
+    return patterns
+
+
 def resolve_build_config(
-    build_cfg: BuildConfig, args: argparse.Namespace, config_dir: Path, cwd: Path
+    build_cfg: BuildConfig,
+    args: argparse.Namespace,
+    config_dir: Path,
+    cwd: Path,
+    root_cfg: Optional[RootConfig] = None,
 ) -> BuildConfig:
     """Merge CLI overrides and normalize paths."""
     # Make a mutable copy
@@ -185,7 +215,8 @@ def resolve_build_config(
         for i in cast(list[str], args.add_include):
             includes.append(str((cwd / i).resolve()))
 
-    resolved["include"] = includes
+    # deduplicate include
+    resolved["include"] = list(dict.fromkeys(includes))
 
     # Normalize excludes
     excludes: list[str] = []
@@ -210,6 +241,29 @@ def resolve_build_config(
             excludes.append(e)
 
     resolved["exclude"] = excludes
+
+    # --- Merge .gitignore patterns into excludes if enabled ---
+    # Determine whether to respect .gitignore
+    if getattr(args, "respect_gitignore", None) is not None:
+        use_gitignore = args.respect_gitignore
+    elif "respect_gitignore" in build_cfg:
+        use_gitignore = build_cfg["respect_gitignore"]
+    else:
+        # fallback — true by default, overridden by root config if needed
+        use_gitignore = (root_cfg or {}).get("respect_gitignore", True)
+    resolved["respect_gitignore"] = use_gitignore
+
+    if use_gitignore:
+        gitignore_path = config_dir / ".gitignore"
+        patterns = load_gitignore_patterns(gitignore_path)
+        debug_print(
+            f"[DEBUG] Using .gitignore at {config_dir} ({len(patterns)} patterns)"
+        )
+        if patterns:
+            resolved["exclude"].extend(patterns)
+
+    # deduplicate exclude
+    resolved["exclude"] = list(dict.fromkeys(resolved["exclude"]))
 
     # Normalize output path
     out_dir = args.out or resolved.get("out", "dist")
@@ -256,7 +310,24 @@ def main(argv: Optional[List[str]] = None) -> int:
     builds = parse_builds(raw_config)
     debug_print(f"[DEBUG BUILDS AFTER PARSE] {builds}")
 
-    resolved_builds = [resolve_build_config(b, args, config_dir, cwd) for b in builds]
+    root_respect_gitignore = raw_config.get("respect_gitignore", True)
+
+    root_cfg = {k: v for k, v in raw_config.items() if k != "builds"}
+    resolved_builds = [
+        resolve_build_config(
+            b,
+            args,
+            config_dir,
+            cwd,
+            cast(RootConfig, root_cfg),
+        )
+        for b in builds
+    ]
+
+    # Apply the root default to any build that didn't specify or override it
+    for b in resolved_builds:
+        if "respect_gitignore" not in b:
+            b["respect_gitignore"] = root_respect_gitignore
 
     # --- Quiet mode: temporarily suppress stdout ---
     if args.quiet:
