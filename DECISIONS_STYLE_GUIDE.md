@@ -101,7 +101,9 @@ When a decision replaces or expands on an earlier one, link both ways:
 This creates a readable decision graph without repetition.
 
 ### Follow-up and Evolution
-If you later revisit a decision, add a short dated outcome note:
+Optional section for when a decision led to new insight or a revised implementation. Use it to later record what changed, not to rewrite the past.
+
+If you later revisit a decision, add a short dated follow-up note:
 
 ```markdown
 ### Follow-up and Evolution (2025-11-02)
