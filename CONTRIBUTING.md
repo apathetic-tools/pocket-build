@@ -7,7 +7,7 @@ This guide explains how to set up your environment, run checks, and safely contr
 
 ## 🐍 Supported Python Versions
 
-Pocket-build targets **Python 3.10+**.  
+Pocket-build targets **Python 3.10+** *(see [DEC 04]()).  
 That keeps compatibility with Ubuntu 22.04 (the baseline CI OS) while staying modern.
 See the [decision record](DECISIONS.md#2025-10-13-python-version.md) for background on this choice.
 
