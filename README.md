@@ -57,7 +57,7 @@ It’s MIT-licensed, minimal, and meant to stay out of your way — just with on
 
 ---
 
-> ✨ *ChatGPT was used to help draft language, formatting, and code — plus we just love em dashes.*
+> ✨ *AI was used to help draft language, formatting, and code — plus we just love em dashes.*
 
 <p align="center">
   <sub>😐 <a href="https://apathetic-tools.github.io/">Apathetic Tools</a> © <a href="./LICENSE">MIT-NOAI</a></sub>

@@ -394,7 +394,7 @@ This enables a small team to deliver a polished, well-documented tool rather tha
 - Frees developers to focus on architecture and testing rather than boilerplate  
 - The practice is disclosed transparently in documentation footers:  
 
-  > ✨ *ChatGPT was used to help draft language, formatting, and code — plus we just love em dashes.*
+  > ✨ *AI was used to help draft language, formatting, and code — plus we just love em dashes.*
 
 - Recognizes AI as a **supporting tool**, not a substitute for understanding  
 
@@ -414,7 +414,7 @@ Until those standards exist, AI here is treated as a **paid assistant**, not a d
 _Written following the [DECISIONS.md Style Guide](./DECISIONS_STYLE_GUIDE.md)._  
 _This document records **why** we build things the way we do — not just **what** we built._
 
-> ✨ *ChatGPT was used to help draft language, formatting, and code — plus we just love em dashes.*
+> ✨ *AI was used to help draft language, formatting, and code — plus we just love em dashes.*
 
 <p align="center">
   <sub>😐 <a href="https://apathetic-tools.github.io/">Apathetic Tools</a> © <a href="./LICENSE">MIT-NOAI</a></sub>

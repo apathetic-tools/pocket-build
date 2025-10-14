@@ -195,7 +195,7 @@ Keep it tidy, readable, and honest.
 
 *Format inspired by [ADR](https://adr.github.io/), but optimized for small, evolving projects.*
 
-> ✨ *ChatGPT was used to help draft language, formatting, and code — plus we just love em dashes.*
+> ✨ *AI was used to help draft language, formatting, and code — plus we just love em dashes.*
 
 <p align="center">
   <sub>😐 <a href="https://apathetic-tools.github.io/">Apathetic Tools</a> © <a href="./LICENSE">MIT-NOAI</a></sub>
