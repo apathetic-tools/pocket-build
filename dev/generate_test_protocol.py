@@ -53,7 +53,6 @@ def load_package():
     spec = importlib.util.spec_from_file_location("pocket_build", PKG_PATH)
     assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
-    assert spec and spec.loader
     spec.loader.exec_module(mod)
     return mod
 
@@ -64,7 +63,7 @@ def extract_qualified_names_from_ast(source: str) -> Set[str]:
     names: Set[str] = set()
 
     class TypeRefVisitor(ast.NodeVisitor):
-        def visit_Attribute(self, node: ast.Attribute):
+        def visit_Attribute(self, node: ast.Attribute) -> None:
             parts: list[str] = []
             current: ast.AST = node
             while isinstance(current, ast.Attribute):
@@ -78,14 +77,14 @@ def extract_qualified_names_from_ast(source: str) -> Set[str]:
                     names.add(full)
             self.generic_visit(node)
 
-        def visit_Subscript(self, node: ast.Subscript):
+        def visit_Subscript(self, node: ast.Subscript) -> None:
             self.visit(node.value)
             self.visit(node.slice)
 
-        def visit_AnnAssign(self, node: ast.AnnAssign):
+        def visit_AnnAssign(self, node: ast.AnnAssign) -> None:
             self.visit(node.annotation)
 
-        def visit_arg(self, node: ast.arg):
+        def visit_arg(self, node: ast.arg) -> None:
             if node.annotation:
                 self.visit(node.annotation)
 
@@ -107,7 +106,7 @@ def collect_all_qualified_names(pkg_dir: Path) -> Set[str]:
 
 def make_imports_from_names(qualified_names: Set[str]) -> list[str]:
     """Generate sorted import statements for known modules only."""
-    imports: Set[str] = set()
+    imports: set[str] = set()
     for qname in qualified_names:
         parts = qname.split(".")
         if parts[0] in {"typing", "builtins"}:
@@ -115,7 +114,11 @@ def make_imports_from_names(qualified_names: Set[str]) -> list[str]:
         if len(parts) > 1:
             mod = ".".join(parts[:-1])
             # Sanity check: does this look like a real importable module?
-            if importlib.util.find_spec(mod) or mod.startswith("pocket_build."):
+            try:
+                spec = importlib.util.find_spec(mod)
+            except (ImportError, ValueError):
+                spec = None
+            if spec is not None or mod.startswith("pocket_build."):
                 imports.add(f"import {mod}")
     return sorted(imports)
 
@@ -123,7 +126,7 @@ def make_imports_from_names(qualified_names: Set[str]) -> list[str]:
 # ------------------------------------------------------------
 # Protocol generator
 # ------------------------------------------------------------
-def generate_protocol():
+def generate_protocol() -> None:
     mod = load_package()
 
     # Collect all public names
