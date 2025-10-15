@@ -40,7 +40,7 @@ def test_main_with_config(
     runtime_env: RuntimeLike,
 ) -> None:
     """Should detect config, run one build, and exit cleanly."""
-    config = tmp_path / ".pocket-build.json"
+    config = tmp_path / f".{runtime_env.PROGRAM_SCRIPT}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
     monkeypatch.chdir(tmp_path)
 
@@ -65,7 +65,7 @@ def test_help_flag(
 
     out = capsys.readouterr().out
     assert "usage:" in out.lower()
-    assert "pocket-build" in out
+    assert runtime_env.PROGRAM_SCRIPT in out
     assert "--out" in out
 
 
@@ -78,7 +78,7 @@ def test_version_flag(
     out = capsys.readouterr().out
 
     assert code == 0
-    assert "Pocket Build" in out
+    assert runtime_env.PROGRAM_DISPLAY in out
 
     assert re.search(r"\d+\.\d+\.\d+", out)
 
@@ -99,7 +99,7 @@ def test_dry_run_creates_no_files(tmp_path: Path, runtime_env: RuntimeLike):
     src_dir.mkdir()
     (src_dir / "foo.txt").write_text("data")
 
-    config = tmp_path / ".pocket-build.json"
+    config = tmp_path / f".{runtime_env.PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": ["src/**"], "out": "dist"}]}')
 
     code = runtime_env.main(["--config", str(config), "--dry-run"])

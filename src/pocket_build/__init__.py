@@ -8,7 +8,7 @@ so that tests and users can use either interchangeably.
 from .build import copy_directory, copy_file, copy_item, run_build
 from .cli import main
 from .config import parse_builds
-from .meta import PROGRAM_ENV
+from .meta import PROGRAM_DISPLAY, PROGRAM_ENV, PROGRAM_SCRIPT
 from .runtime import current_runtime
 from .types import BuildConfig
 from .utils import (  # is_error_level,; should_log,
@@ -35,6 +35,8 @@ __all__ = [
     "parse_builds",
     # --- meta ---
     "PROGRAM_ENV",
+    "PROGRAM_DISPLAY",
+    "PROGRAM_SCRIPT",
     # --- types ---
     "BuildConfig",
     # --- utils ---

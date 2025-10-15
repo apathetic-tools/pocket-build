@@ -12,7 +12,9 @@ class RuntimeLike(Protocol):
 
     BuildConfig: type
     LEVEL_ORDER: Any
+    PROGRAM_DISPLAY: Any
     PROGRAM_ENV: Any
+    PROGRAM_SCRIPT: Any
     RESET: Any
 
     def colorize(self, text: str, color: str, use_color: bool | None = None) -> str: ...

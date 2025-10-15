@@ -9,7 +9,7 @@ from typing import Any, List, Optional, cast
 
 from .build import run_build
 from .config import parse_builds
-from .meta import PROGRAM_ENV, PROGRAM_NAME
+from .meta import PROGRAM_DISPLAY, PROGRAM_ENV, PROGRAM_SCRIPT
 from .runtime import current_runtime
 from .types import BuildConfig, MetaBuildConfig, RootConfig
 from .utils import GREEN, RED, YELLOW, colorize, load_jsonc, log
@@ -35,7 +35,7 @@ def get_metadata_from_header(script_path: Path) -> tuple[str, str]:
 
 def get_metadata() -> tuple[str, str]:
     """
-    Return (version, commit) tuple for Pocket Build.
+    Return (version, commit) tuple for this tool.
     - Bundled script → parse from header
     - Source package → read pyproject.toml + git
     """
@@ -78,7 +78,7 @@ def get_metadata() -> tuple[str, str]:
 
 
 def setup_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog=PROGRAM_NAME)
+    parser = argparse.ArgumentParser(prog=PROGRAM_SCRIPT)
     parser.add_argument("--include", nargs="+", help="Override include patterns.")
     parser.add_argument("--exclude", nargs="+", help="Override exclude patterns.")
     parser.add_argument("-o", "--out", help="Override output directory.")
@@ -141,7 +141,77 @@ def setup_parser() -> argparse.ArgumentParser:
         dest="log_level",
         help="Set log verbosity level.",
     )
+    parser.add_argument(
+        "--selftest",
+        action="store_true",
+        help="Run a built-in sanity test to verify that the tool works correctly.",
+    )
     return parser
+
+
+def run_selftest() -> int:
+    """Run a lightweight functional test of the tool itself."""
+    import shutil
+    import tempfile
+
+    log("info", "🧪 Running self-test...")
+
+    tmp_dir = Path(tempfile.mkdtemp(prefix=f"{PROGRAM_SCRIPT}-selftest-"))
+    src = tmp_dir / "src"
+    out = tmp_dir / "out"
+    src.mkdir()
+
+    # Create a tiny file to copy
+    file = src / "hello.txt"
+    file.write_text(f"hello {PROGRAM_DISPLAY}!", encoding="utf-8")
+
+    # Explicitly typed fake config for internal run
+    config: dict[str, list[BuildConfig]] = {
+        "builds": [
+            {"include": [str(src / "**")], "out": str(out)},
+        ]
+    }
+
+    try:
+        log("debug", f"[SELFTEST] using temp dir: {tmp_dir}")
+        builds = parse_builds(config)
+        for b in builds:
+            resolved = resolve_build_config(
+                b,
+                argparse.Namespace(
+                    include=None,
+                    exclude=None,
+                    add_include=None,
+                    add_exclude=None,
+                    out=None,
+                    dry_run=False,
+                    respect_gitignore=None,
+                    log_level="info",
+                ),
+                config_dir=tmp_dir,
+                cwd=tmp_dir,
+                root_cfg={"respect_gitignore": False},
+            )
+            run_build(resolved)
+
+        # Verify file copy
+        copied = out / "hello.txt"
+        if (
+            copied.exists()
+            and copied.read_text().strip() == f"hello {PROGRAM_DISPLAY}!"
+        ):
+            log(
+                "info", f"✅ Self-test passed — {PROGRAM_DISPLAY} is working correctly."
+            )
+            return 0
+        log("error", "Self-test failed: output file not found or invalid.")
+        return 1
+
+    except Exception as e:
+        log("error", f"Self-test failed: {e}")
+        return 1
+    finally:
+        shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def find_config(args: argparse.Namespace, cwd: Path) -> Optional[Path]:
@@ -156,9 +226,9 @@ def find_config(args: argparse.Namespace, cwd: Path) -> Optional[Path]:
         return config
 
     candidates: List[Path] = [
-        cwd / f".{PROGRAM_NAME}.py",
-        cwd / f".{PROGRAM_NAME}.jsonc",
-        cwd / f".{PROGRAM_NAME}.json",
+        cwd / f".{PROGRAM_SCRIPT}.py",
+        cwd / f".{PROGRAM_SCRIPT}.jsonc",
+        cwd / f".{PROGRAM_SCRIPT}.json",
     ]
     found = [p for p in candidates if p.exists()]
 
@@ -328,17 +398,20 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.version:
         version, commit = get_metadata()
         # always output
-        print(f"Pocket Build {version} ({commit})")
+        print(f"{PROGRAM_DISPLAY} {version} ({commit})")
         return 0
 
     # --- Python version check ---
     if sys.version_info < (3, 10):
         # error before log-level exists
         print(
-            colorize(f"❌  {PROGRAM_NAME} requires Python 3.10 or newer.", RED),
+            colorize(f"❌  {PROGRAM_DISPLAY} requires Python 3.10 or newer.", RED),
             file=sys.stderr,
         )
         return 1
+
+    if args.selftest:
+        return run_selftest()
 
     # --- Config path handling ---
     cwd = Path.cwd().resolve()
@@ -356,7 +429,7 @@ def main(argv: Optional[List[str]] = None) -> int:
         else:
             # error before log-level exists
             print(
-                f"❌  No build config found (.{PROGRAM_NAME}.json)"
+                f"❌  No build config found (.{PROGRAM_SCRIPT}.json)"
                 " and no includes provided.",
                 file=sys.stderr,
             )
