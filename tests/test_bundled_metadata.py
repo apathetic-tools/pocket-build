@@ -93,3 +93,41 @@ def test_bundled_script_metadata_and_execution() -> None:
         )
         assert "Build completed" in result.stdout
         assert "🎉 All builds complete" in result.stdout
+
+
+def test_bundled_script_has_python_constants_and_parses_them() -> None:
+    """Ensure __version__ and __commit__ constants exist and match header."""
+    root = Path(__file__).resolve().parent.parent
+    script = root / "bin" / "pocket-build.py"
+    text = script.read_text(encoding="utf-8")
+
+    # Check constants exist
+    version_const = re.search(r"__version__\s*=\s*['\"]([^'\"]+)['\"]", text)
+    commit_const = re.search(r"__commit__\s*=\s*['\"]([^'\"]+)['\"]", text)
+    assert version_const, "Missing __version__ constant"
+    assert commit_const, "Missing __commit__ constant"
+
+    # Check they match header comments
+    header_version = re.search(r"^# Version:\s*([\w.\-]+)", text, re.MULTILINE)
+    header_commit = re.search(r"^# Commit:\s*(.+)$", text, re.MULTILINE)
+    assert header_version, "Missing # Version header"
+    assert header_commit, "Missing # Commit header"
+
+    assert version_const.group(1) == header_version.group(1)
+    assert commit_const.group(1) == header_commit.group(1)
+
+
+def test_get_metadata_from_header_prefers_constants(tmp_path: Path):
+    """Should return values from __version__ and __commit__ if header lines missing."""
+    from pocket_build.cli import get_metadata_from_header
+
+    text = """
+__version__ = "1.2.3"
+__commit__ = "abc1234"
+"""
+    script = tmp_path / "fake_script.py"
+    script.write_text(text)
+    version, commit = get_metadata_from_header(script)
+
+    assert version == "1.2.3"
+    assert commit == "abc1234"

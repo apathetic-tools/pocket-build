@@ -17,17 +17,33 @@ from .utils_runtime import GREEN, RED, YELLOW, colorize, log
 
 
 def get_metadata_from_header(script_path: Path) -> tuple[str, str]:
-    """Extract version and commit from bundled header if present."""
+    """Extract version and commit from bundled script.
+
+    Prefers in-file constants (__version__, __commit__) if present;
+    falls back to commented header tags.
+    """
     version = "unknown"
     commit = "unknown"
 
     try:
         text = script_path.read_text(encoding="utf-8")
-        for line in text.splitlines():
-            if line.startswith("# Version:"):
-                version = line.split(":", 1)[1].strip()
-            elif line.startswith("# Commit:"):
-                commit = line.split(":", 1)[1].strip()
+
+        # --- Prefer Python constants if defined ---
+        const_version = re.search(r"__version__\s*=\s*['\"]([^'\"]+)['\"]", text)
+        const_commit = re.search(r"__commit__\s*=\s*['\"]([^'\"]+)['\"]", text)
+        if const_version:
+            version = const_version.group(1)
+        if const_commit:
+            commit = const_commit.group(1)
+
+        # --- Fallback: header lines ---
+        if version == "unknown" or commit == "unknown":
+            for line in text.splitlines():
+                if line.startswith("# Version:") and version == "unknown":
+                    version = line.split(":", 1)[1].strip()
+                elif line.startswith("# Commit:") and commit == "unknown":
+                    commit = line.split(":", 1)[1].strip()
+
     except Exception:
         pass
 
