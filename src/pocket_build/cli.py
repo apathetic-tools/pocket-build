@@ -1,7 +1,5 @@
 # src/pocket_build/cli.py
 import argparse
-import contextlib
-import io
 import os
 import re
 import subprocess
@@ -14,7 +12,7 @@ from .config import parse_builds
 from .meta import PROGRAM_ENV, PROGRAM_NAME
 from .runtime import current_runtime
 from .types import BuildConfig, MetaBuildConfig, RootConfig
-from .utils import RED, YELLOW, colorize, is_error_level, load_jsonc, log
+from .utils import RED, YELLOW, colorize, load_jsonc, log
 
 
 def get_metadata_from_header(script_path: Path) -> tuple[str, str]:
@@ -145,7 +143,10 @@ def find_config(args: argparse.Namespace, cwd: Path) -> Optional[Path]:
     if args.config:
         config = Path(args.config).expanduser().resolve()
         if not config.exists():
-            print(colorize(f"⚠️  Config file not found: {config}", YELLOW))
+            # error before log-level exists
+            print(
+                colorize(f"⚠️  Config file not found: {config}", YELLOW), file=sys.stderr
+            )
             return None
         return config
 
@@ -159,6 +160,7 @@ def find_config(args: argparse.Namespace, cwd: Path) -> Optional[Path]:
     if found:
         if len(found) > 1:
             names = ", ".join(p.name for p in found)
+            # error before log-level exists
             print(
                 colorize(
                     (
@@ -166,7 +168,8 @@ def find_config(args: argparse.Namespace, cwd: Path) -> Optional[Path]:
                         f" using {found[0].name}."
                     ),
                     YELLOW,
-                )
+                ),
+                file=sys.stderr,
             )
         return found[0]
 
@@ -314,19 +317,28 @@ def main(argv: Optional[List[str]] = None) -> int:
     # --- Version flag ---
     if args.version:
         version, commit = get_metadata()
+        # always output
         print(f"Pocket Build {version} ({commit})")
         return 0
 
     # --- Python version check ---
     if sys.version_info < (3, 10):
-        print(colorize(f"❌ {PROGRAM_NAME} requires Python 3.10 or newer.", RED))
+        # error before log-level exists
+        print(
+            colorize(f"❌ {PROGRAM_NAME} requires Python 3.10 or newer.", RED),
+            file=sys.stderr,
+        )
         return 1
 
     # --- Config path handling ---
     cwd = Path.cwd().resolve()
     config_path = find_config(args, cwd)
     if not config_path:
-        print(colorize(f"⚠️  No build config found (.{PROGRAM_NAME}.json).", YELLOW))
+        # error before log-level exists
+        print(
+            colorize(f"⚠️  No build config found (.{PROGRAM_NAME}.json).", YELLOW),
+            file=sys.stderr,
+        )
         return 1
 
     # --- Config + Build handling ---
@@ -367,23 +379,14 @@ def main(argv: Optional[List[str]] = None) -> int:
         if "respect_gitignore" not in b:
             b["respect_gitignore"] = root_respect_gitignore
 
-    # --- Quiet mode: temporarily suppress stdout ---
-    if is_error_level(args.log_level):
-        # everything printed inside this block is discarded
-        with contextlib.redirect_stdout(io.StringIO()):
-            for build_cfg in resolved_builds:
-                run_build(build_cfg)
-        return 0
-
-    # --- Normal / verbose mode ---
-    print(f"🔧 Using config: {config_path.name}")
-    print(f"📁 Config base: {config_dir}")
-    print(f"📂 Invoked from: {cwd}\n")
-    print(f"🔧 Running {len(resolved_builds)} build(s)\n")
+    log("info", f"🔧 Using config: {config_path.name}")
+    log("info", f"📁 Config base: {config_dir}")
+    log("info", f"📂 Invoked from: {cwd}\n")
+    log("info", f"🔧 Running {len(resolved_builds)} build(s)\n")
 
     for i, build_cfg in enumerate(resolved_builds, 1):
-        print(f"▶️  Build {i}/{len(resolved_builds)}")
+        log("info", f"▶️  Build {i}/{len(resolved_builds)}")
         run_build(build_cfg)
 
-    print("🎉 All builds complete.")
+    log("info", "🎉 All builds complete.")
     return 0

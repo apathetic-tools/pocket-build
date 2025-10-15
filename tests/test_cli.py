@@ -28,7 +28,8 @@ def test_main_no_config(
     code = runtime_env.main([])
     assert code == 1
 
-    out = capsys.readouterr().out
+    captured = capsys.readouterr()
+    out = captured.out + captured.err
     assert "No build config" in out
 
 

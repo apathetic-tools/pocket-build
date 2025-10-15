@@ -153,4 +153,4 @@ def run_build(
 
             copy_item(src, dest, excludes, meta)
 
-    print(f"✅ Build completed → {out_dir}\n")
+    log("info", f"✅ Build completed → {out_dir}\n")

@@ -98,7 +98,7 @@ def test_run_build_creates_output_dir_and_copies(
         "out": str(project_root / "dist"),
         "__meta__": meta,
     }
-    runtime_env.current_runtime["log_level"] = "critical"  # normal
+    runtime_env.current_runtime["log_level"] = "info"  # normal
     runtime_env.run_build(build_cfg)
 
     dist = project_root / "dist"
