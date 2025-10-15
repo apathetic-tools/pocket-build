@@ -11,16 +11,18 @@ from .config import parse_builds
 from .meta import PROGRAM_DISPLAY, PROGRAM_ENV, PROGRAM_SCRIPT
 from .runtime import current_runtime
 from .types import BuildConfig
-from .utils import (  # is_error_level,; should_log,
+from .utils_core import (
+    get_glob_root,
+    is_excluded,
+    load_jsonc,
+    should_use_color,
+)
+from .utils_runtime import (  # is_error_level,; should_log,
     LEVEL_ORDER,
     RESET,
     colorize,
-    get_glob_root,
     is_bypass_capture,
-    is_excluded,
-    load_jsonc,
     log,
-    should_use_color,
 )
 
 __all__ = [

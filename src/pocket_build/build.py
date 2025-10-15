@@ -4,12 +4,14 @@ from pathlib import Path
 from typing import List
 
 from .types import BuildConfig, IncludeEntry, MetaBuildConfig
-from .utils import (
-    YELLOW,
-    colorize,
+from .utils_core import (
     get_glob_root,
     has_glob_chars,
     is_excluded,
+)
+from .utils_runtime import (
+    YELLOW,
+    colorize,
     log,
 )
 

@@ -50,3 +50,4 @@ class RootConfig(TypedDict, total=False):
 
 class Runtime(TypedDict):
     log_level: str
+    use_color: bool

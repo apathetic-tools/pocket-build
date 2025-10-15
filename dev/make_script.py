@@ -27,9 +27,10 @@ PYPROJECT = ROOT / "pyproject.toml"
 
 ORDER = [
     "meta.py",
-    "runtime.py",
     "types.py",
-    "utils.py",
+    "utils_core.py",  # needed before runtime.py
+    "runtime.py",
+    "utils_runtime.py",
     "config.py",
     "build.py",
     "cli.py",

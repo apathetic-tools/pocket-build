@@ -1,6 +1,8 @@
 # tests/test_utils_color.py
 """Tests for color utility helpers in pocket_build.utils."""
 
+# not doing tests for resolved_use_color()
+
 from __future__ import annotations
 
 import sys
@@ -67,30 +69,6 @@ def test_colorize_explicit_true_false(runtime_env: RuntimeLike) -> None:
     assert colorize(test_string, GREEN, use_color=False) == test_string
 
 
-def test_colorize_caches_system_default(
-    runtime_env: RuntimeLike,
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Caches system color decision on first call."""
-    colorize = runtime_env.colorize
-    # Reset cache for deterministic behavior
-    if hasattr(colorize, "_system_default"):
-        delattr(colorize, "_system_default")
-
-    # Determine correct patch target
-    if getattr(runtime_env, "__name__", "") == "pocket_build_single":
-        target = "pocket_build_single.should_use_color"
-    else:
-        target = "pocket_build.utils.should_use_color"
-
-    monkeypatch.setattr(target, lambda: True)
-    assert GREEN in colorize("cache", GREEN)
-
-    # Change should_use_color() to False — cached result should persist
-    monkeypatch.setattr(target, lambda: False)
-    assert GREEN in colorize("cache", GREEN)
-
-
 def test_colorize_respects_reset(
     runtime_env: RuntimeLike,
     monkeypatch: pytest.MonkeyPatch,
@@ -102,7 +80,7 @@ def test_colorize_respects_reset(
     if getattr(runtime_env, "__name__", "") == "pocket_build_single":
         target = "pocket_build_single.should_use_color"
     else:
-        target = "pocket_build.utils.should_use_color"
+        target = "pocket_build.utils_core.should_use_color"
 
     monkeypatch.setattr(target, lambda: False)
     if hasattr(colorize, "_system_default"):
@@ -111,3 +89,22 @@ def test_colorize_respects_reset(
     test_string = "test string"
     result = colorize(test_string, GREEN)
     assert result == test_string
+
+
+def test_colorize_respects_runtime_flag(
+    runtime_env: RuntimeLike, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """colorize() should follow current_runtime['use_color'] exactly."""
+    colorize = runtime_env.colorize
+    RESET = runtime_env.RESET
+    text = "sample"
+
+    # Force runtime to enable color
+    runtime_env.current_runtime["use_color"] = True
+    result = colorize(text, GREEN)
+    assert result == f"{GREEN}{text}{RESET}"
+
+    # Force runtime to disable color
+    runtime_env.current_runtime["use_color"] = False
+    result = colorize(text, GREEN)
+    assert result == text

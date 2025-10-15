@@ -11,7 +11,6 @@ Planned command-line flags for future releases:
 
 - [ ] Ensure all CLI parameters are covered in config
 - [ ] Add key to disable update checks directly in config
-- [ ] Add key to disable colors directly in config
 - [ ] Provide a JSON Schema for validation and autocomplete  
 
 ## 🧩 Joiner Scripts (Build System)
@@ -21,7 +20,6 @@ Exploring bundling options for generating the single-file release:
 
 ## 🧪 Tests
 - [ ] Flesh out tests for additional functionality after it has been added
-- [ ] `--selftest` that runs a few minimal checks internally using Python’s `unittest`—so the user can verify that the install works without needing pytest.
 
 ## 🧑‍💻 Development 
 - [ ] Deploy action when I tag a release should create a release and attach it to the tagged release.

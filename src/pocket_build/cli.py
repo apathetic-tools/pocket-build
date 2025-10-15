@@ -12,7 +12,8 @@ from .config import parse_builds
 from .meta import PROGRAM_DISPLAY, PROGRAM_ENV, PROGRAM_SCRIPT
 from .runtime import current_runtime
 from .types import BuildConfig, MetaBuildConfig, RootConfig
-from .utils import GREEN, RED, YELLOW, colorize, load_jsonc, log
+from .utils_core import load_jsonc, should_use_color
+from .utils_runtime import GREEN, RED, YELLOW, colorize, log
 
 
 def get_metadata_from_header(script_path: Path) -> tuple[str, str]:
@@ -116,6 +117,23 @@ def setup_parser() -> argparse.ArgumentParser:
     gitignore.set_defaults(respect_gitignore=None)
 
     parser.add_argument("--version", action="store_true", help="Show version info.")
+
+    color = parser.add_mutually_exclusive_group()
+    color.add_argument(
+        "--no-color",
+        dest="use_color",
+        action="store_const",
+        const=False,
+        help="Disable ANSI color output.",
+    )
+    color.add_argument(
+        "--color",
+        dest="use_color",
+        action="store_const",
+        const=True,
+        help="Force-enable ANSI color output (overrides auto-detect).",
+    )
+    color.set_defaults(use_color=None)
 
     log_level = parser.add_mutually_exclusive_group()
     log_level.add_argument(
@@ -393,6 +411,9 @@ def resolve_build_config(
 def main(argv: Optional[List[str]] = None) -> int:
     parser = setup_parser()
     args = parser.parse_args(argv)
+
+    use_color = args.use_color if args.use_color is not None else should_use_color()
+    current_runtime["use_color"] = use_color
 
     # --- Version flag ---
     if args.version:

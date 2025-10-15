@@ -13,7 +13,7 @@
 ## 🚀 Quick Start
 
 The self-contained executable script lives at [**`bin/pocket-build.py`**](./bin/pocket-build.py).  
-The only requirement is **Python 3.8+** — no pip, no dependencies.
+The only requirement is **Python 3.10+** — no pip, no dependencies.
 
 Download or copy that one file anywhere and run it directly:
 
@@ -24,6 +24,22 @@ python3 pocket-build.py
 That’s it. ✨
 
 Everything else in this repo (tests, docs, configs) exists only for developing and maintaining the script itself.
+
+---
+
+## 🧪 Verify Your Install
+
+Pocket-Build includes a built-in self-check — no pytest required.  
+You can verify that the script works correctly on your system by running:
+
+```bash
+python3 pocket-build.py --selftest
+```
+
+This creates a tiny temporary project, copies a test file, and confirms it completes successfully.  
+If you see a ✅ “Self-test passed” message, your installation is working perfectly.
+
+---
 
 ### ⚖️ License
 - [MIT-NOAI License](LICENSE)
