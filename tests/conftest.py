@@ -25,6 +25,31 @@ from _pytest.python import Metafunc
 
 from tests.fixtures.runtime_protocol import RuntimeLike
 
+GEN_PROTOCOL_CMD = ["poetry", "run", "poe", "gen:test:protocol"]
+
+
+def ensure_protocol_up_to_date(root: Path) -> Path:
+    """Regenerate tests/fixtures/runtime_protocol.py if outdated."""
+    proto_path = root / "tests" / "fixtures" / "runtime_protocol.py"
+    src_dir = root / "src" / "pocket_build"
+
+    # If missing or older than any source file → rebuild.
+    needs_rebuild = not proto_path.exists()
+    if not needs_rebuild:
+        proto_mtime = proto_path.stat().st_mtime_ns
+        for src_file in src_dir.rglob("*.py"):
+            if src_file.stat().st_mtime_ns > proto_mtime:
+                needs_rebuild = True
+                break
+
+    if needs_rebuild:
+        print("🧩 Regenerating runtime_protocol.py (gen:test:protocol)...")
+        subprocess.run(GEN_PROTOCOL_CMD, cwd=root, check=True)
+        proto_path.touch()
+        assert proto_path.exists(), "❌ Failed to generate runtime protocol."
+
+    return proto_path
+
 
 # ------------------------------------------------------------
 # ⚙️ Auto-build helper for bundled script
@@ -64,14 +89,15 @@ def runtime_env(
     """Yield a loaded pocket_build environment (module or bundled single-file)."""
     root = Path(__file__).resolve().parent.parent
 
+    # --- Ensure supporting artifacts are current ---
+    ensure_protocol_up_to_date(root)
+
     if request.param == "module":
         import pocket_build as mod
 
         yield mod  # type: ignore[return-value]
-
     else:
         bin_path = ensure_bundled_script_up_to_date(root)
-
         spec = importlib.util.spec_from_file_location("pocket_build_single", bin_path)
         assert spec and spec.loader, f"Failed to load spec from {bin_path}"
         mod = importlib.util.module_from_spec(spec)
