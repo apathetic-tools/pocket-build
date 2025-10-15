@@ -33,7 +33,7 @@ def copy_directory(
     """Recursively copy directory contents, skipping excluded files."""
     for item in src.rglob("*"):
         if is_excluded(item, exclude_patterns, root):
-            log("debug", f"🚫 Skipped: {item.relative_to(root)}")
+            log("debug", f"🚫  Skipped: {item.relative_to(root)}")
             continue
         target = dest / item.relative_to(src)
         if item.is_dir():
@@ -55,11 +55,11 @@ def copy_item(
     # Determine which base to use for exclusion checks
     if "exclude_base" not in meta:
         if "include_base" not in meta:
-            log("trace", "[WARN] Using fallback exclude_base — meta incomplete `.`")
+            log("trace", "⚠️  Using fallback exclude_base — meta incomplete `.`")
         else:
             log(
                 "debug",
-                "[WARN] Using fallback exclude_base — meta incomplete `include_base`",
+                "⚠️  Using fallback exclude_base — meta incomplete `include_base`",
             )
     exclude_base = Path(
         meta.get("exclude_base") or meta.get("include_base") or "."
@@ -67,12 +67,12 @@ def copy_item(
 
     log(
         "trace",
-        f"[DEBUG COPY_ITEM] src={src} dest={dest} "
+        f"[COPY_ITEM] src={src} dest={dest} "
         f"exclude_base={exclude_base} patterns={exclude_patterns}",
     )
 
     if is_excluded(src, exclude_patterns, exclude_base):
-        log("debug", f"🚫 Skipped (excluded): {src.relative_to(exclude_base)}")
+        log("debug", f"🚫  Skipped (excluded): {src.relative_to(exclude_base)}")
         return
     if src.is_dir():
         copy_directory(src, dest, exclude_patterns, exclude_base)
@@ -93,8 +93,7 @@ def run_build(
 
     log(
         "trace",
-        f"[DEBUG RUN_BUILD] include={includes}"
-        f" out_dir={out_dir} include_base={include_base}",
+        f"[RUN_BUILD] include={includes} out_dir={out_dir} include_base={include_base}",
     )
 
     # Clean and recreate output directory
@@ -129,7 +128,7 @@ def run_build(
             glob_root = get_glob_root(src_pattern)
             matches = list(glob_root.rglob(src_path.relative_to(glob_root).as_posix()))
 
-        log("trace", f"[DEBUG MATCHES] root={glob_root} matches={matches}")
+        log("trace", f"[MATCHES] root={glob_root} matches={matches}")
 
         if not matches:
             log("debug", colorize(f"⚠️  No matches for {src_pattern}", YELLOW))

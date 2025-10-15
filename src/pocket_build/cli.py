@@ -184,9 +184,9 @@ def load_config(config_path: Path) -> dict[str, Any]:
             exec(config_path.read_text(), config_globals)
             log(
                 "trace",
-                f"[DEBUG EXEC] globals after exec: {list(config_globals.keys())}",
+                f"[EXEC] globals after exec: {list(config_globals.keys())}",
             )
-            log("trace", f"[DEBUG EXEC] builds: {config_globals.get('builds')}")
+            log("trace", f"[EXEC] builds: {config_globals.get('builds')}")
         finally:
             sys.path.pop(0)
 
@@ -286,7 +286,7 @@ def resolve_build_config(
         patterns = load_gitignore_patterns(gitignore_path)
         log(
             "trace",
-            f"[DEBUG] Using .gitignore at {config_dir} ({len(patterns)} patterns)",
+            f"Using .gitignore at {config_dir} ({len(patterns)} patterns)",
         )
         if patterns:
             resolved["exclude"].extend(patterns)
@@ -330,7 +330,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if sys.version_info < (3, 10):
         # error before log-level exists
         print(
-            colorize(f"❌ {PROGRAM_NAME} requires Python 3.10 or newer.", RED),
+            colorize(f"❌  {PROGRAM_NAME} requires Python 3.10 or newer.", RED),
             file=sys.stderr,
         )
         return 1
@@ -341,7 +341,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     if not config_path:
         # error before log-level exists
         print(
-            colorize(f"⚠️  No build config found (.{PROGRAM_NAME}.json).", YELLOW),
+            colorize(f"❌  No build config found (.{PROGRAM_NAME}.json).", RED),
             file=sys.stderr,
         )
         return 1
@@ -361,9 +361,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         log_level = raw_config.get("log_level", "info")
     current_runtime["log_level"] = log_level
 
-    log("trace", f"[DEBUG RAW CONFIG] {raw_config}")
+    log("trace", f"[RAW CONFIG] {raw_config}")
     builds = parse_builds(raw_config)
-    log("trace", f"[DEBUG BUILDS AFTER PARSE] {builds}")
+    log("trace", f"[BUILDS AFTER PARSE] {builds}")
 
     root_respect_gitignore = raw_config.get("respect_gitignore", True)
 
@@ -395,7 +395,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
         if build_log_level:
             current_runtime["log_level"] = build_log_level
-            log("debug", f"[DEBUG] Overriding log level → {build_log_level}")
+            log("debug", f"Overriding log level → {build_log_level}")
 
         log("info", f"▶️  Build {i}/{len(resolved_builds)}")
         run_build(build_cfg)

@@ -18,6 +18,31 @@ RESET = "\033[0m"
 
 LEVEL_ORDER = ["critical", "error", "warning", "info", "debug", "trace"]
 
+LOG_PREFIXES: dict[str, str | None] = {
+    "critical": "💥 ",
+    "error": "❌ ",
+    "warning": "⚠️ ",
+    "info": None,
+    "debug": "[DEBUG] ",
+    "trace": "[TRACE] ",
+}
+LOG_PREFIXES_COLOR: dict[str, str | None] = {
+    "critical": None,
+    "error": None,
+    "warning": None,
+    "info": None,
+    "debug": GREEN,
+    "trace": YELLOW,
+}
+LOG_MSG_COLOR: dict[str, str | None] = {
+    "critical": None,
+    "error": None,
+    "warning": None,
+    "info": None,
+    "debug": None,
+    "trace": None,
+}
+
 
 def is_bypass_capture() -> bool:
     """Return True if capture bypass env vars are active."""
@@ -44,23 +69,47 @@ def log(
     end: str = "\n",
     file: TextIO | None = None,
     flush: bool = False,
+    prefix: str | None = None,
 ) -> None:
     """Print a message respecting current log level and routing to
-    stdout/stderr appropriately. Honors BYPASS_CAPTURE env vars."""
+    stdout/stderr appropriately.
+    - Prefix color and message color are mutually exclusive:
+      if a message color is set, prefix color is skipped.
+    - Safe for use in captured output; respects BYPASS_CAPTURE"""
     current_level = current_runtime["log_level"]
     if not should_log(level, current_level):
         return
 
+    # Determine correct output stream
     if file is None and is_bypass_capture():
-        # Use the *original* un-captured stream when available
-        if is_error_level(level):
-            file = getattr(sys, "__stderr__", sys.stderr)
-        else:
-            file = getattr(sys, "__stdout__", sys.stdout)
+        file = (
+            getattr(sys, "__stderr__", sys.stderr)
+            if is_error_level(level)
+            else getattr(sys, "__stdout__", sys.stdout)
+        )
     elif file is None:
         file = sys.stderr if is_error_level(level) else sys.stdout
 
-    print(*values, sep=sep, end=end, file=file, flush=flush)
+    prefix_color = LOG_PREFIXES_COLOR.get(level)
+    msg_color = LOG_MSG_COLOR.get(level)
+
+    # Safely coerce prefix
+    actual_prefix = prefix if prefix is not None else (LOG_PREFIXES.get(level) or "")
+
+    # Helper lambdas to treat None/"" as unset
+    def is_set(value: str | None) -> bool:
+        return bool(value and value.strip())
+
+    # If no whole-line color, apply prefix color
+    if not is_set(msg_color) and is_set(prefix_color):
+        actual_prefix = colorize(actual_prefix, cast(str, prefix_color))
+
+    message = sep.join([actual_prefix] + [str(v) for v in values])
+
+    if is_set(msg_color):
+        message = colorize(message, cast(str, msg_color))
+
+    print(message, end=end, file=file, flush=flush)
 
 
 def load_jsonc(path: Path) -> Dict[str, Any]:

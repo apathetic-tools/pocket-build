@@ -3,12 +3,20 @@
 # not doing tests for is_error_level() and should_log()
 
 import io
+import re
 import sys
 
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
 from tests.conftest import RuntimeLike
+
+ANSI_PATTERN = re.compile(r"\033\[[0-9;]*m")
+
+
+def strip_ansi(s: str) -> str:
+    """Remove ANSI escape sequences for color safety."""
+    return ANSI_PATTERN.sub("", s)
 
 
 @pytest.fixture(autouse=True)
@@ -82,15 +90,21 @@ def test_is_bypass_capture_env_vars(
 def test_log_routes_correct_stream(
     runtime_env: RuntimeLike, level: str, expected_stream: str
 ):
-    """Log should route messages to stdout/stderr based on severity."""
+    """Ensure log() routes to the correct stream and message appears,
+    ignoring prefixes/colors."""
     out, err = capture_output(runtime_env, level, "trace")
 
+    out, err = strip_ansi(out.strip()), strip_ansi(err.strip())
+
+    combined = out or err
+    assert f"msg:{level}" in combined  # message always present
+
     if expected_stream == "stdout":
-        assert out.strip() == f"msg:{level}"
-        assert err == ""
+        assert out  # message goes to stdout
+        assert not err
     else:
-        assert err.strip() == f"msg:{level}"
-        assert out == ""
+        assert err  # message goes to stderr
+        assert not out
 
 
 @pytest.mark.parametrize(
@@ -141,3 +155,67 @@ def test_log_bypass_capture_env(monkeypatch: MonkeyPatch, runtime_env: RuntimeLi
 
     assert "out-msg" in fake_stdout.getvalue()
     assert "err-msg" in fake_stderr.getvalue()
+
+
+@pytest.mark.parametrize(
+    "level,expected_prefix",
+    [
+        ("info", ""),  # info has no prefix
+        ("debug", "[DEBUG] "),  # debug has one
+        ("trace", "[TRACE] "),  # trace has one
+        ("warning", "⚠️ "),  # emoji prefix
+        ("error", "❌ "),
+        ("critical", "💥 "),
+    ],
+)
+def test_log_includes_default_prefix(
+    runtime_env: RuntimeLike, level: str, expected_prefix: str
+):
+    """log() should include the correct default prefix based on level."""
+    runtime_env.current_runtime["log_level"] = "trace"
+
+    out_buf, err_buf = io.StringIO(), io.StringIO()
+    sys_stdout, sys_stderr = sys.stdout, sys.stderr
+    sys.stdout, sys.stderr = out_buf, err_buf
+    try:
+        runtime_env.log(level, "hello")
+    finally:
+        sys.stdout, sys.stderr = sys_stdout, sys_stderr
+
+    output = (out_buf.getvalue() or err_buf.getvalue()).strip()
+    # Strip any ANSI codes before comparing
+    clean = __import__("re").sub(r"\033\[[0-9;]*m", "", output)
+
+    assert clean.startswith(expected_prefix)
+    assert "hello" in clean
+
+
+def test_log_allows_custom_prefix(runtime_env: RuntimeLike):
+    """Explicit prefix argument should override default prefix entirely."""
+    runtime_env.current_runtime["log_level"] = "debug"
+
+    buf = io.StringIO()
+    sys_stdout, sys.stderr = sys.stdout, sys.stderr
+    sys.stdout = buf
+    try:
+        runtime_env.log("debug", "world", prefix="[CUSTOM] ")
+    finally:
+        sys.stdout = sys_stdout
+
+    output = buf.getvalue().strip()
+    clean = __import__("re").sub(r"\033\[[0-9;]*m", "", output)
+
+    assert clean.startswith("[CUSTOM] ")
+    assert "world" in clean
+    # Ensure default prefix does not appear
+    assert "[DEBUG]" not in clean
+
+
+def test_log_includes_some_prefix_for_non_info(runtime_env: RuntimeLike):
+    """Non-info levels should include some kind of prefix (emoji or tag)."""
+    runtime_env.current_runtime["log_level"] = "trace"
+    out, _ = capture_output(runtime_env, "debug", "trace")
+    cleaned = strip_ansi(out.strip())
+
+    # There should be something before "msg:debug"
+    assert any(cleaned.startswith(p) for p in ("[", "⚠️", "❌", "💥"))

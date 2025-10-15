@@ -52,6 +52,7 @@ class RuntimeLike(Protocol):
         end: str = "\n",
         file: typing.TextIO | None = None,
         flush: bool = False,
+        prefix: str | None = None,
     ) -> None: ...
     def main(self, argv: Optional[List[str]] = None) -> int: ...
     def parse_builds(
