@@ -305,6 +305,11 @@ def resolve_build_config(
         meta["out_base"] = str(config_dir)
         resolved["out"] = str((config_dir / out_dir).resolve())
 
+    # --- Optional per-build log level override (for single-build convenience) ---
+    if "log_level" in build_cfg:
+        # Allow single-build convenience override
+        resolved["log_level"] = build_cfg["log_level"]
+
     # Explicitly cast back to BuildConfig for return
     resolved["__meta__"] = meta
     return cast(BuildConfig, resolved)
@@ -385,8 +390,19 @@ def main(argv: Optional[List[str]] = None) -> int:
     log("info", f"🔧 Running {len(resolved_builds)} build(s)\n")
 
     for i, build_cfg in enumerate(resolved_builds, 1):
+        build_log_level = build_cfg.get("log_level")
+        prev_level = current_runtime["log_level"]
+
+        if build_log_level:
+            current_runtime["log_level"] = build_log_level
+            log("debug", f"[DEBUG] Overriding log level → {build_log_level}")
+
         log("info", f"▶️  Build {i}/{len(resolved_builds)}")
         run_build(build_cfg)
+
+        # Restore root-level log level
+        if build_log_level:
+            current_runtime["log_level"] = prev_level
 
     log("info", "🎉 All builds complete.")
     return 0

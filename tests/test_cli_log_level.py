@@ -1,4 +1,4 @@
-# tests/test_cli.py
+# tests/test_cli_log_level.py
 """Tests for pocket_build.cli (module and single-file versions)."""
 
 from __future__ import annotations
@@ -131,3 +131,41 @@ def test_log_level_from_env_var(
 
     assert code == 0
     assert runtime_env.current_runtime["log_level"] == "error"
+
+
+def test_per_build_log_level_override(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    runtime_env: RuntimeLike,
+) -> None:
+    """A build's own log_level should temporarily override the runtime level."""
+    # Root config sets info, but the build overrides to debug
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(
+        json.dumps(
+            {
+                "log_level": "info",
+                "builds": [
+                    {"include": [], "out": "dist1"},
+                    {"include": [], "out": "dist2", "log_level": "debug"},
+                ],
+            }
+        )
+    )
+    monkeypatch.chdir(tmp_path)
+
+    code = runtime_env.main([])
+    captured = capsys.readouterr()
+    out = captured.out + captured.err
+
+    assert code == 0
+    # It should have built both directories
+    assert (tmp_path / "dist1").exists()
+    assert (tmp_path / "dist2").exists()
+
+    # During the second build, debug logs should have appeared
+    assert "[DEBUG" in out or "Overriding log level" in out
+
+    # After all builds complete, runtime should be restored to root level
+    assert runtime_env.current_runtime["log_level"] == "info"

@@ -30,6 +30,9 @@ class BuildConfig(TypedDict, total=False):
     out: str
     respect_gitignore: bool
 
+    # optional single-build convenience override
+    log_level: str
+
 
 class RootConfig(TypedDict, total=False):
     builds: List[BuildConfig]
