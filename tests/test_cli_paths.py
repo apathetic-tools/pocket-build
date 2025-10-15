@@ -12,6 +12,58 @@ from _pytest.monkeypatch import MonkeyPatch
 from tests.conftest import RuntimeLike
 
 
+def test_configless_run_with_include_flag(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    runtime_env: RuntimeLike,
+) -> None:
+    """Should run successfully without a config file when --include is provided."""
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "foo.txt").write_text("hello")
+
+    # No config file on purpose
+    monkeypatch.chdir(tmp_path)
+
+    code = runtime_env.main(["--include", "src/**", "--out", "dist"])
+    captured = capsys.readouterr()
+    out = captured.out + captured.err
+
+    # Should exit successfully
+    assert code == 0
+
+    # Output directory should exist and contain copied files
+    dist = tmp_path / "dist"
+    assert dist.exists()
+    assert (dist / "foo.txt").exists()
+
+    # Log output should mention CLI-only mode
+    assert "CLI-only mode" in out or "no config file" in out
+    assert "Build completed" in out
+
+
+def test_configless_run_with_add_include_flag(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    runtime_env: RuntimeLike,
+):
+    """Should run in CLI-only mode when --add-include is provided (no config)."""
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "bar.txt").write_text("world")
+
+    monkeypatch.chdir(tmp_path)
+
+    code = runtime_env.main(["--add-include", "src/**", "--out", "outdir"])
+    out = capsys.readouterr().out
+
+    assert code == 0
+    assert (tmp_path / "outdir" / "bar.txt").exists()
+    assert "CLI-only" in out or "no config file" in out
+
+
 def test_custom_config_path(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,

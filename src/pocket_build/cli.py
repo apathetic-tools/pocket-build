@@ -12,7 +12,7 @@ from .config import parse_builds
 from .meta import PROGRAM_ENV, PROGRAM_NAME
 from .runtime import current_runtime
 from .types import BuildConfig, MetaBuildConfig, RootConfig
-from .utils import RED, YELLOW, colorize, load_jsonc, log
+from .utils import GREEN, RED, YELLOW, colorize, load_jsonc, log
 
 
 def get_metadata_from_header(script_path: Path) -> tuple[str, str]:
@@ -181,7 +181,7 @@ def find_config(args: argparse.Namespace, cwd: Path) -> Optional[Path]:
     return None
 
 
-def load_config(config_path: Path) -> dict[str, Any]:
+def load_config(config_path: Path) -> dict[str, Any] | list[Any]:
     if config_path.suffix == ".py":
         config_globals: dict[str, Any] = {}
         sys.path.insert(0, str(config_path.parent))
@@ -344,18 +344,36 @@ def main(argv: Optional[List[str]] = None) -> int:
     cwd = Path.cwd().resolve()
     config_path = find_config(args, cwd)
     if not config_path:
-        # error before log-level exists
-        print(
-            colorize(f"❌  No build config found (.{PROGRAM_NAME}.json).", RED),
-            file=sys.stderr,
-        )
-        return 1
+        if args.include or args.add_include:
+            # debug before log-level exists
+            print(
+                colorize("[DEBUG]", GREEN),
+                " No config file found — using CLI-only mode.",
+                file=sys.stderr,
+            )
+            raw_config: dict[str, Any] | list[Any] = {}
+            config_dir = cwd
+        else:
+            # error before log-level exists
+            print(
+                f"❌  No build config found (.{PROGRAM_NAME}.json)"
+                " and no includes provided.",
+                file=sys.stderr,
+            )
+            return 1
+    else:
+        config_dir = config_path.parent.resolve()
+        raw_config = load_config(config_path)
 
-    # --- Config + Build handling ---
-    config_dir = config_path.parent.resolve()
-    raw_config = load_config(config_path)
+    # Narrow the type early so .get() and .items() are valid
+    if isinstance(raw_config, list):
+        # parse_builds() can handle lists directly; no global fields to inspect
+        log("trace", "Config is a list — treating as single build (no root fields).")
+        root_cfg: dict[str, Any] = {}
+    else:
+        root_cfg = raw_config
 
-    # Determine effective log level, from now on use log_print()
+    # Determine effective log level, from now on use log()
     env_log_level = os.getenv(f"{PROGRAM_ENV}_LOG_LEVEL") or os.getenv("LOG_LEVEL")
     log_level: str
     if args.log_level:
@@ -363,7 +381,7 @@ def main(argv: Optional[List[str]] = None) -> int:
     elif env_log_level:
         log_level = env_log_level
     else:
-        log_level = raw_config.get("log_level", "info")
+        log_level = root_cfg.get("log_level", "info")
     current_runtime["log_level"] = log_level
 
     log("trace", f"[RAW CONFIG] {raw_config}")
@@ -374,9 +392,9 @@ def main(argv: Optional[List[str]] = None) -> int:
             b.pop("dry_run", None)
     log("trace", f"[BUILDS AFTER PARSE] {builds}")
 
-    root_respect_gitignore = raw_config.get("respect_gitignore", True)
+    root_respect_gitignore = root_cfg.get("respect_gitignore", True)
 
-    root_cfg = {k: v for k, v in raw_config.items() if k != "builds"}
+    root_cfg = {k: v for k, v in root_cfg.items() if k != "builds"}
     resolved_builds = [
         resolve_build_config(
             b,
@@ -388,6 +406,17 @@ def main(argv: Optional[List[str]] = None) -> int:
         for b in builds
     ]
 
+    if (
+        all(not b.get("include") for b in resolved_builds)
+        and not args.add_include
+        and not args.include
+    ):
+        log(
+            "warning",
+            "No include patterns found.\n"
+            "   Use 'include' in your config or pass --include / --add-include.",
+        )
+
     # Apply the root default to any build that didn't specify or override it
     for b in resolved_builds:
         if "respect_gitignore" not in b:
@@ -396,9 +425,13 @@ def main(argv: Optional[List[str]] = None) -> int:
     if args.dry_run:
         log("info", "🧪 Dry-run mode: no files will be written or deleted.\n")
 
-    log("info", f"🔧 Using config: {config_path.name}")
-    log("info", f"📁 Config base: {config_dir}")
-    log("info", f"📂 Invoked from: {cwd}\n")
+    if config_path:
+        log("info", f"🔧 Using config: {config_path.name}")
+        log("info", f"📁 Config base: {config_dir}")
+        log("info", f"📂 Invoked from: {cwd}\n")
+    else:
+        log("info", "🔧 Running in CLI-only mode (no config file).")
+        log("info", f"📁 Working base: {config_dir}")
     log("info", f"🔧 Running {len(resolved_builds)} build(s)\n")
 
     for i, build_cfg in enumerate(resolved_builds, 1):

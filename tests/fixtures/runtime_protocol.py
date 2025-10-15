@@ -2,7 +2,7 @@
 # ruff: noqa: E501
 import pathlib
 import typing
-from typing import Any, Dict, List, Optional, Protocol
+from typing import Any, Dict, List, Optional, Protocol, Union
 
 import pocket_build.types
 
@@ -58,7 +58,7 @@ class RuntimeLike(Protocol):
     ) -> None: ...
     def main(self, argv: Optional[List[str]] = None) -> int: ...
     def parse_builds(
-        self, raw_config: Dict[str, Any]
+        self, raw_config: Union[Dict[str, Any], List[Any]]
     ) -> List[pocket_build.types.BuildConfig]: ...
     def run_build(self, build_cfg: pocket_build.types.BuildConfig) -> None: ...
     def should_use_color(

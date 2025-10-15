@@ -39,6 +39,7 @@ HEADER = """# /tests/package_protocol.py
 import pathlib
 import typing
 import pocket_build.types
+from typing import Union
 """
 
 
