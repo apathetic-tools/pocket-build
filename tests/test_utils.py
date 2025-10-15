@@ -1,10 +1,14 @@
 # tests/test_utils.py
 """Tests for pocket_build.utils (module and single-file versions)."""
 
+# not doing tests for has_glob_chars()
+
 from __future__ import annotations
 
 from pathlib import Path
 from typing import Any, Dict
+
+import pytest
 
 from tests.conftest import RuntimeLike
 
@@ -44,3 +48,23 @@ def test_is_excluded_matches_patterns(
 
     assert runtime_env.is_excluded(file, ["foo/*"], root)
     assert not runtime_env.is_excluded(file, ["baz/*"], root)
+
+
+@pytest.mark.parametrize(
+    "pattern,expected",
+    [
+        ("src/**/*.py", Path("src")),  # nested glob
+        ("foo/bar/*.txt", Path("foo/bar")),  # single-level glob
+        ("assets/*", Path("assets")),  # trailing glob
+        ("*.md", Path(".")),  # glob at start (no static prefix)
+        ("**/*.js", Path(".")),  # pure glob pattern
+        ("no/globs/here", Path("no/globs/here")),  # no globs at all
+        ("./src/*/*.cfg", Path("src")),  # leading ./ ignored, stops at *
+    ],
+)
+def test_get_glob_root_extracts_static_prefix(
+    runtime_env: RuntimeLike, pattern: str, expected: Path
+):
+    """get_glob_root() should return the non-glob portion of a path pattern."""
+    result = runtime_env.get_glob_root(pattern)
+    assert result == expected, f"{pattern!r} → {result}, expected {expected}"

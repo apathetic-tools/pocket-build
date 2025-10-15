@@ -28,7 +28,7 @@ def test_bundled_script_metadata_and_execution() -> None:
 
     # --- Basic existence checks ---
     assert script.exists(), (
-        "Bundled script not found — run `poetry run poe build.single` first."
+        "Bundled script not found — run `poetry run poe build:single` first."
     )
     assert pyproject.exists(), "pyproject.toml missing — project layout inconsistent."
 

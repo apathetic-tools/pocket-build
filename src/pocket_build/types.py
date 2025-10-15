@@ -24,15 +24,23 @@ class MetaBuildConfig(TypedDict, total=False):
 class BuildConfig(TypedDict, total=False):
     include: List[Union[str, IncludeEntry]]
     exclude: List[str]
-    out: str
     __meta__: MetaBuildConfig
 
     # optional per-build override
+    out: str
     respect_gitignore: bool
 
 
 class RootConfig(TypedDict, total=False):
     builds: List[BuildConfig]
 
-    # global default
+    # runtime behavior
+    log_level: str
+
+    # default for each build
+    out: str
     respect_gitignore: bool
+
+
+class Runtime(TypedDict):
+    log_level: str

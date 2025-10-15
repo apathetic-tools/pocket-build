@@ -1,0 +1,156 @@
+# tests/test_cli_overrides.py
+"""Tests for pocket_build.cli (module and single-file versions)."""
+
+from __future__ import annotations
+
+import json
+from pathlib import Path
+
+import pytest
+from _pytest.monkeypatch import MonkeyPatch
+
+from tests.conftest import RuntimeLike
+
+
+def test_include_flag_overrides_config(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    runtime_env: RuntimeLike,
+) -> None:
+    """--include should override config include patterns."""
+    # Prepare files
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "foo.txt").write_text("ok")
+
+    other_dir = tmp_path / "other"
+    other_dir.mkdir()
+    (other_dir / "bar.txt").write_text("nope")
+
+    # Config originally points to wrong folder
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(
+        json.dumps(
+            {"builds": [{"include": ["other/**"], "exclude": [], "out": "dist"}]}
+        )
+    )
+
+    monkeypatch.chdir(tmp_path)
+    # Override include at CLI level
+    code = runtime_env.main(["--include", "src/**"])
+    out = capsys.readouterr().out
+
+    assert code == 0
+    dist_dir = tmp_path / "dist"
+    # Should copy src contents (flattened), not 'other'
+    assert (dist_dir / "foo.txt").exists()
+    assert not (dist_dir / "other").exists()
+    assert "Build completed" in out
+
+
+def test_exclude_flag_overrides_config(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    runtime_env: RuntimeLike,
+) -> None:
+    """--exclude should override config exclude patterns."""
+    # Create input directory with two files
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "keep.txt").write_text("keep me")
+    (src_dir / "ignore.tmp").write_text("ignore me")
+
+    # Config has no exclude rules
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(json.dumps({"builds": [{"include": ["src/**"], "out": "dist"}]}))
+
+    monkeypatch.chdir(tmp_path)
+    # Pass exclude override on CLI
+    code = runtime_env.main(["--exclude", "*.tmp"])
+    out = capsys.readouterr().out
+
+    assert code == 0
+    dist_dir = tmp_path / "dist"
+    # The .tmp file should be excluded now
+    assert (dist_dir / "keep.txt").exists()
+    assert not (dist_dir / "ignore.tmp").exists()
+    assert "Build completed" in out
+
+
+def test_add_include_extends_config(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    runtime_env: RuntimeLike,
+) -> None:
+    """--add-include should extend config include patterns, not override them."""
+    # Prepare directories and files
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "a.txt").write_text("A")
+
+    extra_dir = tmp_path / "extra"
+    extra_dir.mkdir()
+    (extra_dir / "b.txt").write_text("B")
+
+    # Config includes only src/**
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(
+        json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]})
+    )
+
+    # Run with --add-include extra/**
+    monkeypatch.chdir(tmp_path)
+    code = runtime_env.main(["--add-include", "extra/**"])
+    out = capsys.readouterr().out
+
+    assert code == 0
+    dist = tmp_path / "dist"
+
+    # ✅ Both directories should be included
+    assert (dist / "a.txt").exists()
+    assert (dist / "b.txt").exists()
+
+    # Output should confirm the build
+    assert "Build completed" in out
+
+
+def test_add_exclude_extends_config(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+    runtime_env: RuntimeLike,
+) -> None:
+    """--add-exclude should extend config exclude patterns, not override them."""
+    # Setup source directory with various files
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "keep.txt").write_text("keep")
+    (src_dir / "ignore.tmp").write_text("ignore")
+    (src_dir / "ignore.log").write_text("ignore2")
+
+    # Config excludes *.log files
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(
+        json.dumps(
+            {"builds": [{"include": ["src/**"], "exclude": ["*.log"], "out": "dist"}]}
+        )
+    )
+
+    # Add an extra exclude via CLI
+    monkeypatch.chdir(tmp_path)
+    code = runtime_env.main(["--add-exclude", "*.tmp"])
+    out = capsys.readouterr().out
+
+    assert code == 0
+    dist = tmp_path / "dist"
+
+    # ✅ keep.txt should survive
+    assert (dist / "keep.txt").exists()
+    # 🚫 both excluded files should be missing
+    assert not (dist / "ignore.tmp").exists()
+    assert not (dist / "ignore.log").exists()
+
+    assert "Build completed" in out

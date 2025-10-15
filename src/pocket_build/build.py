@@ -8,18 +8,20 @@ from .utils import (
     GREEN,
     YELLOW,
     colorize,
-    debug_print,
     get_glob_root,
     has_glob_chars,
     is_excluded,
+    log,
 )
 
 
-def copy_file(src: Path, dest: Path, root: Path, verbose: bool = False) -> None:
+def copy_file(src: Path, dest: Path, root: Path) -> None:
     dest.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(src, dest)
-    if verbose:
-        print(colorize(f"📄 {src.relative_to(root)} → {dest.relative_to(root)}", GREEN))
+    log(
+        "debug",
+        colorize(f"📄 {src.relative_to(root)} → {dest.relative_to(root)}", GREEN),
+    )
 
 
 def copy_directory(
@@ -27,13 +29,11 @@ def copy_directory(
     dest: Path,
     exclude_patterns: List[str],
     root: Path,
-    verbose: bool = False,
 ) -> None:
     """Recursively copy directory contents, skipping excluded files."""
     for item in src.rglob("*"):
         if is_excluded(item, exclude_patterns, root):
-            if verbose:
-                print(f"🚫 Skipped: {item.relative_to(root)}")
+            log("debug", f"🚫 Skipped: {item.relative_to(root)}")
             continue
         target = dest / item.relative_to(src)
         if item.is_dir():
@@ -41,8 +41,7 @@ def copy_directory(
         else:
             target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(item, target)
-            if verbose:
-                print(colorize(f"📄 {item.relative_to(root)}", GREEN))
+            log("debug", colorize(f"📄 {item.relative_to(root)}", GREEN))
 
 
 def copy_item(
@@ -50,40 +49,39 @@ def copy_item(
     dest: Path,
     exclude_patterns: List[str],
     meta: MetaBuildConfig,
-    verbose: bool = False,
 ) -> None:
     """Copy a file or directory, respecting excludes and meta base paths."""
 
     # Determine which base to use for exclusion checks
     if "exclude_base" not in meta:
         if "include_base" not in meta:
-            debug_print("[WARN] Using fallback exclude_base — meta incomplete `.`")
+            log("trace", "[WARN] Using fallback exclude_base — meta incomplete `.`")
         else:
-            debug_print(
-                "[WARN] Using fallback exclude_base — meta incomplete `include_base`"
+            log(
+                "debug",
+                "[WARN] Using fallback exclude_base — meta incomplete `include_base`",
             )
     exclude_base = Path(
         meta.get("exclude_base") or meta.get("include_base") or "."
     ).resolve()
 
-    debug_print(
+    log(
+        "trace",
         f"[DEBUG COPY_ITEM] src={src} dest={dest} "
-        f"exclude_base={exclude_base} patterns={exclude_patterns}"
+        f"exclude_base={exclude_base} patterns={exclude_patterns}",
     )
 
     if is_excluded(src, exclude_patterns, exclude_base):
-        if verbose:
-            print(f"🚫 Skipped (excluded): {src.relative_to(exclude_base)}")
+        log("debug", f"🚫 Skipped (excluded): {src.relative_to(exclude_base)}")
         return
     if src.is_dir():
-        copy_directory(src, dest, exclude_patterns, exclude_base, verbose)
+        copy_directory(src, dest, exclude_patterns, exclude_base)
     else:
-        copy_file(src, dest, exclude_base, verbose)
+        copy_file(src, dest, exclude_base)
 
 
 def run_build(
     build_cfg: BuildConfig,
-    verbose: bool = False,
 ) -> None:
     """Execute a single build task using a fully resolved config."""
     includes: list[str | IncludeEntry] = build_cfg.get("include", [])
@@ -93,9 +91,10 @@ def run_build(
     meta = build_cfg.get("__meta__", {})
     include_base = Path(meta.get("include_base", ".")).resolve()
 
-    debug_print(
+    log(
+        "trace",
         f"[DEBUG RUN_BUILD] include={includes}"
-        f" out_dir={out_dir} include_base={include_base}"
+        f" out_dir={out_dir} include_base={include_base}",
     )
 
     # Clean and recreate output directory
@@ -110,12 +109,12 @@ def run_build(
         assert src_pattern is not None, f"Missing required 'src' in entry: {entry_dict}"
 
         if not src_pattern or src_pattern.strip() in {".", ""}:
-            if verbose:
-                print(
-                    colorize(
-                        f"⚠️  Skipping invalid include pattern: {src_pattern!r}", YELLOW
-                    )
-                )
+            log(
+                "debug",
+                colorize(
+                    f"⚠️  Skipping invalid include pattern: {src_pattern!r}", YELLOW
+                ),
+            )
             continue
 
         dest_name = entry_dict.get("dest")
@@ -130,17 +129,15 @@ def run_build(
             glob_root = get_glob_root(src_pattern)
             matches = list(glob_root.rglob(src_path.relative_to(glob_root).as_posix()))
 
-        debug_print(f"[DEBUG MATCHES] root={glob_root} matches={matches}")
+        log("trace", f"[DEBUG MATCHES] root={glob_root} matches={matches}")
 
         if not matches:
-            if verbose:
-                print(colorize(f"⚠️  No matches for {src_pattern}", YELLOW))
+            log("debug", colorize(f"⚠️  No matches for {src_pattern}", YELLOW))
             continue
 
         for src in matches:
             if not src.exists():
-                if verbose:
-                    print(colorize(f"⚠️  Missing: {src}", YELLOW))
+                log("debug", colorize(f"⚠️  Missing: {src}", YELLOW))
                 continue
 
             # Compute destination
@@ -154,6 +151,6 @@ def run_build(
                     rel = src.relative_to(glob_root)
                 dest = out_dir / rel
 
-            copy_item(src, dest, excludes, meta, verbose)
+            copy_item(src, dest, excludes, meta)
 
     print(f"✅ Build completed → {out_dir}\n")

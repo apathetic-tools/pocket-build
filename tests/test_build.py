@@ -18,9 +18,9 @@ def test_copy_file_creates_and_copies(
     src = tmp_path / "a.txt"
     src.write_text("hi")
     dest = tmp_path / "out" / "a.txt"
-    verbose = True
 
-    runtime_env.copy_file(src, dest, tmp_path, verbose)
+    runtime_env.current_runtime["log_level"] = "debug"  # verbose
+    runtime_env.copy_file(src, dest, tmp_path)
 
     out = dest.read_text()
     assert out == "hi"
@@ -40,8 +40,8 @@ def test_copy_directory_respects_excludes(
     (src_dir / "skip.txt").write_text("no")
 
     dest = tmp_path / "out"
-    verbose = True
-    runtime_env.copy_directory(src_dir, dest, ["**/skip.txt"], tmp_path, verbose)
+    runtime_env.current_runtime["log_level"] = "debug"  # verbose
+    runtime_env.copy_directory(src_dir, dest, ["**/skip.txt"], tmp_path)
 
     assert (dest / "keep.txt").exists()
     assert not (dest / "skip.txt").exists()
@@ -60,7 +60,6 @@ def test_copy_item_handles_file_and_dir(
     (src_dir / "a.txt").write_text("data")
 
     dest = tmp_path / "out"
-    verbose = False
 
     meta: MetaBuildConfig = {
         "include_base": str(tmp_path),
@@ -69,7 +68,8 @@ def test_copy_item_handles_file_and_dir(
         "origin": str(tmp_path),
     }
 
-    runtime_env.copy_item(src_dir, dest, [], meta, verbose)
+    runtime_env.current_runtime["log_level"] = "critical"  # normal
+    runtime_env.copy_item(src_dir, dest, [], meta)
     assert (dest / "a.txt").exists()
 
 
@@ -98,8 +98,8 @@ def test_run_build_creates_output_dir_and_copies(
         "out": str(project_root / "dist"),
         "__meta__": meta,
     }
-    verbose = False
-    runtime_env.run_build(build_cfg, verbose)
+    runtime_env.current_runtime["log_level"] = "critical"  # normal
+    runtime_env.run_build(build_cfg)
 
     dist = project_root / "dist"
     assert (dist / "src" / "foo.txt").exists()
@@ -130,7 +130,12 @@ def test_run_build_handles_missing_match(
         "out": str(project_root / "dist"),
         "__meta__": meta,
     }
-    verbose = True
-    runtime_env.run_build(cfg, verbose)
+    runtime_env.current_runtime["log_level"] = "debug"  # verbose
+    runtime_env.run_build(cfg)
     captured = capsys.readouterr().out
     assert "⚠️" in captured
+
+
+def test_parse_builds_handles_single_and_multiple(runtime_env: RuntimeLike):
+    assert runtime_env.parse_builds({"builds": [{"include": []}]}) == [{"include": []}]
+    assert runtime_env.parse_builds({"include": []}) == [{"include": []}]

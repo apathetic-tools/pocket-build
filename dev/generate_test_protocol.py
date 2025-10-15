@@ -29,10 +29,17 @@ ROOT = Path(__file__).resolve().parent.parent
 SRC_DIR = ROOT / "src"
 PKG_DIR = SRC_DIR / "pocket_build"
 PKG_PATH = PKG_DIR / "__init__.py"
-OUT_PATH = ROOT / "tests" / "package_protocol.py"
+OUT_PATH = ROOT / "tests" / "fixtures" / "runtime_protocol.py"
 
 # Cache stdlib modules for sanity filtering
 STDLIB_MODULES = getattr(sys, "stdlib_module_names", set())
+
+HEADER = """# /tests/package_protocol.py
+# ruff: noqa: E501
+import pathlib
+import typing
+import pocket_build.types
+"""
 
 
 # ------------------------------------------------------------
@@ -151,13 +158,13 @@ def generate_protocol():
         else:
             lines.append(f"    {name}: Any")
 
-    content = "\n".join(lines) + "\n"
+    content = HEADER + "\n" + "\n".join(lines) + "\n"
     OUT_PATH.write_text(content, encoding="utf-8")
 
     rel_out = OUT_PATH.relative_to(ROOT)
     print(
         f"✅ Generated {rel_out} with {len(names)} entries"
-        " and {len(dynamic_imports)} imports."
+        f" and {len(dynamic_imports)} imports."
     )
 
 

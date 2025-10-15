@@ -26,6 +26,8 @@ DEFAULT_OUT_FILE = ROOT / "bin" / "pocket-build.py"
 PYPROJECT = ROOT / "pyproject.toml"
 
 ORDER = [
+    "meta.py",
+    "runtime.py",
     "types.py",
     "utils.py",
     "config.py",

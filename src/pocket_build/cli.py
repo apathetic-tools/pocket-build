@@ -2,6 +2,7 @@
 import argparse
 import contextlib
 import io
+import os
 import re
 import subprocess
 import sys
@@ -10,8 +11,10 @@ from typing import Any, List, Optional, cast
 
 from .build import run_build
 from .config import parse_builds
+from .meta import PROGRAM_ENV, PROGRAM_NAME
+from .runtime import current_runtime
 from .types import BuildConfig, MetaBuildConfig, RootConfig
-from .utils import RED, YELLOW, colorize, debug_print, load_jsonc
+from .utils import RED, YELLOW, colorize, is_error_level, load_jsonc, log
 
 
 def get_metadata_from_header(script_path: Path) -> tuple[str, str]:
@@ -77,7 +80,7 @@ def get_metadata() -> tuple[str, str]:
 
 
 def setup_parser() -> argparse.ArgumentParser:
-    parser = argparse.ArgumentParser(prog="pocket-build")
+    parser = argparse.ArgumentParser(prog=PROGRAM_NAME)
     parser.add_argument("--include", nargs="+", help="Override include patterns.")
     parser.add_argument("--exclude", nargs="+", help="Override exclude patterns.")
     parser.add_argument("-o", "--out", help="Override output directory.")
@@ -111,9 +114,30 @@ def setup_parser() -> argparse.ArgumentParser:
 
     parser.add_argument("--version", action="store_true", help="Show version info.")
 
-    noise = parser.add_mutually_exclusive_group()
-    noise.add_argument("-q", "--quiet", action="store_true", help="Suppress output.")
-    noise.add_argument("-v", "--verbose", action="store_true", help="Verbose logs.")
+    log_level = parser.add_mutually_exclusive_group()
+    log_level.add_argument(
+        "-q",
+        "--quiet",
+        action="store_const",
+        const="warning",
+        dest="log_level",
+        help="Suppress non-critical output (same as --log-level warning).",
+    )
+    log_level.add_argument(
+        "-v",
+        "--verbose",
+        action="store_const",
+        const="debug",
+        dest="log_level",
+        help="Verbose output (same as --log-level debug).",
+    )
+    log_level.add_argument(
+        "--log-level",
+        choices=["critical", "error", "warning", "info", "debug"],
+        default=None,
+        dest="log_level",
+        help="Set log verbosity level.",
+    )
     return parser
 
 
@@ -125,10 +149,10 @@ def find_config(args: argparse.Namespace, cwd: Path) -> Optional[Path]:
             return None
         return config
 
-    candidates = [
-        cwd / ".pocket-build.py",
-        cwd / ".pocket-build.jsonc",
-        cwd / ".pocket-build.json",
+    candidates: List[Path] = [
+        cwd / f".{PROGRAM_NAME}.py",
+        cwd / f".{PROGRAM_NAME}.jsonc",
+        cwd / f".{PROGRAM_NAME}.json",
     ]
     found = [p for p in candidates if p.exists()]
 
@@ -155,10 +179,11 @@ def load_config(config_path: Path) -> dict[str, Any]:
         sys.path.insert(0, str(config_path.parent))
         try:
             exec(config_path.read_text(), config_globals)
-            debug_print(
-                f"[DEBUG EXEC] globals after exec: {list(config_globals.keys())}"
+            log(
+                "trace",
+                f"[DEBUG EXEC] globals after exec: {list(config_globals.keys())}",
             )
-            debug_print(f"[DEBUG EXEC] builds: {config_globals.get('builds')}")
+            log("trace", f"[DEBUG EXEC] builds: {config_globals.get('builds')}")
         finally:
             sys.path.pop(0)
 
@@ -256,8 +281,9 @@ def resolve_build_config(
     if use_gitignore:
         gitignore_path = config_dir / ".gitignore"
         patterns = load_gitignore_patterns(gitignore_path)
-        debug_print(
-            f"[DEBUG] Using .gitignore at {config_dir} ({len(patterns)} patterns)"
+        log(
+            "trace",
+            f"[DEBUG] Using .gitignore at {config_dir} ({len(patterns)} patterns)",
         )
         if patterns:
             resolved["exclude"].extend(patterns)
@@ -293,22 +319,34 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     # --- Python version check ---
     if sys.version_info < (3, 10):
-        print(colorize("❌ pocket-build requires Python 3.10 or newer.", RED))
+        print(colorize(f"❌ {PROGRAM_NAME} requires Python 3.10 or newer.", RED))
         return 1
 
     # --- Config path handling ---
     cwd = Path.cwd().resolve()
     config_path = find_config(args, cwd)
     if not config_path:
-        print(colorize("⚠️  No build config found (.pocket-build.json).", YELLOW))
+        print(colorize(f"⚠️  No build config found (.{PROGRAM_NAME}.json).", YELLOW))
         return 1
 
     # --- Config + Build handling ---
     config_dir = config_path.parent.resolve()
     raw_config = load_config(config_path)
-    debug_print(f"[DEBUG RAW CONFIG] {raw_config}")
+
+    # Determine effective log level, from now on use log_print()
+    env_log_level = os.getenv(f"{PROGRAM_ENV}_LOG_LEVEL") or os.getenv("LOG_LEVEL")
+    log_level: str
+    if args.log_level:
+        log_level = args.log_level
+    elif env_log_level:
+        log_level = env_log_level
+    else:
+        log_level = raw_config.get("log_level", "info")
+    current_runtime["log_level"] = log_level
+
+    log("trace", f"[DEBUG RAW CONFIG] {raw_config}")
     builds = parse_builds(raw_config)
-    debug_print(f"[DEBUG BUILDS AFTER PARSE] {builds}")
+    log("trace", f"[DEBUG BUILDS AFTER PARSE] {builds}")
 
     root_respect_gitignore = raw_config.get("respect_gitignore", True)
 
@@ -330,11 +368,11 @@ def main(argv: Optional[List[str]] = None) -> int:
             b["respect_gitignore"] = root_respect_gitignore
 
     # --- Quiet mode: temporarily suppress stdout ---
-    if args.quiet:
+    if is_error_level(args.log_level):
         # everything printed inside this block is discarded
         with contextlib.redirect_stdout(io.StringIO()):
             for build_cfg in resolved_builds:
-                run_build(build_cfg, verbose=args.verbose or False)
+                run_build(build_cfg)
         return 0
 
     # --- Normal / verbose mode ---
@@ -345,7 +383,7 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     for i, build_cfg in enumerate(resolved_builds, 1):
         print(f"▶️  Build {i}/{len(resolved_builds)}")
-        run_build(build_cfg, verbose=args.verbose or False)
+        run_build(build_cfg)
 
     print("🎉 All builds complete.")
     return 0
