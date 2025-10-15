@@ -1,3 +1,4 @@
+<!-- DECISIONS.md -->
 # DECISIONS.md
 
 A record of major design and implementation choices in **pocket-build** — what was considered, what was chosen, and why.

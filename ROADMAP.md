@@ -1,3 +1,4 @@
+<!-- Roadmap.md -->
 # 🧭 Roadmap
 
 ## 🧰 CLI Parameters
@@ -29,10 +30,11 @@ Exploring bundling options for generating the single-file release:
 Potential quality-of-life features:
 
 - [ ] Inject version into final bundled script  
-- [ ] Add SHA-256 hashing to skip unchanged files  
 - [ ] Implement `--watch` mode for live rebuilds  
 - [ ] publish to PyPI, NPM, PACKAGIST, others?
 - [ ] Automatically update module API for conftest.py
+
+> See [REJECTED.md](REJECTED.md) for experiments and ideas that were explored but intentionally not pursued.
 
 ---
 
