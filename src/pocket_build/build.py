@@ -5,7 +5,6 @@ from typing import List
 
 from .types import BuildConfig, IncludeEntry, MetaBuildConfig
 from .utils import (
-    GREEN,
     YELLOW,
     colorize,
     get_glob_root,
@@ -15,13 +14,19 @@ from .utils import (
 )
 
 
-def copy_file(src: Path, dest: Path, root: Path) -> None:
-    dest.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(src, dest)
+def copy_file(
+    src: Path,
+    dest: Path,
+    root: Path,
+    dry_run: bool,
+) -> None:
     log(
         "debug",
-        colorize(f"📄 {src.relative_to(root)} → {dest.relative_to(root)}", GREEN),
+        f"📄 {src.relative_to(root)} → {dest.relative_to(root)}",
     )
+    if not dry_run:
+        dest.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(src, dest)
 
 
 def copy_directory(
@@ -29,19 +34,23 @@ def copy_directory(
     dest: Path,
     exclude_patterns: List[str],
     root: Path,
+    dry_run: bool,
 ) -> None:
     """Recursively copy directory contents, skipping excluded files."""
     for item in src.rglob("*"):
         if is_excluded(item, exclude_patterns, root):
             log("debug", f"🚫  Skipped: {item.relative_to(root)}")
             continue
+
         target = dest / item.relative_to(src)
         if item.is_dir():
-            target.mkdir(parents=True, exist_ok=True)
+            if not dry_run:
+                target.mkdir(parents=True, exist_ok=True)
         else:
-            target.parent.mkdir(parents=True, exist_ok=True)
-            shutil.copy2(item, target)
-            log("debug", colorize(f"📄 {item.relative_to(root)}", GREEN))
+            log("debug", f"📄 {item.relative_to(root)}")
+            if not dry_run:
+                target.parent.mkdir(parents=True, exist_ok=True)
+                shutil.copy2(item, target)
 
 
 def copy_item(
@@ -49,6 +58,7 @@ def copy_item(
     dest: Path,
     exclude_patterns: List[str],
     meta: MetaBuildConfig,
+    dry_run: bool,
 ) -> None:
     """Copy a file or directory, respecting excludes and meta base paths."""
 
@@ -75,15 +85,16 @@ def copy_item(
         log("debug", f"🚫  Skipped (excluded): {src.relative_to(exclude_base)}")
         return
     if src.is_dir():
-        copy_directory(src, dest, exclude_patterns, exclude_base)
+        copy_directory(src, dest, exclude_patterns, exclude_base, dry_run)
     else:
-        copy_file(src, dest, exclude_base)
+        copy_file(src, dest, exclude_base, dry_run)
 
 
 def run_build(
     build_cfg: BuildConfig,
 ) -> None:
     """Execute a single build task using a fully resolved config."""
+    dry_run = build_cfg.get("dry_run", False)
     includes: list[str | IncludeEntry] = build_cfg.get("include", [])
     excludes: list[str] = build_cfg.get("exclude", [])
     out_dir = Path(build_cfg.get("out", "")).expanduser().resolve()
@@ -98,8 +109,14 @@ def run_build(
 
     # Clean and recreate output directory
     if out_dir.exists():
-        shutil.rmtree(out_dir)
-    out_dir.mkdir(parents=True, exist_ok=True)
+        if dry_run:
+            log("info", f"🧪 (dry-run) Would remove existing directory: {out_dir}")
+        else:
+            shutil.rmtree(out_dir)
+    if dry_run:
+        log("info", f"🧪 (dry-run) Would create: {out_dir}")
+    else:
+        out_dir.mkdir(parents=True, exist_ok=True)
 
     # Iterate through include entries
     for entry in includes:
@@ -150,6 +167,6 @@ def run_build(
                     rel = src.relative_to(glob_root)
                 dest = out_dir / rel
 
-            copy_item(src, dest, excludes, meta)
+            copy_item(src, dest, excludes, meta, dry_run)
 
     log("info", f"✅ Build completed → {out_dir}\n")

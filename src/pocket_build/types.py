@@ -33,6 +33,9 @@ class BuildConfig(TypedDict, total=False):
     # optional single-build convenience override
     log_level: str
 
+    # runtime flag (CLI only, not persisted in normal configs)
+    dry_run: bool
+
 
 class RootConfig(TypedDict, total=False):
     builds: List[BuildConfig]

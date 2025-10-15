@@ -22,9 +22,10 @@ class RuntimeLike(Protocol):
         dest: pathlib.Path,
         exclude_patterns: List[str],
         root: pathlib.Path,
+        dry_run: bool,
     ) -> None: ...
     def copy_file(
-        self, src: pathlib.Path, dest: pathlib.Path, root: pathlib.Path
+        self, src: pathlib.Path, dest: pathlib.Path, root: pathlib.Path, dry_run: bool
     ) -> None: ...
     def copy_item(
         self,
@@ -32,6 +33,7 @@ class RuntimeLike(Protocol):
         dest: pathlib.Path,
         exclude_patterns: List[str],
         meta: pocket_build.types.MetaBuildConfig,
+        dry_run: bool,
     ) -> None: ...
 
     current_runtime: Any

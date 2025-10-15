@@ -20,7 +20,7 @@ def test_copy_file_creates_and_copies(
     dest = tmp_path / "out" / "a.txt"
 
     runtime_env.current_runtime["log_level"] = "debug"  # verbose
-    runtime_env.copy_file(src, dest, tmp_path)
+    runtime_env.copy_file(src, dest, tmp_path, False)
 
     out = dest.read_text()
     assert out == "hi"
@@ -41,7 +41,7 @@ def test_copy_directory_respects_excludes(
 
     dest = tmp_path / "out"
     runtime_env.current_runtime["log_level"] = "debug"  # verbose
-    runtime_env.copy_directory(src_dir, dest, ["**/skip.txt"], tmp_path)
+    runtime_env.copy_directory(src_dir, dest, ["**/skip.txt"], tmp_path, False)
 
     assert (dest / "keep.txt").exists()
     assert not (dest / "skip.txt").exists()
@@ -69,7 +69,7 @@ def test_copy_item_handles_file_and_dir(
     }
 
     runtime_env.current_runtime["log_level"] = "critical"  # normal
-    runtime_env.copy_item(src_dir, dest, [], meta)
+    runtime_env.copy_item(src_dir, dest, [], meta, False)
     assert (dest / "a.txt").exists()
 
 

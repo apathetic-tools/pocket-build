@@ -92,3 +92,16 @@ def test_version_flag(
     else:
         # Modular source version — uses live Git
         assert re.search(r"\([0-9a-f]{4,}\)", out)
+
+
+def test_dry_run_creates_no_files(tmp_path: Path, runtime_env: RuntimeLike):
+    src_dir = tmp_path / "src"
+    src_dir.mkdir()
+    (src_dir / "foo.txt").write_text("data")
+
+    config = tmp_path / ".pocket-build.json"
+    config.write_text('{"builds": [{"include": ["src/**"], "out": "dist"}]}')
+
+    code = runtime_env.main(["--config", str(config), "--dry-run"])
+    assert code == 0
+    assert not (tmp_path / "dist").exists()

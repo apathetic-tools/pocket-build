@@ -83,6 +83,11 @@ def setup_parser() -> argparse.ArgumentParser:
     parser.add_argument("--exclude", nargs="+", help="Override exclude patterns.")
     parser.add_argument("-o", "--out", help="Override output directory.")
     parser.add_argument("-c", "--config", help="Path to build config file.")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate build actions without copying or deleting files.",
+    )
 
     parser.add_argument(
         "--add-include",
@@ -363,6 +368,10 @@ def main(argv: Optional[List[str]] = None) -> int:
 
     log("trace", f"[RAW CONFIG] {raw_config}")
     builds = parse_builds(raw_config)
+    for b in builds:
+        if "dry_run" in b:
+            log("warning", "Ignoring dry_run field from config (CLI-only).")
+            b.pop("dry_run", None)
     log("trace", f"[BUILDS AFTER PARSE] {builds}")
 
     root_respect_gitignore = raw_config.get("respect_gitignore", True)
@@ -384,6 +393,9 @@ def main(argv: Optional[List[str]] = None) -> int:
         if "respect_gitignore" not in b:
             b["respect_gitignore"] = root_respect_gitignore
 
+    if args.dry_run:
+        log("info", "🧪 Dry-run mode: no files will be written or deleted.\n")
+
     log("info", f"🔧 Using config: {config_path.name}")
     log("info", f"📁 Config base: {config_dir}")
     log("info", f"📂 Invoked from: {cwd}\n")
@@ -392,6 +404,9 @@ def main(argv: Optional[List[str]] = None) -> int:
     for i, build_cfg in enumerate(resolved_builds, 1):
         build_log_level = build_cfg.get("log_level")
         prev_level = current_runtime["log_level"]
+
+        # Inject CLI-only runtime flag
+        build_cfg["dry_run"] = args.dry_run
 
         if build_log_level:
             current_runtime["log_level"] = build_log_level
