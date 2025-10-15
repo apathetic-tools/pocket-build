@@ -106,7 +106,7 @@ def split_imports(
             mod = node.module or ""
             if node.level > 0 or mod.startswith(package_name):
                 is_internal = True
-        elif isinstance(node, ast.Import):
+        else:  # isinstance(node, ast.Import):
             if any(alias.name.startswith(package_name) for alias in node.names):
                 is_internal = True
 

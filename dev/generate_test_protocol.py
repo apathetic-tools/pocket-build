@@ -32,7 +32,9 @@ PKG_PATH = PKG_DIR / "__init__.py"
 OUT_PATH = ROOT / "tests" / "fixtures" / "runtime_protocol.py"
 
 # Cache stdlib modules for sanity filtering
-STDLIB_MODULES = getattr(sys, "stdlib_module_names", set())
+STDLIB_MODULES: set[str] = (
+    set(sys.stdlib_module_names) if hasattr(sys, "stdlib_module_names") else set()
+)
 
 HEADER = """# /tests/package_protocol.py
 # ruff: noqa: E501
@@ -49,6 +51,7 @@ from typing import Union
 def load_package():
     """Dynamically import src/pocket_build without polluting sys.path."""
     spec = importlib.util.spec_from_file_location("pocket_build", PKG_PATH)
+    assert spec is not None and spec.loader is not None
     mod = importlib.util.module_from_spec(spec)
     assert spec and spec.loader
     spec.loader.exec_module(mod)
@@ -62,8 +65,8 @@ def extract_qualified_names_from_ast(source: str) -> Set[str]:
 
     class TypeRefVisitor(ast.NodeVisitor):
         def visit_Attribute(self, node: ast.Attribute):
-            parts = []
-            current = node
+            parts: list[str] = []
+            current: ast.AST = node
             while isinstance(current, ast.Attribute):
                 parts.append(current.attr)
                 current = current.value

@@ -25,7 +25,6 @@ Exploring bundling options for generating the single-file release:
 ## 💡 Ideas & Experiments
 Potential quality-of-life features:
 
-- [ ] Inject version into final bundled script  
 - [ ] Implement `--watch` mode for live rebuilds  
 - [ ] publish to PyPI, NPM, PACKAGIST, others?
 
