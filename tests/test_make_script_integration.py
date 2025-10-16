@@ -18,6 +18,7 @@ from typing import Dict
 import pytest
 
 
+# this test does not use runtime_env
 @pytest.mark.parametrize(
     "env_vars, expected_pattern",
     [

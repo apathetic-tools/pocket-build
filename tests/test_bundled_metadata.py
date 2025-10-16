@@ -5,6 +5,10 @@ was generated correctly — includes metadata, license header,
 and matches the declared version from pyproject.toml.
 """
 
+# we import `_` private for testing purposes only
+# pyright: reportPrivateUsage=false
+# ruff: noqa: F401
+
 from __future__ import annotations
 
 import os
@@ -20,6 +24,7 @@ except ModuleNotFoundError:
     import tomli as tomllib  # type: ignore[no-redef]
 
 
+# this test does not use runtime_env
 def test_bundled_script_metadata_and_execution() -> None:
     """Ensure the generated pocket-build.py script is complete and functional."""
     root = Path(__file__).resolve().parent.parent
@@ -95,6 +100,7 @@ def test_bundled_script_metadata_and_execution() -> None:
         assert "🎉 All builds complete" in result.stdout
 
 
+# this test does not use runtime_env
 def test_bundled_script_has_python_constants_and_parses_them() -> None:
     """Ensure __version__ and __commit__ constants exist and match header."""
     root = Path(__file__).resolve().parent.parent
@@ -117,9 +123,10 @@ def test_bundled_script_has_python_constants_and_parses_them() -> None:
     assert commit_const.group(1) == header_commit.group(1)
 
 
-def test_get_metadata_from_header_prefers_constants(tmp_path: Path):
+# this test does not use runtime_env
+def test__get_metadata_from_header_prefers_constants(tmp_path: Path):
     """Should return values from __version__ and __commit__ if header lines missing."""
-    from pocket_build.cli import get_metadata_from_header
+    from pocket_build.cli import _get_metadata_from_header
 
     text = """
 __version__ = "1.2.3"
@@ -127,7 +134,7 @@ __commit__ = "abc1234"
 """
     script = tmp_path / "fake_script.py"
     script.write_text(text)
-    version, commit = get_metadata_from_header(script)
+    version, commit = _get_metadata_from_header(script)
 
     assert version == "1.2.3"
     assert commit == "abc1234"

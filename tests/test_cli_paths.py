@@ -23,24 +23,25 @@ def test_configless_run_with_include_flag(
     src_dir.mkdir()
     (src_dir / "foo.txt").write_text("hello")
 
-    # No config file on purpose
-    monkeypatch.chdir(tmp_path)
+    with monkeypatch.context() as mp:
+        # No config file on purpose
+        mp.chdir(tmp_path)
 
-    code = runtime_env.main(["--include", "src/**", "--out", "dist"])
-    captured = capsys.readouterr()
-    out = captured.out + captured.err
+        code = runtime_env.main(["--include", "src/**", "--out", "dist"])
+        captured = capsys.readouterr()
+        out = captured.out + captured.err
 
-    # Should exit successfully
-    assert code == 0
+        # Should exit successfully
+        assert code == 0
 
-    # Output directory should exist and contain copied files
-    dist = tmp_path / "dist"
-    assert dist.exists()
-    assert (dist / "foo.txt").exists()
+        # Output directory should exist and contain copied files
+        dist = tmp_path / "dist"
+        assert dist.exists()
+        assert (dist / "foo.txt").exists()
 
-    # Log output should mention CLI-only mode
-    assert "CLI-only mode" in out or "no config file" in out
-    assert "Build completed" in out
+        # Log output should mention CLI-only mode
+        assert "CLI-only mode" in out or "no config file" in out
+        assert "Build completed" in out
 
 
 def test_configless_run_with_add_include_flag(
@@ -54,14 +55,15 @@ def test_configless_run_with_add_include_flag(
     src.mkdir()
     (src / "bar.txt").write_text("world")
 
-    monkeypatch.chdir(tmp_path)
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
 
-    code = runtime_env.main(["--add-include", "src/**", "--out", "outdir"])
-    out = capsys.readouterr().out
+        code = runtime_env.main(["--add-include", "src/**", "--out", "outdir"])
+        out = capsys.readouterr().out
 
-    assert code == 0
-    assert (tmp_path / "outdir" / "bar.txt").exists()
-    assert "CLI-only" in out or "no config file" in out
+        assert code == 0
+        assert (tmp_path / "outdir" / "bar.txt").exists()
+        assert "CLI-only" in out or "no config file" in out
 
 
 def test_custom_config_path(
@@ -72,11 +74,13 @@ def test_custom_config_path(
 ):
     cfg = tmp_path / "custom.json"
     cfg.write_text('{"builds": [{"include": [], "out": "dist"}]}')
-    monkeypatch.chdir(tmp_path)
-    code = runtime_env.main(["--config", str(cfg)])
-    out = capsys.readouterr().out
-    assert code == 0
-    assert "Using config: custom.json" in out
+
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main(["--config", str(cfg)])
+        out = capsys.readouterr().out
+        assert code == 0
+        assert "Using config: custom.json" in out
 
 
 def test_out_flag_overrides_config(
@@ -97,20 +101,21 @@ def test_out_flag_overrides_config(
         )
     )
 
-    monkeypatch.chdir(tmp_path)
-    code = runtime_env.main(["--out", "override-dist"])
-    out = capsys.readouterr().out
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main(["--out", "override-dist"])
+        out = capsys.readouterr().out
 
-    assert code == 0
-    # Confirm it built into the override directory
-    override_dir = tmp_path / "override-dist"
-    assert override_dir.exists()
+        assert code == 0
+        # Confirm it built into the override directory
+        override_dir = tmp_path / "override-dist"
+        assert override_dir.exists()
 
-    # Confirm it built into the override directory (contents only)
-    assert (override_dir / "foo.txt").exists()
+        # Confirm it built into the override directory (contents only)
+        assert (override_dir / "foo.txt").exists()
 
-    # Optional: check output logs
-    assert "override-dist" in out
+        # Optional: check output logs
+        assert "override-dist" in out
 
 
 def test_out_flag_relative_to_cwd(
@@ -133,14 +138,15 @@ def test_out_flag_relative_to_cwd(
     cwd = tmp_path / "runner"
     cwd.mkdir()
 
-    monkeypatch.chdir(cwd)
-    code = runtime_env.main(["--config", str(config), "--out", "output"])
-    assert code == 0
+    with monkeypatch.context() as mp:
+        mp.chdir(cwd)
+        code = runtime_env.main(["--config", str(config), "--out", "output"])
+        assert code == 0
 
-    output_dir = cwd / "output"
-    assert (output_dir / "file.txt").exists()
-    # Ensure it didn't build the script near the config file, but cwd instead
-    assert not (project / "output").exists()
+        output_dir = cwd / "output"
+        assert (output_dir / "file.txt").exists()
+        # Ensure it didn't build the script near the config file, but cwd instead
+        assert not (project / "output").exists()
 
 
 def test_config_out_relative_to_config_file(
@@ -158,18 +164,19 @@ def test_config_out_relative_to_config_file(
     config = project / ".pocket-build.json"
     config.write_text(json.dumps({"builds": [{"include": ["src/**"], "out": "dist"}]}))
 
-    cwd = tmp_path / "runner"
-    cwd.mkdir()
-    monkeypatch.chdir(cwd)
+    with monkeypatch.context() as mp:
+        cwd = tmp_path / "runner"
+        cwd.mkdir()
+        mp.chdir(cwd)
 
-    code = runtime_env.main(["--config", str(config)])
-    assert code == 0
+        code = runtime_env.main(["--config", str(config)])
+        assert code == 0
 
-    dist_dir = project / "dist"
-    # Contents of src should be copied directly into dist/
-    assert (dist_dir / "file.txt").exists()
-    # Ensure it didn't build relative to the CWD
-    assert not (cwd / "dist").exists()
+        dist_dir = project / "dist"
+        # Contents of src should be copied directly into dist/
+        assert (dist_dir / "file.txt").exists()
+        # Ensure it didn't build relative to the CWD
+        assert not (cwd / "dist").exists()
 
 
 def test_python_config_preferred_over_json(
@@ -204,16 +211,17 @@ builds = [
     json_cfg = tmp_path / ".pocket-build.json"
     json_cfg.write_text(json_dump)
 
-    monkeypatch.chdir(tmp_path)
-    code = runtime_env.main([])
-    out = capsys.readouterr().out
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main([])
+        out = capsys.readouterr().out
 
-    assert code == 0
-    dist = tmp_path / "dist"
-    # Only the Python config file's include should have been used
-    assert (dist / "src" / "from_py.txt").exists()
-    assert not (dist / "src" / "from_json.txt").exists()
-    assert "Build completed" in out
+        assert code == 0
+        dist = tmp_path / "dist"
+        # Only the Python config file's include should have been used
+        assert (dist / "src" / "from_py.txt").exists()
+        assert not (dist / "src" / "from_json.txt").exists()
+        assert "Build completed" in out
 
 
 @pytest.mark.parametrize("ext", [".jsonc", ".json"])
@@ -247,11 +255,12 @@ def test_json_and_jsonc_config_supported(
         """
     )
 
-    monkeypatch.chdir(tmp_path)
-    code = runtime_env.main([])
-    out = capsys.readouterr().out
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main([])
+        out = capsys.readouterr().out
 
-    assert code == 0
-    dist = tmp_path / "dist"
-    assert (dist / "hello.txt").exists()
-    assert "Build completed" in out
+        assert code == 0
+        dist = tmp_path / "dist"
+        assert (dist / "hello.txt").exists()
+        assert "Build completed" in out

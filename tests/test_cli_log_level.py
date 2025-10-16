@@ -22,15 +22,17 @@ def test_quiet_flag(
     """Should suppress most output but still succeed."""
     config = tmp_path / ".pocket-build.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
-    monkeypatch.chdir(tmp_path)
 
-    code = runtime_env.main(["--quiet"])
-    out = capsys.readouterr().out
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main(["--quiet"])
 
-    assert code == 0
-    # should not contain normal messages
-    assert "Build completed" not in out
-    assert "All builds complete" not in out
+        out = capsys.readouterr().out
+
+        assert code == 0
+        # should not contain normal messages
+        assert "Build completed" not in out
+        assert "All builds complete" not in out
 
 
 def test_verbose_flag(
@@ -49,18 +51,20 @@ def test_verbose_flag(
     config.write_text(
         json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]})
     )
-    monkeypatch.chdir(tmp_path)
 
-    code = runtime_env.main(["--verbose"])
-    captured = capsys.readouterr()
-    out = captured.out + captured.err
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main(["--verbose"])
 
-    assert code == 0
-    # Verbose mode should show per-file details
-    assert "📄" in out or "🚫" in out
-    # It should still include summary
-    assert "Build completed" in out
-    assert "All builds complete" in out
+        captured = capsys.readouterr()
+        out = captured.out + captured.err
+
+        assert code == 0
+        # Verbose mode should show per-file details
+        assert "📄" in out or "🚫" in out
+        # It should still include summary
+        assert "Build completed" in out
+        assert "All builds complete" in out
 
 
 def test_verbose_and_quiet_mutually_exclusive(
@@ -72,18 +76,21 @@ def test_verbose_and_quiet_mutually_exclusive(
     """Should fail when both --verbose and --quiet are provided."""
     config = tmp_path / ".pocket-build.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
-    monkeypatch.chdir(tmp_path)
 
-    # argparse should exit with SystemExit(2)
-    with pytest.raises(SystemExit) as e:
-        runtime_env.main(["--quiet", "--verbose"])
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
 
-    assert e.value.code == 2  # argparse error exit code
+        # argparse should exit with SystemExit(2)
+        with pytest.raises(SystemExit) as e:
+            runtime_env.main(["--quiet", "--verbose"])
+            assert e.value.code == 2  # argparse error exit code
 
-    captured = capsys.readouterr()
-    combined = captured.out + captured.err
-    assert "not allowed with argument" in combined or "mutually exclusive" in combined
-    assert "--quiet" in combined and "--verbose" in combined
+        captured = capsys.readouterr()
+        combined = captured.out + captured.err
+        assert (
+            "not allowed with argument" in combined or "mutually exclusive" in combined
+        )
+        assert "--quiet" in combined and "--verbose" in combined
 
 
 def test_log_level_flag_sets_runtime(
@@ -95,15 +102,17 @@ def test_log_level_flag_sets_runtime(
     """--log-level should override config and environment."""
     config = tmp_path / ".pocket-build.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
-    monkeypatch.chdir(tmp_path)
 
-    code = runtime_env.main(["--log-level", "debug"])
-    out = capsys.readouterr().out
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main(["--log-level", "debug"])
 
-    assert code == 0
-    assert "Build completed" in out
-    # Verify that runtime log level is set correctly
-    assert runtime_env.current_runtime["log_level"] == "debug"
+        out = capsys.readouterr().out
+
+        assert code == 0
+        assert "Build completed" in out
+        # Verify that runtime log level is set correctly
+        assert runtime_env.current_runtime["log_level"] == "debug"
 
 
 def test_log_level_from_env_var(
@@ -115,22 +124,24 @@ def test_log_level_from_env_var(
     """LOG_LEVEL and {PROGRAM_ENV}_LOG_LEVEL should be respected when flag not given."""
     config = tmp_path / ".pocket-build.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
-    monkeypatch.chdir(tmp_path)
 
-    # 1️⃣ Specific env var wins
-    monkeypatch.setenv(f"{PROGRAM_ENV}_LOG_LEVEL", "warning")
-    code = runtime_env.main([])
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
 
-    assert code == 0
-    assert runtime_env.current_runtime["log_level"] == "warning"
+        # 1️⃣ Specific env var wins
+        mp.setenv(f"{PROGRAM_ENV}_LOG_LEVEL", "warning")
+        code = runtime_env.main([])
 
-    # 2️⃣ Generic LOG_LEVEL fallback works
-    monkeypatch.delenv(f"{PROGRAM_ENV}_LOG_LEVEL")
-    monkeypatch.setenv("LOG_LEVEL", "error")
-    code = runtime_env.main([])
+        assert code == 0
+        assert runtime_env.current_runtime["log_level"] == "warning"
 
-    assert code == 0
-    assert runtime_env.current_runtime["log_level"] == "error"
+        # 2️⃣ Generic LOG_LEVEL fallback works
+        mp.delenv(f"{PROGRAM_ENV}_LOG_LEVEL")
+        mp.setenv("LOG_LEVEL", "error")
+        code = runtime_env.main([])
+
+        assert code == 0
+        assert runtime_env.current_runtime["log_level"] == "error"
 
 
 def test_per_build_log_level_override(
@@ -153,19 +164,21 @@ def test_per_build_log_level_override(
             }
         )
     )
-    monkeypatch.chdir(tmp_path)
 
-    code = runtime_env.main([])
-    captured = capsys.readouterr()
-    out = captured.out + captured.err
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
 
-    assert code == 0
-    # It should have built both directories
-    assert (tmp_path / "dist1").exists()
-    assert (tmp_path / "dist2").exists()
+        code = runtime_env.main([])
+        captured = capsys.readouterr()
+        out = captured.out + captured.err
 
-    # During the second build, debug logs should have appeared
-    assert "[DEBUG" in out or "Overriding log level" in out
+        assert code == 0
+        # It should have built both directories
+        assert (tmp_path / "dist1").exists()
+        assert (tmp_path / "dist2").exists()
 
-    # After all builds complete, runtime should be restored to root level
-    assert runtime_env.current_runtime["log_level"] == "info"
+        # During the second build, debug logs should have appeared
+        assert "[DEBUG" in out or "Overriding log level" in out
+
+        # After all builds complete, runtime should be restored to root level
+        assert runtime_env.current_runtime["log_level"] == "info"

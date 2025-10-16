@@ -1,6 +1,6 @@
 # tests/test_utils_logs.py
 
-# not doing tests for is_error_level() and should_log()
+# not doing tests for _is_error_level() and _should_log()
 
 import io
 import re
@@ -48,32 +48,33 @@ def test_is_bypass_capture_env_vars(
     """is_bypass_capture() should return True
     when *_BYPASS_CAPTURE or BYPASS_CAPTURE is set."""
 
-    # Clear all possibly conflicting env vars first
-    monkeypatch.delenv(f"{runtime_env.PROGRAM_ENV}_BYPASS_CAPTURE", raising=False)
-    monkeypatch.delenv("BYPASS_CAPTURE", raising=False)
+    with monkeypatch.context() as mp:
+        # Clear all possibly conflicting env vars first
+        mp.delenv(f"{runtime_env.PROGRAM_ENV}_BYPASS_CAPTURE", raising=False)
+        mp.delenv("BYPASS_CAPTURE", raising=False)
 
-    # Default → both unset → expect False
-    assert runtime_env.is_bypass_capture() is False
+        # Default → both unset → expect False
+        assert runtime_env.is_bypass_capture() is False
 
-    # Specific env var (PROGRAM_ENV_BYPASS_CAPTURE) wins
-    monkeypatch.setenv(f"{runtime_env.PROGRAM_ENV}_BYPASS_CAPTURE", "1")
-    assert runtime_env.is_bypass_capture() is True
+        # Specific env var (PROGRAM_ENV_BYPASS_CAPTURE) wins
+        mp.setenv(f"{runtime_env.PROGRAM_ENV}_BYPASS_CAPTURE", "1")
+        assert runtime_env.is_bypass_capture() is True
 
-    # Unset the specific one again
-    monkeypatch.delenv(f"{runtime_env.PROGRAM_ENV}_BYPASS_CAPTURE", raising=False)
+        # Unset the specific one again
+        mp.delenv(f"{runtime_env.PROGRAM_ENV}_BYPASS_CAPTURE", raising=False)
 
-    # Generic BYPASS_CAPTURE also triggers
-    monkeypatch.setenv("BYPASS_CAPTURE", "1")
-    assert runtime_env.is_bypass_capture() is True
+        # Generic BYPASS_CAPTURE also triggers
+        mp.setenv("BYPASS_CAPTURE", "1")
+        assert runtime_env.is_bypass_capture() is True
 
-    # Non-“1” values should not trigger
-    monkeypatch.setenv("BYPASS_CAPTURE", "0")
-    assert runtime_env.is_bypass_capture() is False
+        # Non-“1” values should not trigger
+        mp.setenv("BYPASS_CAPTURE", "0")
+        assert runtime_env.is_bypass_capture() is False
 
-    # Case: both set → still True
-    monkeypatch.setenv(f"{runtime_env.PROGRAM_ENV}_BYPASS_CAPTURE", "1")
-    monkeypatch.setenv("BYPASS_CAPTURE", "1")
-    assert runtime_env.is_bypass_capture() is True
+        # Case: both set → still True
+        mp.setenv(f"{runtime_env.PROGRAM_ENV}_BYPASS_CAPTURE", "1")
+        mp.setenv("BYPASS_CAPTURE", "1")
+        assert runtime_env.is_bypass_capture() is True
 
 
 @pytest.mark.parametrize(
@@ -135,26 +136,27 @@ def test_log_respects_current_log_level(
 def test_log_bypass_capture_env(monkeypatch: MonkeyPatch, runtime_env: RuntimeLike):
     """When *_BYPASS_CAPTURE=1, log() should write to __stdout__/__stderr__."""
 
-    # Sneaky program tries to escape our capture,
-    #   we are sneakier and capture it anyways!
-    #   What are you going to do now program?
-    fake_stdout, fake_stderr = io.StringIO(), io.StringIO()
-    monkeypatch.setattr(sys, "__stdout__", fake_stdout)
-    monkeypatch.setattr(sys, "__stderr__", fake_stderr)
+    with monkeypatch.context() as mp:
+        # Sneaky program tries to escape our capture,
+        #   we are sneakier and capture it anyways!
+        #   What are you going to do now program?
+        fake_stdout, fake_stderr = io.StringIO(), io.StringIO()
+        mp.setattr(sys, "__stdout__", fake_stdout)
+        mp.setattr(sys, "__stderr__", fake_stderr)
 
-    # Mock the environment variable so utils re-evaluates
-    monkeypatch.setenv(f"{runtime_env.PROGRAM_ENV}_BYPASS_CAPTURE", "1")
-    monkeypatch.setenv("BYPASS_CAPTURE", "1")
+        # Mock the environment variable so utils re-evaluates
+        mp.setenv(f"{runtime_env.PROGRAM_ENV}_BYPASS_CAPTURE", "1")
+        mp.setenv("BYPASS_CAPTURE", "1")
 
-    runtime_env.current_runtime["log_level"] = "debug"
+        runtime_env.current_runtime["log_level"] = "debug"
 
-    # Info should go to stdout
-    runtime_env.log("info", "out-msg")
-    # Error should go to stderr
-    runtime_env.log("error", "err-msg")
+        # Info should go to stdout
+        runtime_env.log("info", "out-msg")
+        # Error should go to stderr
+        runtime_env.log("error", "err-msg")
 
-    assert "out-msg" in fake_stdout.getvalue()
-    assert "err-msg" in fake_stderr.getvalue()
+        assert "out-msg" in fake_stdout.getvalue()
+        assert "err-msg" in fake_stderr.getvalue()
 
 
 @pytest.mark.parametrize(

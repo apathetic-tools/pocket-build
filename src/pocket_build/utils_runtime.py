@@ -15,7 +15,7 @@ RESET = "\033[0m"
 
 LEVEL_ORDER = ["critical", "error", "warning", "info", "debug", "trace"]
 
-LOG_PREFIXES: dict[str, str | None] = {
+_LOG_PREFIXES: dict[str, str | None] = {
     "critical": "💥 ",
     "error": "❌ ",
     "warning": "⚠️ ",
@@ -23,7 +23,7 @@ LOG_PREFIXES: dict[str, str | None] = {
     "debug": "[DEBUG] ",
     "trace": "[TRACE] ",
 }
-LOG_PREFIXES_COLOR: dict[str, str | None] = {
+_LOG_PREFIXES_COLOR: dict[str, str | None] = {
     "critical": None,
     "error": None,
     "warning": None,
@@ -31,7 +31,7 @@ LOG_PREFIXES_COLOR: dict[str, str | None] = {
     "debug": GREEN,
     "trace": YELLOW,
 }
-LOG_MSG_COLOR: dict[str, str | None] = {
+_LOG_MSG_COLOR: dict[str, str | None] = {
     "critical": None,
     "error": None,
     "warning": None,
@@ -50,11 +50,11 @@ def is_bypass_capture() -> bool:
     )
 
 
-def should_log(level: str, current: str) -> bool:
+def _should_log(level: str, current: str) -> bool:
     return LEVEL_ORDER.index(level) <= LEVEL_ORDER.index(current)
 
 
-def is_error_level(level: str) -> bool:
+def _is_error_level(level: str) -> bool:
     """Return True if this log level represents a problem or warning."""
     return level in {"warning", "error", "critical"}
 
@@ -74,24 +74,24 @@ def log(
       if a message color is set, prefix color is skipped.
     - Safe for use in captured output; respects BYPASS_CAPTURE"""
     current_level = current_runtime["log_level"]
-    if not should_log(level, current_level):
+    if not _should_log(level, current_level):
         return
 
     # Determine correct output stream
     if file is None and is_bypass_capture():
         file = (
             getattr(sys, "__stderr__", sys.stderr)
-            if is_error_level(level)
+            if _is_error_level(level)
             else getattr(sys, "__stdout__", sys.stdout)
         )
     elif file is None:
-        file = sys.stderr if is_error_level(level) else sys.stdout
+        file = sys.stderr if _is_error_level(level) else sys.stdout
 
-    prefix_color = LOG_PREFIXES_COLOR.get(level)
-    msg_color = LOG_MSG_COLOR.get(level)
+    prefix_color = _LOG_PREFIXES_COLOR.get(level)
+    msg_color = _LOG_MSG_COLOR.get(level)
 
     # Safely coerce prefix
-    actual_prefix = prefix if prefix is not None else (LOG_PREFIXES.get(level) or "")
+    actual_prefix = prefix if prefix is not None else (_LOG_PREFIXES.get(level) or "")
 
     # Helper lambdas to treat None/"" as unset
     def is_set(value: str | None) -> bool:

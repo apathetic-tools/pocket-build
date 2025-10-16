@@ -16,5 +16,5 @@ PROGRAM_PACKAGE = _BASE.replace("-", "_")
 # Environment variable prefix (used for POCKET_BUILD_LOG_LEVEL, etc.)
 PROGRAM_ENV = _BASE.replace("-", "_").upper()
 
-# Short tagline or description for help screens and metadata
+# Short tagline or __DESCRIPTION for help screens and metadata
 DESCRIPTION = "A tiny build system that fits in your pocket."

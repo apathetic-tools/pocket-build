@@ -19,6 +19,7 @@ GREEN = "\x1b[32m"
 @pytest.fixture(autouse=True)
 def clean_env(monkeypatch: pytest.MonkeyPatch) -> Generator[None, None, None]:
     """Reset environment variables and cached state before each test."""
+    # fixture itself deals with context teardown, don't need to explicitly set
     for var in ("NO_COLOR", "FORCE_COLOR"):
         monkeypatch.delenv(var, raising=False)
     yield
@@ -29,8 +30,9 @@ def test_should_use_color_no_color(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Disables color if NO_COLOR is present in environment."""
-    monkeypatch.setenv("NO_COLOR", "1")
-    assert runtime_env.should_use_color() is False
+    with monkeypatch.context() as mp:
+        mp.setenv("NO_COLOR", "1")
+        assert runtime_env.should_use_color() is False
 
 
 @pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes", "Yes"])
@@ -40,8 +42,9 @@ def test_should_use_color_force_color(
     value: str,
 ) -> None:
     """Enables color when FORCE_COLOR is set to truthy value."""
-    monkeypatch.setenv("FORCE_COLOR", value)
-    assert runtime_env.should_use_color() is True
+    with monkeypatch.context() as mp:
+        mp.setenv("FORCE_COLOR", value)
+        assert runtime_env.should_use_color() is True
 
 
 def test_should_use_color_tty(
@@ -49,13 +52,14 @@ def test_should_use_color_tty(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Falls back to TTY detection when no env vars set."""
-    fake_stdout = types.SimpleNamespace(isatty=lambda: True)
-    monkeypatch.setattr(sys, "stdout", fake_stdout)
-    assert runtime_env.should_use_color() is True
+    with monkeypatch.context() as mp:
+        fake_stdout = types.SimpleNamespace(isatty=lambda: True)
+        mp.setattr(sys, "stdout", fake_stdout)
+        assert runtime_env.should_use_color() is True
 
-    fake_stdout = types.SimpleNamespace(isatty=lambda: False)
-    monkeypatch.setattr(sys, "stdout", fake_stdout)
-    assert runtime_env.should_use_color() is False
+        fake_stdout = types.SimpleNamespace(isatty=lambda: False)
+        mp.setattr(sys, "stdout", fake_stdout)
+        assert runtime_env.should_use_color() is False
 
 
 def test_colorize_explicit_true_false(runtime_env: RuntimeLike) -> None:
@@ -82,18 +86,17 @@ def test_colorize_respects_reset(
     else:
         target = "pocket_build.utils_core.should_use_color"
 
-    monkeypatch.setattr(target, lambda: False)
-    if hasattr(colorize, "_system_default"):
-        delattr(colorize, "_system_default")
+    with monkeypatch.context() as mp:
+        mp.setattr(target, lambda: False)
+        if hasattr(colorize, "_system_default"):
+            delattr(colorize, "_system_default")
 
-    test_string = "test string"
-    result = colorize(test_string, GREEN)
-    assert result == test_string
+        test_string = "test string"
+        result = colorize(test_string, GREEN)
+        assert result == test_string
 
 
-def test_colorize_respects_runtime_flag(
-    runtime_env: RuntimeLike, monkeypatch: pytest.MonkeyPatch
-) -> None:
+def test_colorize_respects_runtime_flag(runtime_env: RuntimeLike) -> None:
     """colorize() should follow current_runtime['use_color'] exactly."""
     colorize = runtime_env.colorize
     RESET = runtime_env.RESET

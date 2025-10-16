@@ -1,11 +1,13 @@
 # src/pocket_build/cli.py
 import argparse
+import glob
 import os
 import re
 import subprocess
 import sys
+import time
 from pathlib import Path
-from typing import Any, List, Optional, cast
+from typing import Any, Callable, List, cast
 
 from .build import run_build
 from .config import parse_builds
@@ -16,7 +18,79 @@ from .utils_core import load_jsonc, should_use_color
 from .utils_runtime import GREEN, RED, YELLOW, colorize, log
 
 
-def get_metadata_from_header(script_path: Path) -> tuple[str, str]:
+def _collect_included_files(resolved_builds: list[BuildConfig]) -> list[Path]:
+    """Flatten all include globs into a unique list of files."""
+    log("trace", "real_collect_included_files", __name__, id(_collect_included_files))
+    files: set[Path] = set()
+    for b in resolved_builds:
+        for pattern in b.get("include", []):
+            if isinstance(pattern, str):
+                for match in glob.glob(pattern, recursive=True):
+                    p = Path(match)
+                    if p.is_file():
+                        files.add(p.resolve())
+    return sorted(files)
+
+
+def watch_for_changes(
+    rebuild_func: Callable[[], None],
+    resolved_builds: list[BuildConfig],
+    interval: float = 1.0,
+) -> None:
+    """Poll file modification times and rebuild when changes are detected."""
+    log("trace", "real_watch_for_changes", __name__, id(watch_for_changes))
+    print("👀 Watching for changes... Press Ctrl+C to stop.")
+
+    # discover at start
+    included_files = _collect_included_files(resolved_builds)
+    log("trace", "watch_for_changes", "initial files", [str(f) for f in included_files])
+
+    mtimes: dict[Path, float] = {
+        f: f.stat().st_mtime for f in included_files if f.exists()
+    }
+
+    # Collect all output directories to ignore
+    out_dirs = [Path(b["out"]).resolve() for b in resolved_builds if "out" in b]
+
+    rebuild_func()  # initial build
+
+    try:
+        while True:
+            log("trace", "watch_for_changes", "sleep")
+            time.sleep(interval)
+            log("trace", "watch_for_changes", "loop")
+
+            # 🔁 re-expand every tick so new/removed files are tracked
+            included_files = _collect_included_files(resolved_builds)
+
+            changed: list[Path] = []
+            for f in included_files:
+                log("trace", "watch_for_changes", "could be out dir?", f)
+                # skip anything inside any build's output directory
+                if any(f.is_relative_to(out_dir) for out_dir in out_dirs):
+                    continue  # ignore output folder
+                old_m = mtimes.get(f)
+                log("trace", "watch_for_changes", "check", f, old_m)
+                if not f.exists():
+                    if old_m is not None:
+                        changed.append(f)
+                        mtimes.pop(f, None)
+                    continue
+                new_m = f.stat().st_mtime
+                if old_m is None or new_m > old_m:
+                    changed.append(f)
+                    mtimes[f] = new_m
+
+            if changed:
+                print(f"\n🔁 Detected {len(changed)} modified file(s). Rebuilding...")
+                rebuild_func()
+                # refresh timestamps after rebuild
+                mtimes = {f: f.stat().st_mtime for f in included_files if f.exists()}
+    except KeyboardInterrupt:
+        print("\n🛑 Watch stopped.")
+
+
+def _get_metadata_from_header(script_path: Path) -> tuple[str, str]:
     """Extract version and commit from bundled script.
 
     Prefers in-file constants (__version__, __commit__) if present;
@@ -60,7 +134,7 @@ def get_metadata() -> tuple[str, str]:
 
     # --- Heuristic: bundled script lives outside `src/` ---
     if "src" not in str(script_path):
-        return get_metadata_from_header(script_path)
+        return _get_metadata_from_header(script_path)
 
     # --- Modular / source package case ---
 
@@ -94,17 +168,17 @@ def get_metadata() -> tuple[str, str]:
     return version, commit
 
 
-def setup_parser() -> argparse.ArgumentParser:
+def _setup_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog=PROGRAM_SCRIPT)
     parser.add_argument("--include", nargs="+", help="Override include patterns.")
     parser.add_argument("--exclude", nargs="+", help="Override exclude patterns.")
     parser.add_argument("-o", "--out", help="Override output directory.")
-    parser.add_argument("-c", "--config", help="Path to build config file.")
     parser.add_argument(
         "--dry-run",
         action="store_true",
         help="Simulate build actions without copying or deleting files.",
     )
+    parser.add_argument("-c", "--config", help="Path to build config file.")
 
     parser.add_argument(
         "--add-include",
@@ -115,6 +189,10 @@ def setup_parser() -> argparse.ArgumentParser:
         "--add-exclude",
         nargs="+",
         help="Additional exclude patterns (relative to cwd). Extends config excludes.",
+    )
+
+    parser.add_argument(
+        "--watch", action="store_true", help="Rebuild automatically on changes"
     )
 
     gitignore = parser.add_mutually_exclusive_group()
@@ -248,13 +326,14 @@ def run_selftest() -> int:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
-def find_config(args: argparse.Namespace, cwd: Path) -> Optional[Path]:
+def find_config(args: argparse.Namespace, cwd: Path) -> Path | None:
     if args.config:
         config = Path(args.config).expanduser().resolve()
         if not config.exists():
             # error before log-level exists
             print(
-                colorize(f"⚠️  Config file not found: {config}", YELLOW), file=sys.stderr
+                colorize(f"⚠️  Config file not found: {config}", YELLOW),
+                file=sys.stderr,
             )
             return None
         return config
@@ -309,7 +388,7 @@ def load_config(config_path: Path) -> dict[str, Any] | list[Any]:
         return load_jsonc(config_path)
 
 
-def load_gitignore_patterns(path: Path) -> list[str]:
+def _load_gitignore_patterns(path: Path) -> list[str]:
     patterns: list[str] = []
     if path.exists():
         for line in path.read_text().splitlines():
@@ -319,12 +398,31 @@ def load_gitignore_patterns(path: Path) -> list[str]:
     return patterns
 
 
+def run_all_builds(resolved_builds: list[BuildConfig], dry_run: bool) -> None:
+    for i, build_cfg in enumerate(resolved_builds, 1):
+        build_log_level = build_cfg.get("log_level")
+        prev_level = current_runtime["log_level"]
+
+        build_cfg["dry_run"] = dry_run
+        if build_log_level:
+            current_runtime["log_level"] = build_log_level
+            log("debug", f"Overriding log level → {build_log_level}")
+
+        log("info", f"▶️  Build {i}/{len(resolved_builds)}")
+        run_build(build_cfg)
+
+        if build_log_level:
+            current_runtime["log_level"] = prev_level
+
+    log("info", "🎉 All builds complete.")
+
+
 def resolve_build_config(
     build_cfg: BuildConfig,
     args: argparse.Namespace,
     config_dir: Path,
     cwd: Path,
-    root_cfg: Optional[RootConfig] = None,
+    root_cfg: RootConfig | None = None,
 ) -> BuildConfig:
     """Merge CLI overrides and normalize paths."""
     # Make a mutable copy
@@ -392,7 +490,7 @@ def resolve_build_config(
 
     if use_gitignore:
         gitignore_path = config_dir / ".gitignore"
-        patterns = load_gitignore_patterns(gitignore_path)
+        patterns = _load_gitignore_patterns(gitignore_path)
         log(
             "trace",
             f"Using .gitignore at {config_dir} ({len(patterns)} patterns)",
@@ -424,8 +522,8 @@ def resolve_build_config(
     return cast(BuildConfig, resolved)
 
 
-def main(argv: Optional[List[str]] = None) -> int:
-    parser = setup_parser()
+def main(argv: List[str] | None = None) -> int:
+    parser = _setup_parser()
     args = parser.parse_args(argv)
 
     use_color = args.use_color if args.use_color is not None else should_use_color()
@@ -544,23 +642,12 @@ def main(argv: Optional[List[str]] = None) -> int:
         log("info", f"📁 Working base: {config_dir}")
     log("info", f"🔧 Running {len(resolved_builds)} build(s)\n")
 
-    for i, build_cfg in enumerate(resolved_builds, 1):
-        build_log_level = build_cfg.get("log_level")
-        prev_level = current_runtime["log_level"]
+    # --- Run builds ---
+    if args.watch:
+        watch_for_changes(
+            lambda: run_all_builds(resolved_builds, args.dry_run), resolved_builds
+        )
+    else:
+        run_all_builds(resolved_builds, args.dry_run)
 
-        # Inject CLI-only runtime flag
-        build_cfg["dry_run"] = args.dry_run
-
-        if build_log_level:
-            current_runtime["log_level"] = build_log_level
-            log("debug", f"Overriding log level → {build_log_level}")
-
-        log("info", f"▶️  Build {i}/{len(resolved_builds)}")
-        run_build(build_cfg)
-
-        # Restore root-level log level
-        if build_log_level:
-            current_runtime["log_level"] = prev_level
-
-    log("info", "🎉 All builds complete.")
     return 0

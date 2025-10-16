@@ -1,6 +1,10 @@
 # tests/test_cli.py
 """Tests for pocket_build.cli (module and single-file versions)."""
 
+# we import `_` private for testing purposes only
+# pyright: reportPrivateUsage=false
+# ruff: noqa: F401
+
 from __future__ import annotations
 
 import json
@@ -23,14 +27,16 @@ def test_main_no_config(
     runtime_env: RuntimeLike,
 ) -> None:
     """Should print a warning and return exit code 1 when config is missing."""
-    monkeypatch.chdir(tmp_path)
 
-    code = runtime_env.main([])
-    assert code == 1
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
 
-    captured = capsys.readouterr()
-    out = captured.out + captured.err
-    assert "No build config" in out
+        code = runtime_env.main([])
+        assert code == 1
+
+        captured = capsys.readouterr()
+        out = captured.out + captured.err
+        assert "No build config" in out
 
 
 def test_main_with_config(
@@ -42,13 +48,15 @@ def test_main_with_config(
     """Should detect config, run one build, and exit cleanly."""
     config = tmp_path / f".{runtime_env.PROGRAM_SCRIPT}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
-    monkeypatch.chdir(tmp_path)
 
-    code = runtime_env.main([])
-    out = capsys.readouterr().out
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
 
-    assert code == 0
-    assert "Build completed" in out
+        code = runtime_env.main([])
+        out = capsys.readouterr().out
+
+        assert code == 0
+        assert "Build completed" in out
 
 
 def test_help_flag(

@@ -38,18 +38,19 @@ def test_default_respects_gitignore(
     (src / "skip.tmp").write_text("no")
 
     write_gitignore(tmp_path, "*.tmp\n")
-
     make_config(tmp_path, [{"include": ["src/**"], "out": "dist"}])
-    monkeypatch.chdir(tmp_path)
 
-    code = runtime_env.main([])
-    out = capsys.readouterr().out
-    dist = tmp_path / "dist"
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main([])
 
-    assert code == 0
-    assert (dist / "keep.txt").exists()
-    assert not (dist / "skip.tmp").exists()
-    assert "Build completed" in out
+        out = capsys.readouterr().out
+        dist = tmp_path / "dist"
+
+        assert code == 0
+        assert (dist / "keep.txt").exists()
+        assert not (dist / "skip.tmp").exists()
+        assert "Build completed" in out
 
 
 def test_config_disables_gitignore(
@@ -74,16 +75,18 @@ def test_config_disables_gitignore(
             }
         )
     )
-    monkeypatch.chdir(tmp_path)
 
-    code = runtime_env.main([])
-    out = capsys.readouterr().out
-    dist = tmp_path / "dist"
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main([])
 
-    assert code == 0
-    # file.tmp should NOT be excluded since gitignore disabled
-    assert (dist / "file.tmp").exists()
-    assert "Build completed" in out
+        out = capsys.readouterr().out
+        dist = tmp_path / "dist"
+
+        assert code == 0
+        # file.tmp should NOT be excluded since gitignore disabled
+        assert (dist / "file.tmp").exists()
+        assert "Build completed" in out
 
 
 def test_build_enables_gitignore_even_if_root_disabled(
@@ -111,16 +114,18 @@ def test_build_enables_gitignore_even_if_root_disabled(
             }
         )
     )
-    monkeypatch.chdir(tmp_path)
 
-    code = runtime_env.main([])
-    out = capsys.readouterr().out
-    dist = tmp_path / "dist"
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main([])
 
-    assert code == 0
-    assert (dist / "x.txt").exists()
-    assert not (dist / "x.tmp").exists()
-    assert "Build completed" in out
+        out = capsys.readouterr().out
+        dist = tmp_path / "dist"
+
+        assert code == 0
+        assert (dist / "x.txt").exists()
+        assert not (dist / "x.tmp").exists()
+        assert "Build completed" in out
 
 
 def test_cli_disables_gitignore_even_if_enabled_in_config(
@@ -138,16 +143,18 @@ def test_cli_disables_gitignore_even_if_enabled_in_config(
     write_gitignore(tmp_path, "*.tmp\n")
     make_config(tmp_path, [{"include": ["src/**"], "out": "dist"}])
 
-    monkeypatch.chdir(tmp_path)
-    code = runtime_env.main(["--no-gitignore"])
-    out = capsys.readouterr().out
-    dist = tmp_path / "dist"
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main(["--no-gitignore"])
 
-    assert code == 0
-    # .gitignore ignored
-    assert (dist / "ignore.tmp").exists()
-    assert (dist / "keep.txt").exists()
-    assert "Build completed" in out
+        out = capsys.readouterr().out
+        dist = tmp_path / "dist"
+
+        assert code == 0
+        # .gitignore ignored
+        assert (dist / "ignore.tmp").exists()
+        assert (dist / "keep.txt").exists()
+        assert "Build completed" in out
 
 
 def test_cli_enables_gitignore_even_if_config_disables_it(
@@ -173,16 +180,18 @@ def test_cli_enables_gitignore_even_if_config_disables_it(
             }
         )
     )
-    monkeypatch.chdir(tmp_path)
 
-    code = runtime_env.main(["--gitignore"])
-    out = capsys.readouterr().out
-    dist = tmp_path / "dist"
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main(["--gitignore"])
 
-    assert code == 0
-    assert (dist / "keep.txt").exists()
-    assert not (dist / "skip.tmp").exists()
-    assert "Build completed" in out
+        out = capsys.readouterr().out
+        dist = tmp_path / "dist"
+
+        assert code == 0
+        assert (dist / "keep.txt").exists()
+        assert not (dist / "skip.tmp").exists()
+        assert "Build completed" in out
 
 
 def test_gitignore_patterns_append_to_existing_excludes(
@@ -203,14 +212,16 @@ def test_gitignore_patterns_append_to_existing_excludes(
     make_config(
         tmp_path, [{"include": ["src/**"], "exclude": ["*.tmp"], "out": "dist"}]
     )
-    monkeypatch.chdir(tmp_path)
 
-    code = runtime_env.main([])
-    out = capsys.readouterr().out
-    dist = tmp_path / "dist"
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        code = runtime_env.main([])
 
-    assert code == 0
-    assert not (dist / "foo.tmp").exists()  # excluded by config
-    assert not (dist / "bar.log").exists()  # excluded by gitignore
-    assert (dist / "baz.txt").exists()  # should survive
-    assert "Build completed" in out
+        out = capsys.readouterr().out
+        dist = tmp_path / "dist"
+
+        assert code == 0
+        assert not (dist / "foo.tmp").exists()  # excluded by config
+        assert not (dist / "bar.log").exists()  # excluded by gitignore
+        assert (dist / "baz.txt").exists()  # should survive
+        assert "Build completed" in out

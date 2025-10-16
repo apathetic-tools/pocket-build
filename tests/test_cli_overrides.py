@@ -36,17 +36,18 @@ def test_include_flag_overrides_config(
         )
     )
 
-    monkeypatch.chdir(tmp_path)
-    # Override include at CLI level
-    code = runtime_env.main(["--include", "src/**"])
-    out = capsys.readouterr().out
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        # Override include at CLI level
+        code = runtime_env.main(["--include", "src/**"])
+        out = capsys.readouterr().out
 
-    assert code == 0
-    dist_dir = tmp_path / "dist"
-    # Should copy src contents (flattened), not 'other'
-    assert (dist_dir / "foo.txt").exists()
-    assert not (dist_dir / "other").exists()
-    assert "Build completed" in out
+        assert code == 0
+        dist_dir = tmp_path / "dist"
+        # Should copy src contents (flattened), not 'other'
+        assert (dist_dir / "foo.txt").exists()
+        assert not (dist_dir / "other").exists()
+        assert "Build completed" in out
 
 
 def test_exclude_flag_overrides_config(
@@ -66,17 +67,18 @@ def test_exclude_flag_overrides_config(
     config = tmp_path / ".pocket-build.json"
     config.write_text(json.dumps({"builds": [{"include": ["src/**"], "out": "dist"}]}))
 
-    monkeypatch.chdir(tmp_path)
-    # Pass exclude override on CLI
-    code = runtime_env.main(["--exclude", "*.tmp"])
-    out = capsys.readouterr().out
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        # Pass exclude override on CLI
+        code = runtime_env.main(["--exclude", "*.tmp"])
+        out = capsys.readouterr().out
 
-    assert code == 0
-    dist_dir = tmp_path / "dist"
-    # The .tmp file should be excluded now
-    assert (dist_dir / "keep.txt").exists()
-    assert not (dist_dir / "ignore.tmp").exists()
-    assert "Build completed" in out
+        assert code == 0
+        dist_dir = tmp_path / "dist"
+        # The .tmp file should be excluded now
+        assert (dist_dir / "keep.txt").exists()
+        assert not (dist_dir / "ignore.tmp").exists()
+        assert "Build completed" in out
 
 
 def test_add_include_extends_config(
@@ -101,20 +103,21 @@ def test_add_include_extends_config(
         json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]})
     )
 
-    # Run with --add-include extra/**
-    monkeypatch.chdir(tmp_path)
-    code = runtime_env.main(["--add-include", "extra/**"])
-    out = capsys.readouterr().out
+    with monkeypatch.context() as mp:
+        # Run with --add-include extra/**
+        mp.chdir(tmp_path)
+        code = runtime_env.main(["--add-include", "extra/**"])
+        out = capsys.readouterr().out
 
-    assert code == 0
-    dist = tmp_path / "dist"
+        assert code == 0
+        dist = tmp_path / "dist"
 
-    # ✅ Both directories should be included
-    assert (dist / "a.txt").exists()
-    assert (dist / "b.txt").exists()
+        # ✅ Both directories should be included
+        assert (dist / "a.txt").exists()
+        assert (dist / "b.txt").exists()
 
-    # Output should confirm the build
-    assert "Build completed" in out
+        # Output should confirm the build
+        assert "Build completed" in out
 
 
 def test_add_exclude_extends_config(
@@ -139,18 +142,19 @@ def test_add_exclude_extends_config(
         )
     )
 
-    # Add an extra exclude via CLI
-    monkeypatch.chdir(tmp_path)
-    code = runtime_env.main(["--add-exclude", "*.tmp"])
-    out = capsys.readouterr().out
+    with monkeypatch.context() as mp:
+        # Add an extra exclude via CLI
+        mp.chdir(tmp_path)
+        code = runtime_env.main(["--add-exclude", "*.tmp"])
+        out = capsys.readouterr().out
 
-    assert code == 0
-    dist = tmp_path / "dist"
+        assert code == 0
+        dist = tmp_path / "dist"
 
-    # ✅ keep.txt should survive
-    assert (dist / "keep.txt").exists()
-    # 🚫 both excluded files should be missing
-    assert not (dist / "ignore.tmp").exists()
-    assert not (dist / "ignore.log").exists()
+        # ✅ keep.txt should survive
+        assert (dist / "keep.txt").exists()
+        # 🚫 both excluded files should be missing
+        assert not (dist / "ignore.tmp").exists()
+        assert not (dist / "ignore.log").exists()
 
-    assert "Build completed" in out
+        assert "Build completed" in out

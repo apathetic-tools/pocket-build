@@ -38,10 +38,11 @@ STDLIB_MODULES: set[str] = (
 
 HEADER = """# /tests/package_protocol.py
 # ruff: noqa: E501
+import argparse
 import pathlib
 import typing
 import pocket_build.types
-from typing import Union
+from typing import Union, Callable
 """
 
 
@@ -132,7 +133,8 @@ def generate_protocol() -> None:
     # Collect all public names
     names = getattr(mod, "__all__", None)
     if not names:
-        names = [n for n in dir(mod) if not n.startswith("_")]
+        #   if not n.startswith("_")] # we need private for tests
+        names = [n for n in dir(mod)]
 
     # Collect type references across all source files
     qualified_names = collect_all_qualified_names(PKG_DIR)
@@ -159,6 +161,7 @@ def generate_protocol() -> None:
                     sig = "(self)"
                 else:
                     sig = "(self, " + sig[1:]
+            sig = sig.replace("NoneType", "None")
             lines.append(f"    def {name}{sig}: ...")
         elif inspect.isclass(obj):
             lines.append(f"    {name}: type")
