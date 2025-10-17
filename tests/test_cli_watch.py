@@ -10,7 +10,7 @@ from __future__ import annotations
 import time
 from pathlib import Path
 from types import FunctionType
-from typing import Callable, cast
+from typing import Any, Callable, cast
 
 from _pytest.monkeypatch import MonkeyPatch
 
@@ -152,6 +152,7 @@ def test_watch_flag_invokes_watch_mode(
             _rebuild_func: Callable[[], None],
             _resolved_builds: list[BuildConfig],
             _interval: float = 1.0,
+            **_kwargs: Any,
         ):
             """Stub out watch_for_changes() to mark invocation."""
             called["yes"] = True
@@ -272,3 +273,125 @@ def test_watch_for_changes_exported_and_callable(
 
         # --- assert ---
         assert 2 <= calls.count("rebuilt") <= 3
+
+
+def test_watch_ignores_out_dir(tmp_path: Path, monkeypatch: MonkeyPatch):
+    """Ensure watch_for_changes() ignores files in output directory."""
+    from pocket_build.cli import watch_for_changes
+
+    src = tmp_path / "src"
+    src.mkdir()
+    out = tmp_path / "dist"
+    out.mkdir()
+    file = src / "file.txt"
+    file.write_text("x")
+    builds = cast(
+        list[BuildConfig], [{"include": [str(src / "*.txt")], "out": str(out)}]
+    )
+
+    calls: list[str] = []
+
+    def fake_build():
+        calls.append("rebuilt")
+        # simulate self-output file that should not retrigger
+        (out / "copy.txt").write_text("copied")
+
+    counter = {"n": 0}
+
+    def fake_sleep(_: float) -> None:
+        counter["n"] += 1
+        if counter["n"] > 1:
+            raise KeyboardInterrupt
+
+    with monkeypatch.context() as mp:
+        mp.setattr(time, "sleep", fake_sleep)
+        watch_for_changes(fake_build, builds, interval=0.01)
+
+    # Only the initial build should run, not retrigger from the out file
+    assert calls.count("rebuilt") == 1
+
+
+def test_watch_interval_flag_parsing():
+    from pocket_build.cli import _setup_parser
+
+    parser = _setup_parser()
+    args = parser.parse_args(["--watch"])
+    # With new semantics, --watch sets None, meaning "use config/default interval"
+    assert args.watch is None
+
+    args = parser.parse_args(["--watch", "2.5"])
+    assert args.watch == 2.5
+
+    args = parser.parse_args([])
+    assert args.watch is None
+
+
+def test_watch_uses_config_interval_when_flag_passed(
+    tmp_path: Path, monkeypatch: MonkeyPatch, runtime_env: RuntimeLike
+):
+    """Ensure that --watch (no value) uses watch_interval from config when defined."""
+
+    # --- setup config with custom watch_interval ---
+    config = tmp_path / ".pocket-build.json"
+    config.write_text(
+        '{"watch_interval": 0.42, "builds": [{"include": [], "out": "dist"}]}'
+    )
+
+    assert isinstance(runtime_env.main, FunctionType)
+
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+
+        called: dict[str, float] = {}
+
+        def fake_watch(
+            _rebuild_func: Callable[[], None],
+            _resolved_builds: list[BuildConfig],
+            interval: float,
+        ):
+            """Capture the interval actually passed in."""
+            called["interval"] = interval
+            return 0
+
+        # patch the global reference so main() resolves it
+        mp.setitem(runtime_env.main.__globals__, "watch_for_changes", fake_watch)
+
+        # --- run CLI with --watch (no explicit interval) ---
+        code = runtime_env.main(["--watch"])
+        assert code == 0, "Expected main() to exit cleanly"
+
+        # --- verify interval came from config, not default ---
+        delta = abs(called["interval"] - 0.42)
+        assert delta < 1e-9, f"Expected interval=0.42, got {called}"
+
+
+def test_watch_falls_back_to_default_interval_when_no_config(
+    tmp_path: Path, monkeypatch: MonkeyPatch, runtime_env: RuntimeLike
+):
+    """Ensure --watch uses DEFAULT_WATCH_INTERVAL when no config interval is defined."""
+    from pocket_build.constants import DEFAULT_WATCH_INTERVAL
+
+    config = tmp_path / ".pocket-build.json"
+    config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
+
+    assert isinstance(runtime_env.main, FunctionType)
+
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+
+        called: dict[str, float] = {}
+
+        def fake_watch(
+            _rebuild_func: Callable[[], None],
+            _resolved_builds: list[BuildConfig],
+            *,
+            interval: float,
+        ):
+            called["interval"] = interval
+            return 0
+
+        mp.setitem(runtime_env.main.__globals__, "watch_for_changes", fake_watch)
+
+        code = runtime_env.main(["--watch"])
+        assert code == 0
+        assert abs(called["interval"] - DEFAULT_WATCH_INTERVAL) < 1e-9

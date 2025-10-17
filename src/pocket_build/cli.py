@@ -11,6 +11,7 @@ from typing import Any, Callable, List, cast
 
 from .build import run_build
 from .config import parse_builds
+from .constants import DEFAULT_WATCH_INTERVAL
 from .meta import PROGRAM_DISPLAY, PROGRAM_ENV, PROGRAM_SCRIPT
 from .runtime import current_runtime
 from .types import BuildConfig, MetaBuildConfig, RootConfig
@@ -35,11 +36,22 @@ def _collect_included_files(resolved_builds: list[BuildConfig]) -> list[Path]:
 def watch_for_changes(
     rebuild_func: Callable[[], None],
     resolved_builds: list[BuildConfig],
-    interval: float = 1.0,
+    interval: float = DEFAULT_WATCH_INTERVAL,
 ) -> None:
-    """Poll file modification times and rebuild when changes are detected."""
+    """Poll file modification times and rebuild when changes are detected.
+
+    Features:
+    - Skips files inside each build’s output directory.
+    - Re-expands include patterns every loop to detect newly created files.
+    - Polling interval defaults to 1 second (tune 0.5–2.0 for balance).
+    Stops on KeyboardInterrupt.
+    """
+
     log("trace", "real_watch_for_changes", __name__, id(watch_for_changes))
-    print("👀 Watching for changes... Press Ctrl+C to stop.")
+    log(
+        "info",
+        f"👀 Watching for changes (interval={interval:.2f}s)... Press Ctrl+C to stop.",
+    )
 
     # discover at start
     included_files = _collect_included_files(resolved_builds)
@@ -192,7 +204,16 @@ def _setup_parser() -> argparse.ArgumentParser:
     )
 
     parser.add_argument(
-        "--watch", action="store_true", help="Rebuild automatically on changes"
+        "--watch",
+        nargs="?",
+        type=float,
+        metavar="SECONDS",
+        default=None,
+        help=(
+            "Rebuild automatically on changes. "
+            "Optionally specify interval in seconds"
+            f" (default config or: {DEFAULT_WATCH_INTERVAL}). "
+        ),
     )
 
     gitignore = parser.add_mutually_exclusive_group()
@@ -642,11 +663,34 @@ def main(argv: List[str] | None = None) -> int:
         log("info", f"📁 Working base: {config_dir}")
     log("info", f"🔧 Running {len(resolved_builds)} build(s)\n")
 
-    # --- Run builds ---
-    if args.watch:
+    # --- Watch mode ---
+    watch_enabled = (args.watch is not None) or ("--watch" in (argv or []))
+    if watch_enabled:
+        if args.watch is not None:
+            # explicit interval from CLI
+            watch_interval = args.watch
+        else:
+            # no explicit interval — use config or fallback
+            build_interval = next(
+                (
+                    b.get("watch_interval")
+                    for b in resolved_builds
+                    if b.get("watch_interval") is not None
+                ),
+                None,
+            )
+            root_interval = root_cfg.get("watch_interval")
+            watch_interval = float(
+                build_interval or root_interval or DEFAULT_WATCH_INTERVAL
+            )
+
         watch_for_changes(
-            lambda: run_all_builds(resolved_builds, args.dry_run), resolved_builds
+            lambda: run_all_builds(resolved_builds, args.dry_run),
+            resolved_builds,
+            interval=watch_interval,
         )
+
+    # --- Regular Run builds ---
     else:
         run_all_builds(resolved_builds, args.dry_run)
 

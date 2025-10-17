@@ -31,6 +31,7 @@ class BuildConfig(TypedDict, total=False):
     respect_gitignore: bool
 
     # optional single-build convenience override
+    watch_interval: float
     log_level: str
 
     # runtime flag (CLI only, not persisted in normal configs)
@@ -41,6 +42,7 @@ class RootConfig(TypedDict, total=False):
     builds: List[BuildConfig]
 
     # runtime behavior
+    watch_interval: float
     log_level: str
 
     # default for each build
