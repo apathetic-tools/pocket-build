@@ -4,7 +4,7 @@ import builtins
 import importlib
 import os
 
-TRACE_ENABLED = os.environ.get("TRACE", "").lower() in {"1", "true", "yes"}
+TRACE_ENABLED = os.getenv("TRACE", "").lower() in {"1", "true", "yes"}
 
 
 def TRACE(label: str, *args: object):
@@ -17,4 +17,4 @@ def TRACE(label: str, *args: object):
 
     ts = _real_time.monotonic()
     # builtins.print more reliable than sys.stdout.write + sys.stdout.flush
-    builtins.print(f"[TRACE {ts:.6f}] {label}:", *args, flush=True)
+    builtins.print(f"[TTRACE {ts:.6f}] {label}:", *args, flush=True)

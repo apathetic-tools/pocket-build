@@ -126,7 +126,7 @@ def test_bundled_script_has_python_constants_and_parses_them() -> None:
 # this test does not use runtime_env
 def test__get_metadata_from_header_prefers_constants(tmp_path: Path):
     """Should return values from __version__ and __commit__ if header lines missing."""
-    from pocket_build.cli import _get_metadata_from_header
+    from pocket_build.actions import _get_metadata_from_header
 
     text = """
 __version__ = "1.2.3"

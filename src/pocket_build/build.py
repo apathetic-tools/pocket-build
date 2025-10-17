@@ -3,6 +3,7 @@ import shutil
 from pathlib import Path
 from typing import List
 
+from .runtime import current_runtime
 from .types import BuildConfig, IncludeEntry, MetaBuildConfig
 from .utils_core import (
     get_glob_root,
@@ -172,3 +173,22 @@ def run_build(
             copy_item(src, dest, excludes, meta, dry_run)
 
     log("info", f"✅ Build completed → {out_dir}\n")
+
+
+def run_all_builds(resolved_builds: list[BuildConfig], dry_run: bool) -> None:
+    for i, build_cfg in enumerate(resolved_builds, 1):
+        build_log_level = build_cfg.get("log_level")
+        prev_level = current_runtime["log_level"]
+
+        build_cfg["dry_run"] = dry_run
+        if build_log_level:
+            current_runtime["log_level"] = build_log_level
+            log("debug", f"Overriding log level → {build_log_level}")
+
+        log("info", f"▶️  Build {i}/{len(resolved_builds)}")
+        run_build(build_cfg)
+
+        if build_log_level:
+            current_runtime["log_level"] = prev_level
+
+    log("info", "🎉 All builds complete.")

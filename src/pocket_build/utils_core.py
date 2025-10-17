@@ -13,7 +13,7 @@ def should_use_color() -> bool:
     # Respect explicit overrides
     if "NO_COLOR" in os.environ:
         return False
-    if os.environ.get("FORCE_COLOR", "").lower() in {"1", "true", "yes"}:
+    if os.getenv("FORCE_COLOR", "").lower() in {"1", "true", "yes"}:
         return True
 
     # Auto-detect: use color if output is a TTY

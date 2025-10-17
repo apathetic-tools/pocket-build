@@ -21,7 +21,7 @@ from tests.utils import force_mtime_advance
 
 # this test does not use runtime_env
 def test_collect_included_files_expands_patterns(tmp_path: Path):
-    from pocket_build.cli import _collect_included_files
+    from pocket_build.actions import _collect_included_files
 
     src = tmp_path / "src"
     src.mkdir()
@@ -39,7 +39,7 @@ def test_collect_included_files_expands_patterns(tmp_path: Path):
 
 # this test does not use runtime_env
 def test_collect_included_files_handles_nonexistent_paths(tmp_path: Path):
-    from pocket_build.cli import _collect_included_files
+    from pocket_build.actions import _collect_included_files
 
     builds = cast(
         list[BuildConfig],
@@ -64,8 +64,8 @@ def test_watch_for_changes_triggers_rebuild(tmp_path: Path, monkeypatch: MonkeyP
 
     # Import the function directly from its real module.
     # This ties its closure to pocket_build.cli’s global namespace.
-    import pocket_build.cli as cli_mod
-    from pocket_build.cli import watch_for_changes
+    import pocket_build.actions as actions_mod
+    from pocket_build.actions import watch_for_changes
 
     # --- setup temporary workspace ---
     src = tmp_path / "src"
@@ -112,7 +112,7 @@ def test_watch_for_changes_triggers_rebuild(tmp_path: Path, monkeypatch: MonkeyP
         # Patch the module’s global _collect_included_files.
         # This works because watch_for_changes() was imported
         # from this exact module, so it closes over these globals.
-        mp.setattr(cli_mod, "_collect_included_files", fake_collect)
+        mp.setattr(actions_mod, "_collect_included_files", fake_collect)
 
         # Run the watcher with our fake build function.
         watch_for_changes(fake_build, builds, interval=0.01)
@@ -201,6 +201,8 @@ def test_watch_for_changes_exported_and_callable(
     runtime_env: RuntimeLike,
 ):
     """Ensure watch_for_changes runs and rebuilds exactly twice."""
+    import pocket_build.actions as actions_mod
+
     src = tmp_path / "src"
     src.mkdir()
     f = src / "file.txt"
@@ -244,25 +246,41 @@ def test_watch_for_changes_exported_and_callable(
         # The commented variants below document what was tested and why they failed,
         # so we don't repeat the same debugging archaeology later.
         # ------------------------------------------------------------------
-
-        # ✅ Works for both module + single-file
-        mp.setitem(
-            runtime_env.main.__globals__, "_collect_included_files", fake_collect
-        )  # works
+        if "_collect_included_files" in runtime_env.main.__globals__:
+            # Patch the CLI’s global scope too (single-file compatibility)
+            mp.setitem(  # works
+                runtime_env.main.__globals__, "_collect_included_files", fake_collect
+            )
+            # mp.setattr(runtime_env, "_collect_included_files", fake_collect) # works
+            # mp.setattr( #broken
+            #   "pocket_build.actions._collect_included_files", fake_collect
+            # )
+            # mp.setattr( # broken
+            #   actions_mod, "_collect_included_files", fake_collect
+            # )
+        else:
+            # Patch the real implementation (modular mode)
+            mp.setattr(actions_mod, "_collect_included_files", fake_collect)  # works
+            # mp.setitem(  # broken
+            #     runtime_env.main.__globals__, "_collect_included_files", fake_collect
+            # )
+            # mp.setattr(runtime_env, "_collect_included_files", fake_collect) # broken
+            # mp.setattr( # works
+            #   "pocket_build.actions._collect_included_files", fake_collect
+            # )
 
         # -- Fallback notes / historical experiments --
-        # if isinstance(runtime_env, ModuleType) and "single" in runtime_env.__name__:
-        #     mp.setattr(runtime_env, "_collect_included_files", fake_collect)  # works
+        # if "_collect_included_files" in runtime_env.main.__globals__:
+        #
         #     # doesn't work:
-        #     # mp.setattr("pocket_build.cli._collect_included_files", fake_collect)
-        #     # mp.setattr(cli_mod, "_collect_included_files", fake_collect)
+        #
         # else:
-        #     import pocket_build.cli as cli_mod
-        #     mp.setattr(cli_mod, "_collect_included_files", fake_collect)  # works
+        #
+        #
         #     # also works, but more complex:
-        #     # mp.setattr("pocket_build.cli._collect_included_files", fake_collect)
+        #
         #     # doesn't work:
-        #     # mp.setattr(runtime_env, "_collect_included_files", fake_collect)
+        #
 
         mp.setattr(time, "sleep", fake_sleep)  # ✅ works
         # mp.setattr(sys.modules["time"], "sleep", fake_sleep)  # also works
@@ -277,7 +295,7 @@ def test_watch_for_changes_exported_and_callable(
 
 def test_watch_ignores_out_dir(tmp_path: Path, monkeypatch: MonkeyPatch):
     """Ensure watch_for_changes() ignores files in output directory."""
-    from pocket_build.cli import watch_for_changes
+    from pocket_build.actions import watch_for_changes
 
     src = tmp_path / "src"
     src.mkdir()

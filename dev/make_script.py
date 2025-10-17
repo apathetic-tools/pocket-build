@@ -34,6 +34,7 @@ ORDER = [
     "utils_runtime.py",
     "config.py",
     "build.py",
+    "actions.py",
     "cli.py",
 ]
 # ORDER = [p.name for p in SRC_DIR.glob("*.py") if p.name != "__init__.py"]
