@@ -12,7 +12,7 @@ from typing import Any, Callable, List, cast
 from .build import run_build
 from .config import parse_builds
 from .constants import DEFAULT_WATCH_INTERVAL
-from .meta import PROGRAM_DISPLAY, PROGRAM_ENV, PROGRAM_SCRIPT
+from .meta import PROGRAM_DISPLAY, PROGRAM_ENV, PROGRAM_SCRIPT, Metadata
 from .runtime import current_runtime
 from .types import BuildConfig, MetaBuildConfig, RootConfig
 from .utils_core import load_jsonc, should_use_color
@@ -136,7 +136,7 @@ def _get_metadata_from_header(script_path: Path) -> tuple[str, str]:
     return version, commit
 
 
-def get_metadata() -> tuple[str, str]:
+def get_metadata() -> Metadata:
     """
     Return (version, commit) tuple for this tool.
     - Bundled script → parse from header
@@ -146,7 +146,8 @@ def get_metadata() -> tuple[str, str]:
 
     # --- Heuristic: bundled script lives outside `src/` ---
     if "src" not in str(script_path):
-        return _get_metadata_from_header(script_path)
+        version, commit = _get_metadata_from_header(script_path)
+        return Metadata(version, commit)
 
     # --- Modular / source package case ---
 
@@ -177,7 +178,7 @@ def get_metadata() -> tuple[str, str]:
     except Exception:
         pass
 
-    return version, commit
+    return Metadata(version, commit)
 
 
 def _setup_parser() -> argparse.ArgumentParser:
@@ -282,7 +283,7 @@ def _setup_parser() -> argparse.ArgumentParser:
     return parser
 
 
-def run_selftest() -> int:
+def run_selftest() -> bool:
     """Run a lightweight functional test of the tool itself."""
     import shutil
     import tempfile
@@ -298,7 +299,7 @@ def run_selftest() -> int:
     file = src / "hello.txt"
     file.write_text(f"hello {PROGRAM_DISPLAY}!", encoding="utf-8")
 
-    # Explicitly typed fake config for internal run
+    # Minimal fake config for internal run
     config: dict[str, list[BuildConfig]] = {
         "builds": [
             {"include": [str(src / "**")], "out": str(out)},
@@ -319,7 +320,7 @@ def run_selftest() -> int:
                     out=None,
                     dry_run=False,
                     respect_gitignore=None,
-                    log_level="info",
+                    log_level=current_runtime.get("log_level", "info"),
                 ),
                 config_dir=tmp_dir,
                 cwd=tmp_dir,
@@ -336,13 +337,15 @@ def run_selftest() -> int:
             log(
                 "info", f"✅ Self-test passed — {PROGRAM_DISPLAY} is working correctly."
             )
-            return 0
+            return True
+
         log("error", "Self-test failed: output file not found or invalid.")
-        return 1
+        return False
 
     except Exception as e:
         log("error", f"Self-test failed: {e}")
-        return 1
+        return False
+
     finally:
         shutil.rmtree(tmp_dir, ignore_errors=True)
 
@@ -552,9 +555,9 @@ def main(argv: List[str] | None = None) -> int:
 
     # --- Version flag ---
     if args.version:
-        version, commit = get_metadata()
+        meta = get_metadata()
         # always output
-        print(f"{PROGRAM_DISPLAY} {version} ({commit})")
+        print(f"{PROGRAM_DISPLAY} {meta.version} ({meta.commit})")
         return 0
 
     # --- Python version check ---
@@ -567,7 +570,7 @@ def main(argv: List[str] | None = None) -> int:
         return 1
 
     if args.selftest:
-        return run_selftest()
+        return 0 if run_selftest() else 1
 
     # --- Config path handling ---
     cwd = Path.cwd().resolve()

@@ -23,7 +23,7 @@ from .cli import (  # CLI; Engine; Tests
     watch_for_changes,
 )
 from .config import parse_builds  # CLI
-from .meta import PROGRAM_DISPLAY, PROGRAM_ENV, PROGRAM_SCRIPT  # Utils
+from .meta import PROGRAM_DISPLAY, PROGRAM_ENV, PROGRAM_SCRIPT, Metadata  # CLI; Utils
 from .runtime import current_runtime  # Utils
 from .types import (  # Utils
     BuildConfig,
@@ -64,6 +64,7 @@ __all__ = [
     "PROGRAM_SCRIPT",
     "PROGRAM_DISPLAY",
     "PROGRAM_ENV",
+    "Metadata",
     # --- runtime ---
     "current_runtime",
     # --- utils_core ---

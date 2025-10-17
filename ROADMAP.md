@@ -23,8 +23,6 @@ Exploring bundling options for generating the single-file release:
 ## 🧑‍💻 Development
 - [ ] Deploy action when I tag a release should create a release and attach it to the tagged release.
 
-- [ ] Tweak get_metadata() so it returns a small @dataclass instead of tupple.
-- [ ] Tweak run_selftest() so it has a built-in quiet mode and returns a bool
 - [ ] Given we think of the find/load/resolve_build_Config parse_build as all related to resolving configs, should they all live in config.py?
 
 ## 💡 Ideas & Experiments
