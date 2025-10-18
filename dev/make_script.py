@@ -25,19 +25,23 @@ SRC_DIR = ROOT / "src" / "pocket_build"
 DEFAULT_OUT_FILE = ROOT / "bin" / "pocket-build.py"
 PYPROJECT = ROOT / "pyproject.toml"
 
-ORDER = [
-    "constants.py",
-    "meta.py",
-    "types.py",
-    "utils_core.py",  # needed before runtime.py
-    "runtime.py",
-    "utils_runtime.py",
-    "config.py",
-    "build.py",
-    "actions.py",
-    "cli.py",
+# ------------------------------------------------------------
+# Module order (defines both build order and shim targets)
+# ------------------------------------------------------------
+ORDER_NAMES = [
+    "constants",
+    "meta",
+    "types",
+    "utils_core",  # needed before runtime.py
+    "runtime",
+    "utils_runtime",
+    "config",
+    "build",
+    "actions",
+    "cli",
 ]
-# ORDER = [p.name for p in SRC_DIR.glob("*.py") if p.name != "__init__.py"]
+ORDER = [f"{n}.py" for n in ORDER_NAMES]
+SHIM_NAMES = [n for n in ORDER_NAMES if not n.startswith("_")]
 
 LICENSE_HEADER = """\
 # Pocket Build — a tiny build system that fits in your pocket.
@@ -148,6 +152,43 @@ def verify_compiles(path: Path) -> None:
         raise SystemExit(1)
 
 
+def detect_name_collisions(sources: dict[str, str]) -> None:
+    """Detect top-level name collisions across modules."""
+    symbols: dict[str, str] = {}  # name -> module
+    collisions: list[tuple[str, str, str]] = []
+
+    for mod, text in sources.items():
+        try:
+            tree = ast.parse(text)
+        except SyntaxError as e:
+            print(f"❌ Failed to parse {mod}: {e}")
+            continue
+
+        for node in tree.body:
+            if isinstance(node, (ast.FunctionDef, ast.ClassDef, ast.AsyncFunctionDef)):
+                name = node.name
+            elif isinstance(node, ast.Assign):
+                # only consider simple names like x = ...
+                targets = [t.id for t in node.targets if isinstance(t, ast.Name)]
+                if not targets:
+                    continue
+                name = targets[0]
+            else:
+                continue
+
+            prev = symbols.get(name)
+            if prev:
+                collisions.append((name, prev, mod))
+            else:
+                symbols[name] = mod
+
+    if collisions:
+        print("❌ Detected potential top-level name collisions:")
+        for name, a, b in collisions:
+            print(f"   - {name!r} defined in both {a} and {b}")
+        raise SystemExit(1)
+
+
 # ------------------------------------------------------------
 # Build process
 # ------------------------------------------------------------
@@ -165,6 +206,12 @@ def build_single_file(
     all_imports: "OrderedDict[str, None]" = OrderedDict()
     parts: list[str] = []
 
+    # imports for shim
+    all_imports.setdefault("import sys\n", None)
+
+    # for name collision detection
+    module_sources: dict[str, str] = {}
+
     for filename in ORDER:
         path = SRC_DIR / filename
         if not path.exists():
@@ -173,6 +220,7 @@ def build_single_file(
 
         text = path.read_text(encoding="utf-8")
         text = strip_redundant_blocks(text)
+        module_sources[filename] = text
 
         imports, body = split_imports(text, package_name)
         for imp in imports:
@@ -180,6 +228,9 @@ def build_single_file(
 
         header = f"# === {filename} ==="
         parts.append(f"\n{header}\n{body.strip()}\n\n")
+
+    # --- Detect potential collisions ---
+    detect_name_collisions(module_sources)
 
     future_imports: "OrderedDict[str, None]" = OrderedDict()
     for imp in list(all_imports.keys()):
@@ -189,6 +240,17 @@ def build_single_file(
 
     future_block = "".join(future_imports.keys())
     import_block = "".join(all_imports.keys())
+
+    shim_block = [
+        "# --- import shims for single-file runtime ---",
+        "_pkg = 'pocket_build'",
+        "_mod = sys.modules.get(f'{_pkg}_single') or sys.modules.get(_pkg)",
+        "if _mod:",
+        *[f"    sys.modules[f'{{_pkg}}.{name}'] = _mod" for name in SHIM_NAMES],
+        "del _pkg, _mod",
+        "",
+    ]
+    shim_text = "\n".join(shim_block)
 
     final_script = (
         "#!/usr/bin/env python3\n"
@@ -214,7 +276,9 @@ def build_single_file(
         f"__commit__ = {commit!r}\n"
         f"__build_date__ = {build_date!r}\n"
         "\n"
-        "\n" + "\n".join(parts) + "\n\nif __name__ == '__main__':\n"
+        "\n" + "\n".join(parts) + "\n"
+        f"{shim_text}\n"
+        "\nif __name__ == '__main__':\n"
         "    import sys\n"
         "    sys.exit(main(sys.argv[1:]))\n"
     )
