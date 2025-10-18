@@ -13,14 +13,13 @@ from types import FunctionType
 from typing import Any, Callable, cast
 
 from _pytest.monkeypatch import MonkeyPatch
-from pytest import approx
+from pytest import approx  # type: ignore[reportUnknownVariableType]
 
 from pocket_build.types import BuildConfig
 from tests.conftest import RuntimeLike
 from tests.utils import (
     force_mtime_advance,
     patch_runtime_function_func,
-    patch_runtime_function_mod,
 )
 
 
