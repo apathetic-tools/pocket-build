@@ -13,10 +13,15 @@ from types import FunctionType
 from typing import Any, Callable, cast
 
 from _pytest.monkeypatch import MonkeyPatch
+from pytest import approx
 
 from pocket_build.types import BuildConfig
 from tests.conftest import RuntimeLike
-from tests.utils import force_mtime_advance, patch_runtime_function_func
+from tests.utils import (
+    force_mtime_advance,
+    patch_runtime_function_func,
+    patch_runtime_function_mod,
+)
 
 
 # only tests module; no runtime_env
@@ -62,11 +67,6 @@ def test_watch_for_changes_triggers_rebuild(tmp_path: Path, monkeypatch: MonkeyP
     without waiting for real filesystem events.
     """
 
-    # Import the function directly from its real module.
-    # This ties its closure to pocket_build.cli’s global namespace.
-    import pocket_build.actions as actions_mod
-    from pocket_build.actions import watch_for_changes
-
     # --- setup temporary workspace ---
     src = tmp_path / "src"
     src.mkdir()
@@ -109,12 +109,13 @@ def test_watch_for_changes_triggers_rebuild(tmp_path: Path, monkeypatch: MonkeyP
         # Patch time.sleep so the watch loop exits quickly and predictably.
         mp.setattr(time, "sleep", fake_sleep)
 
-        # Patch the module’s global _collect_included_files.
-        # This works because watch_for_changes() was imported
-        # from this exact module, so it closes over these globals.
-        mp.setattr(actions_mod, "_collect_included_files", fake_collect)
+        from pocket_build.actions import _collect_included_files
+
+        patch_runtime_function_func(mp, None, _collect_included_files, fake_collect)
 
         # Run the watcher with our fake build function.
+        from pocket_build.actions import watch_for_changes
+
         watch_for_changes(fake_build, builds, interval=0.01)
 
         # --- verify expected behavior ---
@@ -162,30 +163,9 @@ def test_watch_flag_invokes_watch_mode(
         # if runtime_env.main changes type, this test will break loudly.
         assert isinstance(runtime_env.main, FunctionType)
 
-        # --- patch strategy -------------------------------------------
-        # main() refers to watch_for_changes() via its own globals,
-        # not as a module attribute. So patching main.__globals__
-        # ensures our fake is what main() resolves at call time.
-        # This works for both the "pocket_build.cli" module
-        # and the stitched "pocket_build_single" runtime.
-        # ---------------------------------------------------------------
+        from pocket_build.actions import watch_for_changes
 
-        # ✅ Works reliably across both runtimes
-        mp.setitem(
-            runtime_env.main.__globals__,
-            "watch_for_changes",
-            fake_watch,
-        )
-
-        # -- Fallback / historical variants ----------------------------
-        # These do *not* work because main() doesn't reference the function
-        # through these namespaces — leaving them here avoids re-testing later.
-        #
-        # mp.setattr(runtime_env, "watch_for_changes", fake_watch)  # never called
-        # mp.setattr("pocket_build.cli.watch_for_changes", fake_watch)  # never called
-        # import pocket_build.cli as cli_mod
-        # mp.setattr(cli_mod, "watch_for_changes", fake_watch)  # never called
-        # ---------------------------------------------------------------
+        patch_runtime_function_func(mp, runtime_env, watch_for_changes, fake_watch)
 
         # --- execute main() in watch mode ---
         code = runtime_env.main(["--watch"])
@@ -201,8 +181,6 @@ def test_watch_for_changes_exported_and_callable_old(
     runtime_env: RuntimeLike,
 ):
     """Ensure watch_for_changes runs and rebuilds exactly twice."""
-    import pocket_build.actions as actions_mod
-
     src = tmp_path / "src"
     src.mkdir()
     f = src / "file.txt"
@@ -240,14 +218,11 @@ def test_watch_for_changes_exported_and_callable_old(
     assert isinstance(runtime_env.main, FunctionType)
 
     with monkeypatch.context() as mp:
-        if "_collect_included_files" in runtime_env.main.__globals__:
-            # Patch the CLI’s global scope too (single-file compatibility)
-            mp.setitem(  # works
-                runtime_env.main.__globals__, "_collect_included_files", fake_collect
-            )
-        else:
-            # Patch the real implementation (modular mode)
-            mp.setattr(actions_mod, "_collect_included_files", fake_collect)  # works
+        from pocket_build.actions import _collect_included_files
+
+        patch_runtime_function_func(
+            mp, runtime_env, _collect_included_files, fake_collect
+        )
 
         mp.setattr(time, "sleep", fake_sleep)  # ✅ works
         # mp.setattr(sys.modules["time"], "sleep", fake_sleep)  # also works
@@ -401,16 +376,19 @@ def test_watch_uses_config_interval_when_flag_passed(
             called["interval"] = interval
             return 0
 
-        # patch the global reference so main() resolves it
-        mp.setitem(runtime_env.main.__globals__, "watch_for_changes", fake_watch)
+        from pocket_build.actions import watch_for_changes
+
+        patch_runtime_function_func(mp, runtime_env, watch_for_changes, fake_watch)
 
         # --- run CLI with --watch (no explicit interval) ---
         code = runtime_env.main(["--watch"])
         assert code == 0, "Expected main() to exit cleanly"
 
         # --- verify interval came from config, not default ---
-        delta = abs(called["interval"] - 0.42)
-        assert delta < 1e-9, f"Expected interval=0.42, got {called}"
+        assert "interval" in called, "watch_for_changes() was never invoked"
+        assert called["interval"] == approx(0.42), (
+            f"Expected interval=0.42, got {called}"
+        )
 
 
 def test_watch_falls_back_to_default_interval_when_no_config(
@@ -438,8 +416,14 @@ def test_watch_falls_back_to_default_interval_when_no_config(
             called["interval"] = interval
             return 0
 
-        mp.setitem(runtime_env.main.__globals__, "watch_for_changes", fake_watch)
+        from pocket_build.actions import watch_for_changes
+
+        patch_runtime_function_func(mp, runtime_env, watch_for_changes, fake_watch)
 
         code = runtime_env.main(["--watch"])
         assert code == 0
-        assert abs(called["interval"] - DEFAULT_WATCH_INTERVAL) < 1e-9
+
+        assert "interval" in called, "watch_for_changes() was never invoked"
+        assert called["interval"] == approx(DEFAULT_WATCH_INTERVAL), (
+            f"Expected interval=0.42, got {called}"
+        )

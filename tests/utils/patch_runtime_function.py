@@ -171,8 +171,8 @@ def _patch_runtime_function(
                 f" → {resolve_mod_name!r}"
             )
 
-    # Explicit post-check fallback — only if runtime_env failed
-    # NOTE: this one is a bit weird, I'm not certain it is needed
+    # Safety net: rarely triggered,
+    #  but avoids false negatives if runtime_env is incomplete
     if resolve_mod_env is None and module_env is not None:
         TRACE(f"Falling back to module_env for {resolve_mod_name!r}")
         resolve_mod_env = module_env
