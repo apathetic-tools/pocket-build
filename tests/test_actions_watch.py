@@ -16,10 +16,10 @@ from _pytest.monkeypatch import MonkeyPatch
 
 from pocket_build.types import BuildConfig
 from tests.conftest import RuntimeLike
-from tests.utils import force_mtime_advance
+from tests.utils import force_mtime_advance, patch_runtime_function_func
 
 
-# this test does not use runtime_env
+# only tests module; no runtime_env
 def test_collect_included_files_expands_patterns(tmp_path: Path):
     from pocket_build.actions import _collect_included_files
 
@@ -37,7 +37,7 @@ def test_collect_included_files_expands_patterns(tmp_path: Path):
     assert set(files) == {src / "a.txt", src / "b.txt"}
 
 
-# this test does not use runtime_env
+# only tests module; no runtime_env
 def test_collect_included_files_handles_nonexistent_paths(tmp_path: Path):
     from pocket_build.actions import _collect_included_files
 
@@ -49,7 +49,7 @@ def test_collect_included_files_handles_nonexistent_paths(tmp_path: Path):
     assert files == []  # no crash, empty result
 
 
-# this test does not use runtime_env
+# only tests module; no runtime_env
 def test_watch_for_changes_triggers_rebuild(tmp_path: Path, monkeypatch: MonkeyPatch):
     """Ensure that watch_for_changes() rebuilds on file modification.
 
@@ -195,7 +195,7 @@ def test_watch_flag_invokes_watch_mode(
         assert called, "Expected fake_watch() to be called at least once"
 
 
-def test_watch_for_changes_exported_and_callable(
+def test_watch_for_changes_exported_and_callable_old(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
     runtime_env: RuntimeLike,
@@ -240,47 +240,77 @@ def test_watch_for_changes_exported_and_callable(
     assert isinstance(runtime_env.main, FunctionType)
 
     with monkeypatch.context() as mp:
-        # --- patch strategy -----------------------------------------------
-        # watch_for_changes() lives in the global scope captured by main().
-        # Patching main.__globals__ works in both module and single-file builds.
-        # The commented variants below document what was tested and why they failed,
-        # so we don't repeat the same debugging archaeology later.
-        # ------------------------------------------------------------------
         if "_collect_included_files" in runtime_env.main.__globals__:
             # Patch the CLI’s global scope too (single-file compatibility)
             mp.setitem(  # works
                 runtime_env.main.__globals__, "_collect_included_files", fake_collect
             )
-            # mp.setattr(runtime_env, "_collect_included_files", fake_collect) # works
-            # mp.setattr( #broken
-            #   "pocket_build.actions._collect_included_files", fake_collect
-            # )
-            # mp.setattr( # broken
-            #   actions_mod, "_collect_included_files", fake_collect
-            # )
         else:
             # Patch the real implementation (modular mode)
             mp.setattr(actions_mod, "_collect_included_files", fake_collect)  # works
-            # mp.setitem(  # broken
-            #     runtime_env.main.__globals__, "_collect_included_files", fake_collect
-            # )
-            # mp.setattr(runtime_env, "_collect_included_files", fake_collect) # broken
-            # mp.setattr( # works
-            #   "pocket_build.actions._collect_included_files", fake_collect
-            # )
 
-        # -- Fallback notes / historical experiments --
-        # if "_collect_included_files" in runtime_env.main.__globals__:
-        #
-        #     # doesn't work:
-        #
-        # else:
-        #
-        #
-        #     # also works, but more complex:
-        #
-        #     # doesn't work:
-        #
+        mp.setattr(time, "sleep", fake_sleep)  # ✅ works
+        # mp.setattr(sys.modules["time"], "sleep", fake_sleep)  # also works
+        # mp.setattr(runtime_env, "time.sleep", fake_sleep)  # doesn't work
+
+        # --- run ---
+        runtime_env.watch_for_changes(fake_build, builds, interval=0.01)
+
+        # --- assert ---
+        assert 2 <= calls.count("rebuilt") <= 3
+
+
+def test_watch_for_changes_exported_and_callable(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+    runtime_env: RuntimeLike,
+):
+    """Ensure watch_for_changes runs and rebuilds exactly twice."""
+    src = tmp_path / "src"
+    src.mkdir()
+    f = src / "file.txt"
+    f.write_text("x")
+
+    builds = cast(list[BuildConfig], [{"include": [str(src / "*.txt")], "out": "dist"}])
+    calls: list[str] = []
+
+    def fake_build():
+        calls.append("rebuilt")
+
+    # --- control loop timing ---
+    counter = {"n": 0}
+
+    def fake_sleep(_seconds: float):
+        counter["n"] += 1
+        if counter["n"] >= 3:  # never infinite loop
+            raise KeyboardInterrupt  # stop after second iteration
+
+    # --- simulate file discovery ---
+    def fake_collect(_builds: list[BuildConfig]):
+        # first call: before file change
+        if counter["n"] == 0:
+            return [f]
+
+        # second call: file modified
+        #   need to ensure file's mtime advances
+        # time.sleep(0.002) # we monkeypatched time.sleep so this is fake_sleep # broken
+        f.write_text("y")
+        # modify the file's mtime to fake a modified date in the future
+        force_mtime_advance(f)
+
+        return [f]
+
+    assert isinstance(runtime_env.main, FunctionType)
+
+    with monkeypatch.context() as mp:
+        # patch_runtime_function(
+        #     mp, actions_mod, runtime_env, "_collect_included_files", fake_collect
+        # )
+        from pocket_build.actions import _collect_included_files
+
+        patch_runtime_function_func(
+            mp, runtime_env, _collect_included_files, fake_collect
+        )
 
         mp.setattr(time, "sleep", fake_sleep)  # ✅ works
         # mp.setattr(sys.modules["time"], "sleep", fake_sleep)  # also works

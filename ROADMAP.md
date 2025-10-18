@@ -28,6 +28,8 @@ Exploring bundling options for generating the single-file release:
 ## 💡 Ideas & Experiments
 Potential quality-of-life features:
 
+- [ ] position args 1 for input s2 for outputs
+- [ ] do tests really need a protocol? can I use my new knowledge from monkeypatching?
 - [ ] submodule shims in .py for import parity and no testing runtime fixture (though it may still be useful for IDE)
 - [ ] publish to PyPI, NPM, PACKAGIST, others?
 
