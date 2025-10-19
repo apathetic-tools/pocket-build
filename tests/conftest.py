@@ -65,7 +65,7 @@ def runtime_env() -> Generator[None, None, None]:
     """
     Automatically load the correct runtime module based on RUNTIME_MODE.
 
-    When RUNTIME_MODE=singlefile, replaces `pocket_build` in sys.modules
+    When RUNTIME_MODE=singlefile, replaces `<package name>` in sys.modules
     with the single-file bundled version. Otherwise uses the normal package.
     """
     mode: str = os.getenv("RUNTIME_MODE", "module")
@@ -76,11 +76,11 @@ def runtime_env() -> Generator[None, None, None]:
         return
 
     bin_path: Path = ensure_bundled_script_up_to_date(root)
-    spec = importlib.util.spec_from_file_location("pocket_build", bin_path)
+    spec = importlib.util.spec_from_file_location(PROGRAM_PACKAGE, bin_path)
     assert spec and spec.loader, f"Failed to load spec from {bin_path}"
 
     mod: ModuleType = importlib.util.module_from_spec(spec)
-    sys.modules["pocket_build"] = mod
+    sys.modules[PROGRAM_PACKAGE] = mod
     spec.loader.exec_module(mod)
     yield
     return

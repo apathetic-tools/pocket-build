@@ -1,5 +1,5 @@
 # tests/test_cli_log_level.py
-"""Tests for pocket_build.cli (module and single-file versions)."""
+"""Tests for package.cli (module and single-file versions)."""
 
 from __future__ import annotations
 

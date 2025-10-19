@@ -1,5 +1,5 @@
 # tests/test_utils.py
-"""Tests for pocket_build.utils (module and single-file versions)."""
+"""Tests for package.utils (module and single-file versions)."""
 
 # not doing tests for has_glob_chars()
 

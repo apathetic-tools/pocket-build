@@ -1,5 +1,5 @@
 # tests/test_build.py
-"""Tests for pocket_build.build (module and single-file versions)."""
+"""Tests for package.build (module and single-file versions)."""
 
 from pathlib import Path
 

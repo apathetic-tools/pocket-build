@@ -1,5 +1,5 @@
 # tests/test_cli_gitignore.py
-"""Tests for .gitignore handling and precedence in pocket_build.cli."""
+"""Tests for .gitignore handling and precedence in package.cli."""
 
 from __future__ import annotations
 
