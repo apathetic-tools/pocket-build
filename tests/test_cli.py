@@ -1,5 +1,5 @@
 # tests/test_cli.py
-"""Tests for pocket_build.cli (module and single-file versions)."""
+"""Tests for package.cli (module and single-file versions)."""
 
 # we import `_` private for testing purposes only
 # pyright: reportPrivateUsage=false
