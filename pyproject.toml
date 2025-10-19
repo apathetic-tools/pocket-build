@@ -22,27 +22,36 @@ dependencies = [
 check = ["lint", "typecheck",  "test"]
 lint = ["lint:isort", "lint:ruff", "lint:compile"]
 "lint:ruff" = "ruff check ."
-"lint:isort" = ["lint:isort:reg", "lint:isort:script"]
-"lint:isort:reg" = "isort . --check-only --color"
+"lint:isort" = ["lint:isort:module", "lint:isort:script"]
+"lint:isort:module" = "isort . --check-only --color"
 "lint:isort:script" = {shell = "if [ -f bin/pocket-build.py ]; then isort bin/pocket-build.py --check-only --color; fi" }
 "lint:compile" = ["lint:compile:script"]
 "lint:compile:script" = { shell = "if [ -f bin/pocket-build.py ]; then python -m py_compile bin/pocket-build.py; fi" }
+
+# 🧠 Type checking
 typecheck = "mypy src"
-test = "pytest"
+
+# 🧪 Tests (runs both: module + singlefile)
+test = ["test:pytest:module", "test:pytest:script"]
+"test:pytest:module" = "pytest"
+"test:pytest:script" = [
+  "build:script",
+  { cmd = "pytest", env = { RUNTIME_MODE="singlefile" } }
+]
 
 # 🧹 Automated fixing / formatting
 fix = ["fix:isort", "fix:ruff", "lint:compile", "fix:format"]
-"fix:isort" = ["fix:isort:reg", "fix:isort:script"]
-"fix:isort:reg" = "isort . --color"
+"fix:isort" = ["fix:isort:module", "fix:isort:script"]
+"fix:isort:module" = "isort . --color"
 "fix:isort:script" = {shell = "if [ -f bin/pocket-build.py ]; then isort bin/pocket-build.py --color; fi" }
 "fix:ruff" = "ruff check . --fix"
 "fix:format" = "ruff format ."
 
 # 🧩 Build and license
 "build:script" = "python dev/make_script.py"
-"gen:test:protocol" = "python dev/generate_test_protocol.py"
 "check:license" = "bash dev/check-license.sh"
 
+# 🧪 Internal verification
 [tool.poe.tasks."verify:pytest"]
 cmd = "pytest tests/test_pytest.py"
 env = { RUNTIME_DEBUG = "1" }

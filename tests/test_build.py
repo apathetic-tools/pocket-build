@@ -6,24 +6,30 @@ from pathlib import Path
 import pytest
 
 from pocket_build.types import BuildConfig, MetaBuildConfig
-from tests.conftest import RuntimeLike
 
 
 def test_copy_file_creates_and_copies(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
-    runtime_env: RuntimeLike,
 ) -> None:
     """Ensure copy_file creates directories and copies file content."""
+    import pocket_build.build as mod_build
+    import pocket_build.runtime as mod_runtime
+
+    # --- setup ---
     src = tmp_path / "a.txt"
     src.write_text("hi")
+
     dest = tmp_path / "out" / "a.txt"
 
-    runtime_env.current_runtime["log_level"] = "debug"  # verbose
-    runtime_env.copy_file(src, dest, tmp_path, False)
+    # --- execute ---
+    mod_runtime.current_runtime["log_level"] = "debug"  # verbose
+    mod_build.copy_file(src, dest, tmp_path, False)
 
+    # --- verify ---
     out = dest.read_text()
     assert out == "hi"
+
     captured = capsys.readouterr().out
     assert "📄" in captured
 
@@ -31,18 +37,24 @@ def test_copy_file_creates_and_copies(
 def test_copy_directory_respects_excludes(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
-    runtime_env: RuntimeLike,
 ) -> None:
     """Ensure copy_directory skips excluded files."""
+    import pocket_build.build as mod_build
+    import pocket_build.runtime as mod_runtime
+
+    # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
     (src_dir / "keep.txt").write_text("ok")
     (src_dir / "skip.txt").write_text("no")
 
     dest = tmp_path / "out"
-    runtime_env.current_runtime["log_level"] = "debug"  # verbose
-    runtime_env.copy_directory(src_dir, dest, ["**/skip.txt"], tmp_path, False)
 
+    # --- execute ---
+    mod_runtime.current_runtime["log_level"] = "debug"  # verbose
+    mod_build.copy_directory(src_dir, dest, ["**/skip.txt"], tmp_path, False)
+
+    # --- verify ---
     assert (dest / "keep.txt").exists()
     assert not (dest / "skip.txt").exists()
 
@@ -52,9 +64,12 @@ def test_copy_directory_respects_excludes(
 
 def test_copy_item_handles_file_and_dir(
     tmp_path: Path,
-    runtime_env: RuntimeLike,
 ) -> None:
     """Ensure copy_item handles directories and individual files."""
+    import pocket_build.build as mod_build
+    import pocket_build.runtime as mod_runtime
+
+    # --- setup ---
     src_dir = tmp_path / "dir"
     src_dir.mkdir()
     (src_dir / "a.txt").write_text("data")
@@ -68,17 +83,23 @@ def test_copy_item_handles_file_and_dir(
         "origin": str(tmp_path),
     }
 
-    runtime_env.current_runtime["log_level"] = "critical"  # normal
-    runtime_env.copy_item(src_dir, dest, [], meta, False)
+    # --- execute ---
+    mod_runtime.current_runtime["log_level"] = "critical"  # normal
+    mod_build.copy_item(src_dir, dest, [], meta, False)
+
+    # --- verify ---
     assert (dest / "a.txt").exists()
 
 
 def test_run_build_creates_output_dir_and_copies(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
-    runtime_env: RuntimeLike,
 ) -> None:
     """Validate full build execution flow."""
+    import pocket_build.build as mod_build
+    import pocket_build.runtime as mod_runtime
+
+    # --- setup ---
     project_root = tmp_path
     src_dir = project_root / "src"
     src_dir.mkdir()
@@ -98,9 +119,12 @@ def test_run_build_creates_output_dir_and_copies(
         "out": str(project_root / "dist"),
         "__meta__": meta,
     }
-    runtime_env.current_runtime["log_level"] = "info"  # normal
-    runtime_env.run_build(build_cfg)
 
+    # --- execute ---
+    mod_runtime.current_runtime["log_level"] = "info"  # normal
+    mod_build.run_build(build_cfg)
+
+    # --- verify ---
     dist = project_root / "dist"
     assert (dist / "src" / "foo.txt").exists()
 
@@ -111,9 +135,12 @@ def test_run_build_creates_output_dir_and_copies(
 def test_run_build_handles_missing_match(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
-    runtime_env: RuntimeLike,
 ) -> None:
     """Ensure run_build gracefully handles missing sources."""
+    import pocket_build.build as mod_build
+    import pocket_build.runtime as mod_runtime
+
+    # --- setup ---
     project_root = tmp_path
     meta: MetaBuildConfig = {
         "include_base": str(project_root),
@@ -130,12 +157,11 @@ def test_run_build_handles_missing_match(
         "out": str(project_root / "dist"),
         "__meta__": meta,
     }
-    runtime_env.current_runtime["log_level"] = "debug"  # verbose
-    runtime_env.run_build(cfg)
+
+    # --- execute ---
+    mod_runtime.current_runtime["log_level"] = "debug"  # verbose
+    mod_build.run_build(cfg)
+
+    # --- verify ---
     captured = capsys.readouterr().out
     assert "⚠️" in captured
-
-
-def test_parse_builds_handles_single_and_multiple(runtime_env: RuntimeLike):
-    assert runtime_env.parse_builds({"builds": [{"include": []}]}) == [{"include": []}]
-    assert runtime_env.parse_builds({"include": []}) == [{"include": []}]

@@ -23,14 +23,10 @@ Exploring bundling options for generating the single-file release:
 ## 🧑‍💻 Development
 - [ ] Deploy action when I tag a release should create a release and attach it to the tagged release.
 
-- [ ] Given we think of the find/load/resolve_build_Config parse_build as all related to resolving configs, should they all live in config.py?
-
 ## 💡 Ideas & Experiments
 Potential quality-of-life features:
 
 - [ ] position args 1 for input s2 for outputs
-- [ ] do tests really need a protocol? can I use my new knowledge from monkeypatching?
-- [ ] submodule shims in .py for import parity and no testing runtime fixture (though it may still be useful for IDE)
 - [ ] publish to PyPI, NPM, PACKAGIST, others?
 
 > See [REJECTED.md](REJECTED.md) for experiments and ideas that were explored but intentionally not pursued.

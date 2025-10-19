@@ -6,6 +6,7 @@
 
 
 # this test does not use runtime_env
-def test_pytest_runs():
+def test_pytest_runs() -> None:
     """Minimal test to confirm pytest is functioning."""
+    # --- verify ---
     assert True

@@ -3,10 +3,9 @@
 
 A record of design experiments and ideas that were explored but intentionally not pursued.
 
-## 🧮 Incremental Rebuilds via SHA-256 Hashing
 
-**Date:** 2025-10-15  
-**Status:** Rejected for now  
+## 🧮 Incremental Rebuilds via SHA-256 Hashing
+<a id="rej01"></a>*REJ 01 — 2025-10-15*  
 
 ### Context
 Considered adding file hashing and diffing to skip copying unchanged files during builds.

@@ -17,8 +17,10 @@ from typing import Dict
 
 import pytest
 
+# --- only for singlefile runs ---
+__runtime_mode__ = "singlefile"
 
-# this test does not use runtime_env
+
 @pytest.mark.parametrize(
     "env_vars, expected_pattern",
     [
@@ -34,11 +36,13 @@ def test_make_script_respects_ci_env(
     """
     Should embed either '(unknown (local build))' or a real hash depending on env.
     """
+
+    # --- setup ---
     root = Path(__file__).resolve().parent.parent
     builder = root / "dev" / "make_script.py"
     tmp_script = tmp_path / "pocket-build-test.py"
 
-    # --- Ensure a clean rebuild every time ---
+    # Ensure a clean rebuild every time -
     if tmp_script.exists():
         tmp_script.unlink()
 
@@ -50,7 +54,9 @@ def test_make_script_respects_ci_env(
     # Apply simulated environment
     env.update(env_vars)
 
-    # --- Run the make_script builder ---
+    # --- execute and verify ---
+
+    # 1) generate the bundle
     subprocess.run(
         [sys.executable, str(builder), "--out", str(tmp_script)],
         check=True,
@@ -61,7 +67,7 @@ def test_make_script_respects_ci_env(
     # Confirm the bundle was created
     assert tmp_script.exists(), "Expected temporary script to be generated"
 
-    # --- Execute the generated script ---
+    # 2) Execute the generated script
     result = subprocess.run(
         [sys.executable, str(tmp_script), "--version"],
         capture_output=True,

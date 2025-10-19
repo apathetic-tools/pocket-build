@@ -23,21 +23,26 @@ try:
 except ModuleNotFoundError:
     import tomli as tomllib  # type: ignore[no-redef]
 
+# --- only for singlefile runs ---
+__runtime_mode__ = "singlefile"
 
-# this test does not use runtime_env
+
 def test_bundled_script_metadata_and_execution() -> None:
     """Ensure the generated pocket-build.py script is complete and functional."""
+    # --- setup ---
     root = Path(__file__).resolve().parent.parent
     script = root / "bin" / "pocket-build.py"
     pyproject = root / "pyproject.toml"
 
-    # --- Basic existence checks ---
+    # --- execute and verify ---
+
+    # - Basic existence checks -
     assert script.exists(), (
         "Bundled script not found — run `poetry run poe build:single` first."
     )
     assert pyproject.exists(), "pyproject.toml missing — project layout inconsistent."
 
-    # --- Load declared version from pyproject.toml ---
+    # - Load declared version from pyproject.toml -
     with pyproject.open("rb") as f:
         pyproject_data = cast(dict[str, Any], tomllib.load(f))  # type: ignore[attr-defined]
 
@@ -45,17 +50,17 @@ def test_bundled_script_metadata_and_execution() -> None:
     declared_version = cast(str, project_section.get("version"))
     assert declared_version, "Version not found in pyproject.toml"
 
-    # --- Read bundled script text ---
+    # - Read bundled script text -
     text = script.read_text(encoding="utf-8")
 
-    # --- Metadata presence checks ---
+    # - Metadata presence checks -
     assert "# Pocket Build" in text
     assert "License: MIT-NOAI" in text
     assert "Version:" in text
     assert "Repo:" in text
     assert "auto-generated" in text
 
-    # --- Version and commit format checks ---
+    # - Version and commit format checks -
     version_match = re.search(r"^# Version:\s*([\w.\-]+)", text, re.MULTILINE)
 
     if os.getenv("CI") or os.getenv("GIT_TAG") or os.getenv("GITHUB_REF"):
@@ -73,7 +78,7 @@ def test_bundled_script_metadata_and_execution() -> None:
         f"Bundled version '{bundled_version}' != pyproject version '{declared_version}'"
     )
 
-    # --- Execution check (isolated temp dir) ---
+    # - Execution check (isolated temp dir) -
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp = Path(tmpdir)
         dummy = tmp / "dummy.txt"
@@ -93,20 +98,23 @@ def test_bundled_script_metadata_and_execution() -> None:
             timeout=15,
         )
 
-        assert result.returncode == 0, (
-            f"Non-zero exit ({result.returncode}):\n{result.stderr}"
-        )
-        assert "Build completed" in result.stdout
-        assert "🎉 All builds complete" in result.stdout
+    assert result.returncode == 0, (
+        f"Non-zero exit ({result.returncode}):\n{result.stderr}"
+    )
+    assert "Build completed" in result.stdout
+    assert "🎉 All builds complete" in result.stdout
 
 
-# this test does not use runtime_env
 def test_bundled_script_has_python_constants_and_parses_them() -> None:
     """Ensure __version__ and __commit__ constants exist and match header."""
+    # --- setup ---
     root = Path(__file__).resolve().parent.parent
     script = root / "bin" / "pocket-build.py"
+
+    # --- execute ---
     text = script.read_text(encoding="utf-8")
 
+    # --- verify ---
     # Check constants exist
     version_const = re.search(r"__version__\s*=\s*['\"]([^'\"]+)['\"]", text)
     commit_const = re.search(r"__commit__\s*=\s*['\"]([^'\"]+)['\"]", text)
@@ -123,18 +131,21 @@ def test_bundled_script_has_python_constants_and_parses_them() -> None:
     assert commit_const.group(1) == header_commit.group(1)
 
 
-# this test does not use runtime_env
-def test__get_metadata_from_header_prefers_constants(tmp_path: Path):
+def test__get_metadata_from_header_prefers_constants(tmp_path: Path) -> None:
     """Should return values from __version__ and __commit__ if header lines missing."""
-    from pocket_build.actions import _get_metadata_from_header
+    import pocket_build.actions as mod_actions
 
+    # --- setup ---
     text = """
 __version__ = "1.2.3"
 __commit__ = "abc1234"
 """
     script = tmp_path / "fake_script.py"
     script.write_text(text)
-    version, commit = _get_metadata_from_header(script)
 
+    # --- execute ---
+    version, commit = mod_actions._get_metadata_from_header(script)
+
+    # --- verify ---
     assert version == "1.2.3"
     assert commit == "abc1234"

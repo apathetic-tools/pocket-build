@@ -1,61 +1,37 @@
 # tests/conftest.py
 """
-Shared test fixture for pocket-build.
+Shared test setup for pocket-build.
 
-This lets all tests transparently run against both:
-1. The modular package (`src/pocket_build`)
-2. The bundled single-file script (`bin/pocket-build.py`)
+Each pytest run now targets a single runtime mode:
+- Normal mode (default): uses src/pocket_build
+- Single-file mode: uses bin/pocket-build.py when RUNTIME_MODE=singlefile
 
-Each test receives a `runtime_env` fixture that behaves like the module.
-
-If the bundled script is missing or older than the source files,
-it is automatically rebuilt using `dev/make_script.py`.
+Switch mode with: RUNTIME_MODE=singlefile pytest
 """
 
 from __future__ import annotations
 
 import importlib.util
+import os
 import subprocess
 import sys
 from pathlib import Path
+from types import ModuleType
 from typing import Generator
 
 import pytest
-from _pytest.python import Metafunc
-
-from tests.fixtures.runtime_protocol import RuntimeLike
-
-GEN_PROTOCOL_CMD = ["poetry", "run", "poe", "gen:test:protocol"]
 
 
-def ensure_protocol_up_to_date(root: Path) -> Path:
-    """Regenerate tests/fixtures/runtime_protocol.py if outdated."""
-    proto_path = root / "tests" / "fixtures" / "runtime_protocol.py"
-    src_dir = root / "src" / "pocket_build"
-
-    # If missing or older than any source file → rebuild.
-    needs_rebuild = not proto_path.exists()
-    if not needs_rebuild:
-        proto_mtime = proto_path.stat().st_mtime_ns
-        for src_file in src_dir.rglob("*.py"):
-            if src_file.stat().st_mtime_ns > proto_mtime:
-                needs_rebuild = True
-                break
-
-    if needs_rebuild:
-        print("🧩 Regenerating runtime_protocol.py (gen:test:protocol)...")
-        subprocess.run(GEN_PROTOCOL_CMD, cwd=root, check=True)
-        proto_path.touch()
-        assert proto_path.exists(), "❌ Failed to generate runtime protocol."
-
-    return proto_path
+def pytest_report_header(config: pytest.Config) -> str:
+    mode: str = os.getenv("RUNTIME_MODE", "module")
+    return f"Runtime mode: {mode}"
 
 
 # ------------------------------------------------------------
 # ⚙️ Auto-build helper for bundled script
 # ------------------------------------------------------------
 def ensure_bundled_script_up_to_date(root: Path) -> Path:
-    """Rebuild `bin/pocket-build.py` if missing or older than source files."""
+    """Rebuild `bin/pocket-build.py` if missing or outdated."""
     bin_path = root / "bin" / "pocket-build.py"
     src_dir = root / "src" / "pocket_build"
     builder = root / "dev" / "make_script.py"
@@ -80,52 +56,87 @@ def ensure_bundled_script_up_to_date(root: Path) -> Path:
 
 
 # ------------------------------------------------------------
-# 🔁 Fixture: load either the package or the bundled script
+# 🔁 Fixture: load either the module or the bundled script
 # ------------------------------------------------------------
-@pytest.fixture(scope="session")
-def runtime_env(
-    request: pytest.FixtureRequest,
-) -> Generator[RuntimeLike, None, None]:
-    """Yield a loaded pocket_build environment (module or bundled single-file)."""
-    root = Path(__file__).resolve().parent.parent
+@pytest.fixture(scope="session", autouse=True)
+def runtime_env() -> Generator[None, None, None]:
+    """
+    Automatically load the correct runtime module based on RUNTIME_MODE.
 
-    # --- Ensure supporting artifacts are current ---
-    ensure_protocol_up_to_date(root)
+    When RUNTIME_MODE=singlefile, replaces `pocket_build` in sys.modules
+    with the single-file bundled version. Otherwise uses the normal package.
+    """
+    mode: str = os.getenv("RUNTIME_MODE", "module")
+    root: Path = Path(__file__).resolve().parent.parent
 
-    if request.param == "module":
-        import pocket_build as mod
+    if mode == "module":
+        yield
+        return
 
-        yield mod  # type: ignore[return-value]
-    else:
-        bin_path = ensure_bundled_script_up_to_date(root)
-        spec = importlib.util.spec_from_file_location("pocket_build_single", bin_path)
-        assert spec and spec.loader, f"Failed to load spec from {bin_path}"
-        mod = importlib.util.module_from_spec(spec)
-        sys.modules["pocket_build_single"] = mod
-        spec.loader.exec_module(mod)
-        yield mod  # type: ignore[return-value]
+    bin_path: Path = ensure_bundled_script_up_to_date(root)
+    spec = importlib.util.spec_from_file_location("pocket_build", bin_path)
+    assert spec and spec.loader, f"Failed to load spec from {bin_path}"
+
+    mod: ModuleType = importlib.util.module_from_spec(spec)
+    sys.modules["pocket_build"] = mod
+    spec.loader.exec_module(mod)
+    yield
+    return
 
 
-def pytest_generate_tests(metafunc: Metafunc) -> None:
-    """Attach dependency markers automatically for the two runtimes."""
-    if "runtime_env" in metafunc.fixturenames:
-        metafunc.parametrize(
-            "runtime_env",
-            [
-                pytest.param(
-                    "module",
-                    id="module",
-                    marks=pytest.mark.dependency(
-                        name=f"{metafunc.function.__name__}[module]"
-                    ),
-                ),
-                pytest.param(
-                    "singlefile",
-                    id="singlefile",
-                    marks=pytest.mark.dependency(
-                        depends=[f"{metafunc.function.__name__}[module]"]
-                    ),
-                ),
-            ],
-            indirect=True,
-        )
+def pytest_collection_modifyitems(
+    config: pytest.Config,
+    items: list[pytest.Item],
+) -> None:
+    """Filter and record runtime-specific tests for later reporting."""
+    mode = os.getenv("RUNTIME_MODE", "module")
+
+    # file → number of tests
+    included_map: dict[str, int] = {}
+    root = str(config.rootpath)
+    testpaths: list[str] = config.getini("testpaths") or []
+
+    # Identify mode-specific files by a custom variable defined at module scope
+    for item in list(items):
+        mod = item.getparent(pytest.Module)
+        if mod is None or not hasattr(mod, "obj"):
+            continue
+
+        runtime_marker = getattr(mod.obj, "__runtime_mode__", None)
+
+        if runtime_marker and runtime_marker != mode:
+            items.remove(item)
+            continue
+
+        if runtime_marker and runtime_marker == mode:
+            file_path = str(item.fspath)
+            # Make path relative to project rootdir
+            if file_path.startswith(root):
+                file_path = os.path.relpath(file_path, root)
+                for tp in testpaths:
+                    if file_path.startswith(tp.rstrip("/") + os.sep):
+                        file_path = file_path[len(tp.rstrip("/") + os.sep) :]
+                        break
+
+            included_map[file_path] = included_map.get(file_path, 0) + 1
+
+    # Store results for later reporting
+    config._included_map = included_map  # type: ignore[attr-defined]
+    config._runtime_mode = mode  # type: ignore[attr-defined]
+
+
+def pytest_unconfigure(config: pytest.Config) -> None:
+    """Print summary of included runtime-specific tests at the end."""
+    included_map: dict[str, int] = getattr(config, "_included_map", {})
+    mode = getattr(config, "_runtime_mode", "module")
+
+    if not included_map:
+        return
+
+    total_tests = sum(included_map.values())
+    print(
+        f"🧪 Included {total_tests} {mode}-specific tests"
+        f" across {len(included_map)} files:",
+    )
+    for path, count in sorted(included_map.items()):
+        print(f"   • ({count}) {path}")

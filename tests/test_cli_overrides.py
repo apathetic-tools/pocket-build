@@ -9,17 +9,16 @@ from pathlib import Path
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
-from tests.conftest import RuntimeLike
-
 
 def test_include_flag_overrides_config(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
-    runtime_env: RuntimeLike,
 ) -> None:
     """--include should override config include patterns."""
-    # Prepare files
+    import pocket_build.cli as mod_cli
+
+    # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
     (src_dir / "foo.txt").write_text("ok")
@@ -36,28 +35,32 @@ def test_include_flag_overrides_config(
         )
     )
 
+    # --- patch and execute ---
     with monkeypatch.context() as mp:
         mp.chdir(tmp_path)
         # Override include at CLI level
-        code = runtime_env.main(["--include", "src/**"])
-        out = capsys.readouterr().out
+        code = mod_cli.main(["--include", "src/**"])
 
-        assert code == 0
-        dist_dir = tmp_path / "dist"
-        # Should copy src contents (flattened), not 'other'
-        assert (dist_dir / "foo.txt").exists()
-        assert not (dist_dir / "other").exists()
-        assert "Build completed" in out
+    # --- verify ---
+    out = capsys.readouterr().out
+
+    assert code == 0
+    dist_dir = tmp_path / "dist"
+    # Should copy src contents (flattened), not 'other'
+    assert (dist_dir / "foo.txt").exists()
+    assert not (dist_dir / "other").exists()
+    assert "Build completed" in out
 
 
 def test_exclude_flag_overrides_config(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
-    runtime_env: RuntimeLike,
 ) -> None:
     """--exclude should override config exclude patterns."""
-    # Create input directory with two files
+    import pocket_build.cli as mod_cli
+
+    # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
     (src_dir / "keep.txt").write_text("keep me")
@@ -67,28 +70,32 @@ def test_exclude_flag_overrides_config(
     config = tmp_path / ".pocket-build.json"
     config.write_text(json.dumps({"builds": [{"include": ["src/**"], "out": "dist"}]}))
 
+    # --- patch and execute ---
     with monkeypatch.context() as mp:
         mp.chdir(tmp_path)
         # Pass exclude override on CLI
-        code = runtime_env.main(["--exclude", "*.tmp"])
-        out = capsys.readouterr().out
+        code = mod_cli.main(["--exclude", "*.tmp"])
 
-        assert code == 0
-        dist_dir = tmp_path / "dist"
-        # The .tmp file should be excluded now
-        assert (dist_dir / "keep.txt").exists()
-        assert not (dist_dir / "ignore.tmp").exists()
-        assert "Build completed" in out
+    # --- verify ---
+    out = capsys.readouterr().out
+
+    assert code == 0
+    dist_dir = tmp_path / "dist"
+    # The .tmp file should be excluded now
+    assert (dist_dir / "keep.txt").exists()
+    assert not (dist_dir / "ignore.tmp").exists()
+    assert "Build completed" in out
 
 
 def test_add_include_extends_config(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
-    runtime_env: RuntimeLike,
 ) -> None:
     """--add-include should extend config include patterns, not override them."""
-    # Prepare directories and files
+    import pocket_build.cli as mod_cli
+
+    # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
     (src_dir / "a.txt").write_text("A")
@@ -103,31 +110,35 @@ def test_add_include_extends_config(
         json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]})
     )
 
+    # --- patch and execute ---
     with monkeypatch.context() as mp:
         # Run with --add-include extra/**
         mp.chdir(tmp_path)
-        code = runtime_env.main(["--add-include", "extra/**"])
-        out = capsys.readouterr().out
+        code = mod_cli.main(["--add-include", "extra/**"])
 
-        assert code == 0
-        dist = tmp_path / "dist"
+    # --- verify ---
+    out = capsys.readouterr().out
 
-        # ✅ Both directories should be included
-        assert (dist / "a.txt").exists()
-        assert (dist / "b.txt").exists()
+    assert code == 0
+    dist = tmp_path / "dist"
 
-        # Output should confirm the build
-        assert "Build completed" in out
+    # ✅ Both directories should be included
+    assert (dist / "a.txt").exists()
+    assert (dist / "b.txt").exists()
+
+    # Output should confirm the build
+    assert "Build completed" in out
 
 
 def test_add_exclude_extends_config(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
-    runtime_env: RuntimeLike,
 ) -> None:
     """--add-exclude should extend config exclude patterns, not override them."""
-    # Setup source directory with various files
+    import pocket_build.cli as mod_cli
+
+    # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
     (src_dir / "keep.txt").write_text("keep")
@@ -142,19 +153,22 @@ def test_add_exclude_extends_config(
         )
     )
 
+    # --- patch and execute ---
     with monkeypatch.context() as mp:
         # Add an extra exclude via CLI
         mp.chdir(tmp_path)
-        code = runtime_env.main(["--add-exclude", "*.tmp"])
-        out = capsys.readouterr().out
+        code = mod_cli.main(["--add-exclude", "*.tmp"])
 
-        assert code == 0
-        dist = tmp_path / "dist"
+    # --- verify ---
+    out = capsys.readouterr().out
 
-        # ✅ keep.txt should survive
-        assert (dist / "keep.txt").exists()
-        # 🚫 both excluded files should be missing
-        assert not (dist / "ignore.tmp").exists()
-        assert not (dist / "ignore.log").exists()
+    assert code == 0
+    dist = tmp_path / "dist"
 
-        assert "Build completed" in out
+    # ✅ keep.txt should survive
+    assert (dist / "keep.txt").exists()
+    # 🚫 both excluded files should be missing
+    assert not (dist / "ignore.tmp").exists()
+    assert not (dist / "ignore.log").exists()
+
+    assert "Build completed" in out

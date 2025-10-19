@@ -14,7 +14,7 @@ For formatting guidelines, see the [DECISIONS.md Style Guide](./DECISIONS_STYLE_
 
 ---
 
-## Choose `Serger` for Single-File Builds
+## 🧩 Choose `Serger` for Single-File Builds
 <a id="dec06"></a>*DEC 06 — 2025-10-11*  
 
 ### Context
@@ -67,7 +67,7 @@ That prototype evolved into our in-house **[`Serger`](https://github.com/apathet
 
 <br/><br/>
 
-## Adopt a Three-Tier Distribution Strategy
+## ⚙️ Adopt a Three-Tier Distribution Strategy
 <a id="dec05"></a>*DEC 05 — 2025-10-11*  
 
 ### Context 
@@ -107,7 +107,7 @@ This does not rule out an executable bundle in the future.
 <br/><br/>
 
 
-## Target Python Version 3.10
+## 🧭 Target Python Version 3.10
 <a id="dec04"></a>*DEC 04 — 2025-10-10*  
 
 
@@ -162,7 +162,7 @@ This version provides modern typing and syntax while staying compatible with Ubu
 <br/><br/>
 
 
-## Choose Python as the Implementation Language  
+## 🧭 Choose Python as the Implementation Language  
 <a id="dec03"></a>*DEC 03 — 2025-10-09*  
 
 
@@ -200,7 +200,7 @@ Future distributions may include `.pyz` or bundled binary releases as the projec
 <br/><br/>
 
 
-## Choose MIT-NOAI License
+## ⚖️ Choose MIT-NOAI License
 <a id="dec02"></a>*DEC 02 — 2025-10-09*  
 
 ### Context
@@ -237,7 +237,7 @@ The license asserts consent as a prerequisite for training use — a small bound
 
 
 
-## Use AI Assistance for Documentation and Development  
+## 🤖 Use AI Assistance for Documentation and Development  
 <a id="dec01"></a>*DEC 01 — 2025-10-09*
 
 
