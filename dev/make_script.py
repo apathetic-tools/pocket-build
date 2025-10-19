@@ -154,6 +154,17 @@ def verify_compiles(path: Path) -> None:
 
 def detect_name_collisions(sources: dict[str, str]) -> None:
     """Detect top-level name collisions across modules."""
+
+    # list of harmless globals we don't mind having overwitten
+    IGNORE = {
+        "__all__",
+        "__version__",
+        "__author__",
+        "__path__",
+        "__package__",
+        "__commit__",
+    }
+
     symbols: dict[str, str] = {}  # name -> module
     collisions: list[tuple[str, str, str]] = []
 
@@ -174,6 +185,10 @@ def detect_name_collisions(sources: dict[str, str]) -> None:
                     continue
                 name = targets[0]
             else:
+                continue
+
+            # skip known harmless globals
+            if name in IGNORE:
                 continue
 
             prev = symbols.get(name)

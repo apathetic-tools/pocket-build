@@ -19,7 +19,7 @@ from pocket_build.types import BuildConfig
 from tests.conftest import RuntimeLike
 from tests.utils import (
     force_mtime_advance,
-    patch_runtime_function_func,
+    patch_imported_function,
 )
 
 
@@ -110,7 +110,7 @@ def test_watch_for_changes_triggers_rebuild(tmp_path: Path, monkeypatch: MonkeyP
 
         from pocket_build.actions import _collect_included_files
 
-        patch_runtime_function_func(mp, None, _collect_included_files, fake_collect)
+        patch_imported_function(mp, _collect_included_files, fake_collect)
 
         # Run the watcher with our fake build function.
         from pocket_build.actions import watch_for_changes
@@ -164,7 +164,7 @@ def test_watch_flag_invokes_watch_mode(
 
         from pocket_build.actions import watch_for_changes
 
-        patch_runtime_function_func(mp, runtime_env, watch_for_changes, fake_watch)
+        patch_imported_function(mp, watch_for_changes, fake_watch)
 
         # --- execute main() in watch mode ---
         code = runtime_env.main(["--watch"])
@@ -219,9 +219,7 @@ def test_watch_for_changes_exported_and_callable_old(
     with monkeypatch.context() as mp:
         from pocket_build.actions import _collect_included_files
 
-        patch_runtime_function_func(
-            mp, runtime_env, _collect_included_files, fake_collect
-        )
+        patch_imported_function(mp, _collect_included_files, fake_collect)
 
         mp.setattr(time, "sleep", fake_sleep)  # ✅ works
         # mp.setattr(sys.modules["time"], "sleep", fake_sleep)  # also works
@@ -282,9 +280,7 @@ def test_watch_for_changes_exported_and_callable(
         # )
         from pocket_build.actions import _collect_included_files
 
-        patch_runtime_function_func(
-            mp, runtime_env, _collect_included_files, fake_collect
-        )
+        patch_imported_function(mp, _collect_included_files, fake_collect)
 
         mp.setattr(time, "sleep", fake_sleep)  # ✅ works
         # mp.setattr(sys.modules["time"], "sleep", fake_sleep)  # also works
@@ -377,7 +373,7 @@ def test_watch_uses_config_interval_when_flag_passed(
 
         from pocket_build.actions import watch_for_changes
 
-        patch_runtime_function_func(mp, runtime_env, watch_for_changes, fake_watch)
+        patch_imported_function(mp, watch_for_changes, fake_watch)
 
         # --- run CLI with --watch (no explicit interval) ---
         code = runtime_env.main(["--watch"])
@@ -417,7 +413,7 @@ def test_watch_falls_back_to_default_interval_when_no_config(
 
         from pocket_build.actions import watch_for_changes
 
-        patch_runtime_function_func(mp, runtime_env, watch_for_changes, fake_watch)
+        patch_imported_function(mp, watch_for_changes, fake_watch)
 
         code = runtime_env.main(["--watch"])
         assert code == 0
