@@ -9,10 +9,12 @@ from pathlib import Path
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
+from pocket_build.meta import PROGRAM_SCRIPT
+
 
 def make_config(tmp_path: Path, builds: list[dict[str, object]]) -> Path:
-    """Helper to write a .pocket-build.json file."""
-    cfg = tmp_path / ".pocket-build.json"
+    """Helper to write a .script.json file."""
+    cfg = tmp_path / f".{PROGRAM_SCRIPT}.json"
     cfg.write_text(json.dumps({"builds": builds}))
     return cfg
 
@@ -70,7 +72,7 @@ def test_config_disables_gitignore(
 
     write_gitignore(tmp_path, "*.tmp\n")
 
-    cfg = tmp_path / ".pocket-build.json"
+    cfg = tmp_path / f".{PROGRAM_SCRIPT}.json"
     cfg.write_text(
         json.dumps(
             {
@@ -111,7 +113,7 @@ def test_build_enables_gitignore_even_if_root_disabled(
 
     write_gitignore(tmp_path, "*.tmp\n")
 
-    cfg = tmp_path / ".pocket-build.json"
+    cfg = tmp_path / f".{PROGRAM_SCRIPT}.json"
     cfg.write_text(
         json.dumps(
             {
@@ -187,7 +189,7 @@ def test_cli_enables_gitignore_even_if_config_disables_it(
 
     write_gitignore(tmp_path, "*.tmp\n")
 
-    cfg = tmp_path / ".pocket-build.json"
+    cfg = tmp_path / f".{PROGRAM_SCRIPT}.json"
     cfg.write_text(
         json.dumps(
             {

@@ -1,5 +1,5 @@
 """
-Central constants used across pocket-build.
+Central constants used across the project.
 """
 
 # Default file-watching interval in seconds

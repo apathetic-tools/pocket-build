@@ -1,6 +1,6 @@
 # tests/test_bundled_metadata.py
 """
-Verify that the bundled single-file version (`bin/pocket-build.py`)
+Verify that the bundled single-file version (`bin/script.py`)
 was generated correctly — includes metadata, license header,
 and matches the declared version from pyproject.toml.
 """
@@ -23,15 +23,17 @@ try:
 except ModuleNotFoundError:
     import tomli as tomllib  # type: ignore[no-redef]
 
+from pocket_build.meta import PROGRAM_SCRIPT
+
 # --- only for singlefile runs ---
 __runtime_mode__ = "singlefile"
 
 
 def test_bundled_script_metadata_and_execution() -> None:
-    """Ensure the generated pocket-build.py script is complete and functional."""
+    """Ensure the generated script.py script is complete and functional."""
     # --- setup ---
     root = Path(__file__).resolve().parent.parent
-    script = root / "bin" / "pocket-build.py"
+    script = root / "bin" / f"{PROGRAM_SCRIPT}.py"
     pyproject = root / "pyproject.toml"
 
     # --- execute and verify ---
@@ -84,7 +86,7 @@ def test_bundled_script_metadata_and_execution() -> None:
         dummy = tmp / "dummy.txt"
         dummy.write_text("hi", encoding="utf-8")
 
-        config = tmp / ".pocket-build.json"
+        config = tmp / f".{PROGRAM_SCRIPT}.json"
         config.write_text(
             '{"builds":[{"include":["dummy.txt"],"out":"dist"}]}',
             encoding="utf-8",
@@ -109,7 +111,7 @@ def test_bundled_script_has_python_constants_and_parses_them() -> None:
     """Ensure __version__ and __commit__ constants exist and match header."""
     # --- setup ---
     root = Path(__file__).resolve().parent.parent
-    script = root / "bin" / "pocket-build.py"
+    script = root / "bin" / f"{PROGRAM_SCRIPT}.py"
 
     # --- execute ---
     text = script.read_text(encoding="utf-8")

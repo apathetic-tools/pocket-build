@@ -9,6 +9,8 @@ from pathlib import Path
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
+from pocket_build.meta import PROGRAM_SCRIPT
+
 
 def test_configless_run_with_include_flag(
     tmp_path: Path,
@@ -107,7 +109,7 @@ def test_out_flag_overrides_config(
     src_dir.mkdir()
     (src_dir / "foo.txt").write_text("hello")
 
-    config = tmp_path / ".pocket-build.json"
+    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text(
         json.dumps(
             {"builds": [{"include": ["src/**"], "exclude": [], "out": "ignored"}]}
@@ -147,7 +149,7 @@ def test_out_flag_relative_to_cwd(
     (project / "src").mkdir()
     (project / "src" / "file.txt").write_text("data")
 
-    config = project / ".pocket-build.json"
+    config = project / f".{PROGRAM_SCRIPT}.json"
     config.write_text(
         json.dumps({"builds": [{"include": ["src/**"], "out": "ignored"}]})
     )
@@ -182,7 +184,7 @@ def test_config_out_relative_to_config_file(
     (project / "src").mkdir()
     (project / "src" / "file.txt").write_text("data")
 
-    config = project / ".pocket-build.json"
+    config = project / f".{PROGRAM_SCRIPT}.json"
     config.write_text(json.dumps({"builds": [{"include": ["src/**"], "out": "dist"}]}))
 
     # --- patch and execute ---
@@ -207,7 +209,7 @@ def test_python_config_preferred_over_json(
     monkeypatch: MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
-    """A .pocket-build.py config should take precedence over .jsonc/.json."""
+    """A .script.py config should take precedence over .jsonc/.json."""
     import pocket_build.cli as mod_cli
 
     # --- setup ---
@@ -217,7 +219,7 @@ def test_python_config_preferred_over_json(
     (src_dir / "from_json.txt").write_text("hello from json")
 
     # Create both config types — the Python one should win.
-    py_cfg = tmp_path / ".pocket-build.py"
+    py_cfg = tmp_path / f".{PROGRAM_SCRIPT}.py"
     py_cfg.write_text(
         """
 builds = [
@@ -230,10 +232,10 @@ builds = [
         {"builds": [{"include": ["src/from_json.txt"], "out": "dist"}]}
     )
 
-    jsonc_cfg = tmp_path / ".pocket-build.jsonc"
+    jsonc_cfg = tmp_path / f".{PROGRAM_SCRIPT}.jsonc"
     jsonc_cfg.write_text(json_dump)
 
-    json_cfg = tmp_path / ".pocket-build.json"
+    json_cfg = tmp_path / f".{PROGRAM_SCRIPT}.json"
     json_cfg.write_text(json_dump)
 
     # --- patch and execute ---
@@ -260,7 +262,7 @@ def test_json_and_jsonc_config_supported(
     ext: str,
 ) -> None:
     """
-    Both .pocket-build.jsonc and .pocket-build.json
+    Both .script.jsonc and .script.json
     configs should be detected and used.
     """
     import pocket_build.cli as mod_cli
@@ -270,7 +272,7 @@ def test_json_and_jsonc_config_supported(
     src_dir.mkdir()
     (src_dir / "hello.txt").write_text("hello")
 
-    jsonc_cfg = tmp_path / f".pocket-build{ext}"
+    jsonc_cfg = tmp_path / f".{PROGRAM_SCRIPT}{ext}"
     jsonc_cfg.write_text(
         """
         // comment allowed in JSONC

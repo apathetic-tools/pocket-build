@@ -9,7 +9,7 @@ from pathlib import Path
 import pytest
 from _pytest.monkeypatch import MonkeyPatch
 
-from pocket_build.meta import PROGRAM_ENV
+from pocket_build.meta import PROGRAM_ENV, PROGRAM_SCRIPT
 
 
 def test_quiet_flag(
@@ -21,7 +21,7 @@ def test_quiet_flag(
     import pocket_build.cli as mod_cli
 
     # --- setup ---
-    config = tmp_path / ".pocket-build.json"
+    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
 
     # --- patch and execute ---
@@ -51,7 +51,7 @@ def test_verbose_flag(
     src_dir.mkdir()
     (src_dir / "foo.txt").write_text("hello")
 
-    config = tmp_path / ".pocket-build.json"
+    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text(
         json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]})
     )
@@ -82,7 +82,7 @@ def test_verbose_and_quiet_mutually_exclusive(
     import pocket_build.cli as mod_cli
 
     # --- setup ---
-    config = tmp_path / ".pocket-build.json"
+    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
 
     # --- patch and execute and verify ---
@@ -112,7 +112,7 @@ def test_log_level_flag_sets_runtime(
     import pocket_build.runtime as mod_runtime
 
     # --- setup ---
-    config = tmp_path / ".pocket-build.json"
+    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     # --- patch and execute ---
@@ -138,7 +138,7 @@ def test_log_level_from_env_var(
     import pocket_build.runtime as mod_runtime
 
     # --- setup ---
-    config = tmp_path / ".pocket-build.json"
+    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     # --- patch and execute and verify ---
@@ -172,7 +172,7 @@ def test_per_build_log_level_override(
 
     # --- setup ---
     # Root config sets info, but the build overrides to debug
-    config = tmp_path / ".pocket-build.json"
+    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text(
         json.dumps(
             {

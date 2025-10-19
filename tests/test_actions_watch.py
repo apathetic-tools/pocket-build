@@ -14,6 +14,7 @@ from _pytest.monkeypatch import MonkeyPatch
 from pytest import approx  # type: ignore[reportUnknownVariableType]
 
 from pocket_build.constants import DEFAULT_WATCH_INTERVAL
+from pocket_build.meta import PROGRAM_SCRIPT
 from pocket_build.types import BuildConfig
 from tests.utils import force_mtime_advance, patch_everywhere
 
@@ -139,7 +140,7 @@ def test_watch_flag_invokes_watch_mode(
     import pocket_build.cli as mod_cli
 
     # --- setup ---
-    config = tmp_path / ".pocket-build.json"
+    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     called: dict[str, bool] = {}
@@ -338,7 +339,7 @@ def test_watch_uses_config_interval_when_flag_passed(
     import pocket_build.cli as mod_cli
 
     # --- setup ---
-    config = tmp_path / ".pocket-build.json"
+    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text(
         '{"watch_interval": 0.42, "builds": [{"include": [], "out": "dist"}]}'
     )
@@ -377,7 +378,7 @@ def test_watch_falls_back_to_default_interval_when_no_config(
     import pocket_build.cli as mod_cli
 
     # --- setup ---
-    config = tmp_path / ".pocket-build.json"
+    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     called: dict[str, float] = {}

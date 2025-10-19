@@ -2,7 +2,7 @@
 """
 Integration tests for `dev/make_script.py`.
 
-These verify that the bundled single-file script (`bin/pocket-build.py`)
+These verify that the bundled single-file script (`bin/script.py`)
 embeds the correct commit information depending on environment variables.
 """
 
@@ -40,7 +40,7 @@ def test_make_script_respects_ci_env(
     # --- setup ---
     root = Path(__file__).resolve().parent.parent
     builder = root / "dev" / "make_script.py"
-    tmp_script = tmp_path / "pocket-build-test.py"
+    tmp_script = tmp_path / "script-test.py"
 
     # Ensure a clean rebuild every time -
     if tmp_script.exists():

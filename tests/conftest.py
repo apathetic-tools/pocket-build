@@ -1,10 +1,10 @@
 # tests/conftest.py
 """
-Shared test setup for pocket-build.
+Shared test setup for project.
 
 Each pytest run now targets a single runtime mode:
 - Normal mode (default): uses src/pocket_build
-- Single-file mode: uses bin/pocket-build.py when RUNTIME_MODE=singlefile
+- Single-file mode: uses bin/script.py when RUNTIME_MODE=singlefile
 
 Switch mode with: RUNTIME_MODE=singlefile pytest
 """
@@ -21,6 +21,8 @@ from typing import Generator
 
 import pytest
 
+from pocket_build.meta import PROGRAM_PACKAGE, PROGRAM_SCRIPT
+
 
 def pytest_report_header(config: pytest.Config) -> str:
     mode: str = os.getenv("RUNTIME_MODE", "module")
@@ -31,9 +33,9 @@ def pytest_report_header(config: pytest.Config) -> str:
 # ⚙️ Auto-build helper for bundled script
 # ------------------------------------------------------------
 def ensure_bundled_script_up_to_date(root: Path) -> Path:
-    """Rebuild `bin/pocket-build.py` if missing or outdated."""
-    bin_path = root / "bin" / "pocket-build.py"
-    src_dir = root / "src" / "pocket_build"
+    """Rebuild `bin/script.py` if missing or outdated."""
+    bin_path = root / "bin" / f"{PROGRAM_SCRIPT}.py"
+    src_dir = root / "src" / f"{PROGRAM_PACKAGE}"
     builder = root / "dev" / "make_script.py"
 
     # If the output file doesn't exist or is older than any source file → rebuild.

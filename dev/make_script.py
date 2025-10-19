@@ -2,7 +2,7 @@
 """
 dev/make_script.py
 ------------------
-Concatenate all modular source files into one self-contained `pocket-build.py`.
+Concatenate all modular source files into one self-contained `script.py`.
 
 Produces a portable single-file build system ready for direct use or release.
 All internal and relative imports are stripped, and all remaining imports are
@@ -337,7 +337,7 @@ def main() -> None:
     parser.add_argument(
         "--out",
         type=str,
-        help="Custom output path for generated script (default: bin/pocket-build.py)",
+        help="Custom output path for generated script (default: bin/script.py)",
     )
     args = parser.parse_args()
 
