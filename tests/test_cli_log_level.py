@@ -1,13 +1,11 @@
 # tests/test_cli_log_level.py
 """Tests for package.cli (module and single-file versions)."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
+from pytest import MonkeyPatch
 
 from pocket_build.meta import PROGRAM_ENV, PROGRAM_SCRIPT
 
@@ -44,6 +42,7 @@ def test_verbose_flag(
 ) -> None:
     """Should print detailed file-level logs when --verbose is used."""
     import pocket_build.cli as mod_cli
+    import pocket_build.runtime as mod_runtime
 
     # --- setup ---
     # create a tiny input directory with a file to copy
@@ -72,6 +71,8 @@ def test_verbose_flag(
     assert "Build completed" in out
     assert "All builds complete" in out
 
+    assert mod_runtime.current_runtime["log_level"] == "debug"
+
 
 def test_verbose_and_quiet_mutually_exclusive(
     tmp_path: Path,
@@ -92,7 +93,8 @@ def test_verbose_and_quiet_mutually_exclusive(
         # argparse should exit with SystemExit(2)
         with pytest.raises(SystemExit) as e:
             mod_cli.main(["--quiet", "--verbose"])
-            assert e.value.code == 2  # argparse error exit code
+
+        assert e.value.code == 2  # argparse error exit code # must be outside context
 
     # --- verify only ---
     captured = capsys.readouterr()
@@ -159,6 +161,8 @@ def test_log_level_from_env_var(
 
         assert code == 0
         assert mod_runtime.current_runtime["log_level"] == "error"
+
+        mp.delenv("LOG_LEVEL", raising=False)
 
 
 def test_per_build_log_level_override(

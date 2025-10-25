@@ -6,14 +6,11 @@ These verify that the bundled single-file script (`bin/script.py`)
 embeds the correct commit information depending on environment variables.
 """
 
-from __future__ import annotations
-
 import os
 import re
 import subprocess
 import sys
 from pathlib import Path
-from typing import Dict
 
 import pytest
 
@@ -30,7 +27,7 @@ __runtime_mode__ = "singlefile"
 )
 def test_make_script_respects_ci_env(
     tmp_path: Path,
-    env_vars: Dict[str, str],
+    env_vars: dict[str, str],
     expected_pattern: str,
 ):
     """
@@ -57,12 +54,15 @@ def test_make_script_respects_ci_env(
     # --- execute and verify ---
 
     # 1) generate the bundle
-    subprocess.run(
+    proc = subprocess.run(
         [sys.executable, str(builder), "--out", str(tmp_script)],
+        capture_output=True,
+        text=True,
         check=True,
         env=env,
         cwd=root,
     )
+    assert not proc.stderr.strip(), f"Bundler stderr not empty: {proc.stderr}"
 
     # Confirm the bundle was created
     assert tmp_script.exists(), "Expected temporary script to be generated"

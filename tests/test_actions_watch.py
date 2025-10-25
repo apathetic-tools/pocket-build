@@ -5,18 +5,22 @@
 # pyright: reportPrivateUsage=false
 # ruff: noqa: F401
 
-from __future__ import annotations
-
 from pathlib import Path
-from typing import Any, Callable, cast
+from typing import Any, Callable
 
-from _pytest.monkeypatch import MonkeyPatch
 from pytest import approx  # type: ignore[reportUnknownVariableType]
+from pytest import MonkeyPatch
 
 from pocket_build.constants import DEFAULT_WATCH_INTERVAL
 from pocket_build.meta import PROGRAM_SCRIPT
 from pocket_build.types import BuildConfig
-from tests.utils import force_mtime_advance, patch_everywhere
+from tests.utils import (
+    force_mtime_advance,
+    make_build_cfg,
+    make_include_resolved,
+    make_resolved,
+    patch_everywhere,
+)
 
 
 def test_collect_included_files_expands_patterns(tmp_path: Path) -> None:
@@ -28,13 +32,13 @@ def test_collect_included_files_expands_patterns(tmp_path: Path) -> None:
     (src / "a.txt").write_text("A")
     (src / "b.txt").write_text("B")
 
-    builds = cast(
-        list[BuildConfig],
-        [{"include": [str(src / "*.txt")], "out": str(tmp_path / "out")}],
+    build = make_build_cfg(
+        tmp_path,
+        [make_include_resolved("src/*.txt", tmp_path)],
     )
 
     # --- execute ---
-    files = mod_actions._collect_included_files(builds)
+    files = mod_actions._collect_included_files([build])
 
     # --- verify ---
     assert set(files) == {src / "a.txt", src / "b.txt"}
@@ -44,13 +48,13 @@ def test_collect_included_files_handles_nonexistent_paths(tmp_path: Path) -> Non
     import pocket_build.actions as mod_actions
 
     # --- setup ---
-    builds = cast(
-        list[BuildConfig],
-        [{"include": [str(tmp_path / "missing/**")], "out": str(tmp_path / "out")}],
+    build = make_build_cfg(
+        tmp_path,
+        [make_include_resolved("missing/**", tmp_path)],
     )
 
     # --- execute ---
-    files = mod_actions._collect_included_files(builds)
+    files = mod_actions._collect_included_files([build])
 
     # --- verify ---
     assert files == []  # no crash, empty result
@@ -80,9 +84,9 @@ def test_watch_for_changes_triggers_rebuild(
     f = src / "file.txt"
     f.write_text("x")
 
-    builds = cast(
-        list[BuildConfig],
-        [{"include": [str(src / "*.txt")], "out": str(tmp_path / "out")}],
+    build = make_build_cfg(
+        tmp_path,
+        [make_include_resolved(str(src / "*.txt"), tmp_path)],
     )
 
     calls: list[str] = []
@@ -115,7 +119,7 @@ def test_watch_for_changes_triggers_rebuild(
     with monkeypatch.context() as mp:
         mp.setattr(time, "sleep", fake_sleep)
         patch_everywhere(mp, mod_actions, "_collect_included_files", fake_collect)
-        mod_actions.watch_for_changes(fake_build, builds, interval=0.01)
+        mod_actions.watch_for_changes(fake_build, [build], interval=0.01)
 
     # --- verify ---
     assert 2 <= calls.count("rebuilt") <= 3
@@ -161,61 +165,6 @@ def test_watch_flag_invokes_watch_mode(
     assert called, "Expected fake_watch() to be called at least once"
 
 
-def test_watch_for_changes_exported_and_callable_old(
-    tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-) -> None:
-    """Ensure watch_for_changes runs and rebuilds exactly twice."""
-    import time
-
-    import pocket_build.actions as mod_actions
-
-    # --- setup ---
-    src = tmp_path / "src"
-    src.mkdir()
-    f = src / "file.txt"
-    f.write_text("x")
-
-    builds = cast(list[BuildConfig], [{"include": [str(src / "*.txt")], "out": "dist"}])
-    calls: list[str] = []
-
-    # --- stubs ---
-    def fake_build(*_args: Any, **_kwargs: Any) -> None:
-        calls.append("rebuilt")
-
-    # control loop timing
-    counter = {"n": 0}
-
-    def fake_sleep(*_args: Any, **_kwargs: Any) -> None:
-        counter["n"] += 1
-        if counter["n"] >= 3:  # never infinite loop
-            raise KeyboardInterrupt  # stop after second iteration
-
-    # simulate file discovery
-    def fake_collect(*_args: Any, **_kwargs: Any) -> list[Path]:
-        # first call: before file change
-        if counter["n"] == 0:
-            return [f]
-
-        # second call: file modified
-        #   need to ensure file's mtime advances
-        # we can't sleep, we monkeypatched it
-        f.write_text("y")
-        # modify the file's mtime to fake a modified date in the future
-        force_mtime_advance(f)
-
-        return [f]
-
-    # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.setattr(time, "sleep", fake_sleep)
-        patch_everywhere(mp, mod_actions, "_collect_included_files", fake_collect)
-        mod_actions.watch_for_changes(fake_build, builds, interval=0.01)
-
-    # --- verify ---
-    assert 2 <= calls.count("rebuilt") <= 3
-
-
 def test_watch_for_changes_exported_and_callable(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
@@ -231,7 +180,10 @@ def test_watch_for_changes_exported_and_callable(
     f = src / "file.txt"
     f.write_text("x")
 
-    builds = cast(list[BuildConfig], [{"include": [str(src / "*.txt")], "out": "dist"}])
+    build = make_build_cfg(
+        tmp_path,
+        [make_include_resolved("src/*.txt", tmp_path)],
+    )
     calls: list[str] = []
 
     # --- stubs ---
@@ -265,7 +217,7 @@ def test_watch_for_changes_exported_and_callable(
     with monkeypatch.context() as mp:
         mp.setattr(time, "sleep", fake_sleep)
         patch_everywhere(mp, mod_actions, "_collect_included_files", fake_collect)
-        mod_actions.watch_for_changes(fake_build, builds, interval=0.01)
+        mod_actions.watch_for_changes(fake_build, [build], interval=0.01)
 
     # --- verify ---
     assert 2 <= calls.count("rebuilt") <= 3
@@ -284,8 +236,10 @@ def test_watch_ignores_out_dir(tmp_path: Path, monkeypatch: MonkeyPatch) -> None
     out.mkdir()
     file = src / "file.txt"
     file.write_text("x")
-    builds = cast(
-        list[BuildConfig], [{"include": [str(src / "*.txt")], "out": str(out)}]
+    build = make_build_cfg(
+        tmp_path,
+        [make_include_resolved("src/*.txt", tmp_path)],
+        out=make_resolved(out, tmp_path),
     )
 
     calls: list[str] = []
@@ -306,7 +260,7 @@ def test_watch_ignores_out_dir(tmp_path: Path, monkeypatch: MonkeyPatch) -> None
     # --- patch and execute ---
     with monkeypatch.context() as mp:
         mp.setattr(time, "sleep", fake_sleep)
-        mod_actions.watch_for_changes(fake_build, builds, interval=0.01)
+        mod_actions.watch_for_changes(fake_build, [build], interval=0.01)
 
     # --- verify ---
     # Only the initial build should run, not retrigger from the out file
@@ -322,13 +276,13 @@ def test_watch_interval_flag_parsing() -> None:
     # --- execute and verify ---
     args = parser.parse_args(["--watch"])
     # With new semantics, --watch sets None, meaning "use config/default interval"
-    assert args.watch is None
+    assert getattr(args, "watch", None) is None
 
     args = parser.parse_args(["--watch", "2.5"])
-    assert args.watch == 2.5
+    assert getattr(args, "watch", None) == 2.5
 
     args = parser.parse_args([])
-    assert args.watch is None
+    assert getattr(args, "watch", None) is None
 
 
 def test_watch_uses_config_interval_when_flag_passed(

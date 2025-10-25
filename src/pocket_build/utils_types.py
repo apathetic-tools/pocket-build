@@ -1,0 +1,168 @@
+# src/pocket_build/utils_types.py
+from __future__ import annotations
+
+from pathlib import Path
+from typing import (
+    Any,
+    Literal,
+    Type,
+    TypeVar,
+    Union,
+    cast,
+    get_args,
+    get_origin,
+    get_type_hints,
+)
+
+from .types import IncludeResolved, OriginType, PathResolved
+
+T = TypeVar("T")
+
+
+def cast_hint(typ: Type[T], value: Any) -> T:
+    """Explicit cast that documents intent but is purely for type hinting.
+
+    A drop-in replacement for `typing.cast`, meant for places where:
+      - You want to silence mypy's redundant-cast warnings.
+      - You want to signal "this narrowing is intentional."
+      - You need IDEs (like Pylance) to retain strong inference on a value.
+
+    Does not handle Union, Optional, or nested generics: stick to cast(),
+      because unions almost always represent a meaningful type narrowing.
+
+    This function performs *no runtime checks*.
+    """
+    return cast(T, value)
+
+
+def schema_from_typeddict(td: Type[Any]) -> dict[str, Any]:
+    """Extract field names and their annotated types from a TypedDict."""
+    return get_type_hints(td, include_extras=True)
+
+
+def _base_resolved(
+    path: Path | str, base: Path | str, pattern: str | None, origin: OriginType
+) -> dict[str, object]:
+    # Preserve raw string if available (to keep trailing slashes)
+    raw_path = path if isinstance(path, str) else str(path)
+    result: dict[str, object] = {
+        "path": raw_path,
+        "base": Path(base).resolve(),
+        "origin": origin,
+    }
+    if pattern is not None:
+        result["pattern"] = pattern
+    return result
+
+
+def make_pathresolved(
+    path: Path | str,
+    base: Path | str = ".",
+    origin: OriginType = "code",
+    *,
+    pattern: str | None = None,
+) -> PathResolved:
+    """Quick helper to build a PathResolved entry."""
+    # mutate class type
+    return cast(PathResolved, _base_resolved(path, base, pattern, origin))
+
+
+def make_includeresolved(
+    path: Path | str,
+    base: Path | str = ".",
+    origin: OriginType = "code",
+    *,
+    pattern: str | None = None,
+    dest: Path | str | None = None,
+) -> IncludeResolved:
+    """Create an IncludeResolved entry with optional dest override."""
+    entry = _base_resolved(path, base, pattern, origin)
+    if dest is not None:
+        entry["dest"] = Path(dest)
+    # mutate class type
+    return cast(IncludeResolved, entry)
+
+
+def safe_isinstance(value: Any, expected_type: Any) -> bool:
+    """
+    Like isinstance(), but safe for TypedDicts and typing generics.
+
+    Handles:
+      - typing.Union, Optional, Any
+      - TypedDict subclasses
+      - list[...] with inner types
+      - Defensive fallback for exotic typing constructs
+    """
+    # --- Always allow Any ---
+    if expected_type is Any:
+        return True
+
+    # --- Handle Literals explicitly ---
+    origin = get_origin(expected_type)
+    if origin is Literal:
+        # Literal["x", "y"] → True if value equals any of the allowed literals
+        return value in get_args(expected_type)
+
+    # --- Handle Unions (includes Optional) ---
+    origin = get_origin(expected_type)
+    if origin is Union:
+        # e.g. Union[str, int]
+        return any(safe_isinstance(value, t) for t in get_args(expected_type))
+
+    # --- Handle special case: TypedDicts ---
+    try:
+        if (
+            isinstance(expected_type, type)
+            and hasattr(expected_type, "__annotations__")
+            and hasattr(expected_type, "__total__")
+        ):
+            # Treat TypedDict-like as dict
+            return isinstance(value, dict)
+    except TypeError:
+        # Not a class — skip
+        pass
+
+    # --- Handle generics like list[str], dict[str, int] ---
+    if origin:
+        # Outer container check
+        if not isinstance(value, origin):
+            return False
+
+        # Recursively check elements for known homogeneous containers
+        args = get_args(expected_type)
+        if not args:
+            return True
+
+        # list[str]
+        if origin is list and isinstance(value, list):
+            subtype = args[0]
+            items = cast_hint(list[Any], value)
+            return all(safe_isinstance(v, subtype) for v in items)
+
+        # dict[str, int]
+        if origin is dict and isinstance(value, dict):
+            key_t, val_t = args if len(args) == 2 else (Any, Any)
+            dct = cast_hint(dict[Any, Any], value)
+            return all(
+                safe_isinstance(k, key_t) and safe_isinstance(v, val_t)
+                for k, v in dct.items()
+            )
+
+        # Tuple[str, int] etc.
+        if origin is tuple and isinstance(value, tuple):
+            subtypes = get_args(expected_type)
+            tup = cast_hint(tuple[Any, ...], value)
+            if len(subtypes) == len(tup):
+                return all(safe_isinstance(v, t) for v, t in zip(tup, subtypes))
+            if len(subtypes) == 2 and subtypes[1] is Ellipsis:
+                return all(safe_isinstance(v, subtypes[0]) for v in tup)
+            return False
+
+        return True  # e.g., other typing origins like set[], Iterable[]
+
+    # --- Fallback for simple types ---
+    try:
+        return isinstance(value, expected_type)
+    except TypeError:
+        # Non-type or strange typing construct
+        return False

@@ -1,13 +1,11 @@
 # tests/test_cli_overrides.py
 """Tests for package.cli (module and single-file versions)."""
 
-from __future__ import annotations
-
 import json
 from pathlib import Path
 
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
+from pytest import MonkeyPatch
 
 from pocket_build.meta import PROGRAM_SCRIPT
 

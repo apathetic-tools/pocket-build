@@ -9,8 +9,6 @@ and matches the declared version from pyproject.toml.
 # pyright: reportPrivateUsage=false
 # ruff: noqa: F401
 
-from __future__ import annotations
-
 import os
 import re
 import subprocess
@@ -151,3 +149,18 @@ __commit__ = "abc1234"
     # --- verify ---
     assert version == "1.2.3"
     assert commit == "abc1234"
+
+
+def test__get_metadata_from_header_missing_all(tmp_path: Path):
+    import pocket_build.actions as mod_actions
+
+    # --- setup ---
+    p = tmp_path / "script.py"
+    p.write_text("# no metadata")
+
+    # --- execute ---
+    version, commit = mod_actions._get_metadata_from_header(p)
+
+    # --- verify ---
+    assert version == "unknown"
+    assert commit == "unknown"

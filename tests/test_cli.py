@@ -5,15 +5,13 @@
 # pyright: reportPrivateUsage=false
 # ruff: noqa: F401
 
-from __future__ import annotations
-
 import json
 import os
 import re
 from pathlib import Path
 
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
+from pytest import MonkeyPatch
 
 from pocket_build.meta import PROGRAM_DISPLAY, PROGRAM_SCRIPT
 
@@ -67,13 +65,14 @@ def test_help_flag(
     """Should print usage information and exit cleanly when --help is passed."""
     import pocket_build.cli as mod_cli
 
-    # --- execute and verify ---
+    # --- execute ---
     # Capture SystemExit since argparse exits after printing help.
     with pytest.raises(SystemExit) as e:
         mod_cli.main(["--help"])
 
-        # Argparse exits with code 0 for --help
-        assert e.value.code == 0
+    # --- verify ---
+    # Argparse exits with code 0 for --help (must be outside context)
+    assert e.value.code == 0
 
     out = capsys.readouterr().out
     assert "usage:" in out.lower()
@@ -124,3 +123,31 @@ def test_dry_run_creates_no_files(tmp_path: Path) -> None:
     # --- verify ---
     assert code == 0
     assert not (tmp_path / "dist").exists()
+
+
+def test_main_with_custom_config(tmp_path: Path) -> None:
+    import pocket_build.cli as mod_cli
+
+    # --- setup ---
+    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config.write_text('{"builds": [{"include": ["src"], "out": "dist"}]}')
+
+    # --- execute ---
+    code = mod_cli.main(["--config", str(config)])
+
+    # --- verify ---
+    assert code == 0
+
+
+def test_main_invalid_config(tmp_path: Path) -> None:
+    import pocket_build.cli as mod_cli
+
+    # --- setup ---
+    bad = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    bad.write_text("{not valid json}")
+
+    # --- execute ---
+    code = mod_cli.main(["--config", str(bad)])
+
+    # --- verify ---
+    assert code == 1

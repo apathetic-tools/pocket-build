@@ -1,13 +1,12 @@
 # tests/test_cli_gitignore.py
 """Tests for .gitignore handling and precedence in package.cli."""
 
-from __future__ import annotations
-
 import json
+import shutil
 from pathlib import Path
 
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
+from pytest import MonkeyPatch
 
 from pocket_build.meta import PROGRAM_SCRIPT
 
@@ -249,3 +248,27 @@ def test_gitignore_patterns_append_to_existing_excludes(
     assert not (dist / "bar.log").exists()  # excluded by gitignore
     assert (dist / "baz.txt").exists()  # should survive
     assert "Build completed" in out
+
+
+def test_cli_gitignore_disable_then_enable(
+    tmp_path: Path,
+    monkeypatch: MonkeyPatch,
+):
+    import pocket_build.cli as mod_cli
+
+    # --- setup ---
+    src = tmp_path / "src"
+    src.mkdir()
+    (src / "a.tmp").write_text("x")
+    (src / "b.txt").write_text("y")
+    write_gitignore(tmp_path, "*.tmp\n")
+    make_config(tmp_path, [{"include": ["src/**"], "out": "dist"}])
+
+    # --- execute and verify ---
+    with monkeypatch.context() as mp:
+        mp.chdir(tmp_path)
+        mod_cli.main(["--no-gitignore"])
+        assert (tmp_path / "dist/a.tmp").exists()
+        shutil.rmtree(tmp_path / "dist")
+        mod_cli.main(["--gitignore"])
+        assert not (tmp_path / "dist/a.tmp").exists()

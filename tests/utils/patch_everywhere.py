@@ -4,7 +4,7 @@ import sys
 from types import ModuleType
 from typing import Any, Callable
 
-from _pytest.monkeypatch import MonkeyPatch
+from pytest import MonkeyPatch
 
 from pocket_build.meta import PROGRAM_PACKAGE
 

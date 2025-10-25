@@ -1,5 +1,6 @@
 # src/pocket_build/actions.py
-import argparse
+from __future__ import annotations
+
 import glob
 import re
 import subprocess
@@ -8,25 +9,25 @@ from pathlib import Path
 from typing import Callable
 
 from .build import run_build
-from .config import parse_builds, resolve_build_config
 from .constants import DEFAULT_WATCH_INTERVAL
 from .meta import PROGRAM_DISPLAY, PROGRAM_SCRIPT, Metadata
-from .runtime import current_runtime
 from .types import BuildConfig
-from .utils_runtime import log
+from .utils_types import make_includeresolved, make_pathresolved
+from .utils_using_runtime import log
 
 
 def _collect_included_files(resolved_builds: list[BuildConfig]) -> list[Path]:
     """Flatten all include globs into a unique list of files."""
-    log("trace", "real_collect_included_files", __name__, id(_collect_included_files))
+    log("trace", "_collect_included_files", __name__, id(_collect_included_files))
     files: set[Path] = set()
     for b in resolved_builds:
-        for pattern in b.get("include", []):
-            if isinstance(pattern, str):
-                for match in glob.glob(pattern, recursive=True):
-                    p = Path(match)
-                    if p.is_file():
-                        files.add(p.resolve())
+        for inc in b.get("include", []):
+            pattern = str(inc["base"] / inc["path"])
+            for match in glob.glob(pattern, recursive=True):
+                p = Path(match)
+                if p.is_file():
+                    files.add(p.resolve())
+
     return sorted(files)
 
 
@@ -44,7 +45,7 @@ def watch_for_changes(
     Stops on KeyboardInterrupt.
     """
 
-    log("trace", "real_watch_for_changes", __name__, id(watch_for_changes))
+    log("trace", "_watch_for_changes", __name__, id(watch_for_changes))
     log(
         "info",
         f"👀 Watching for changes (interval={interval:.2f}s)... Press Ctrl+C to stop.",
@@ -52,14 +53,18 @@ def watch_for_changes(
 
     # discover at start
     included_files = _collect_included_files(resolved_builds)
-    log("trace", "watch_for_changes", "initial files", [str(f) for f in included_files])
+    log(
+        "trace", "_watch_for_changes", "initial files", [str(f) for f in included_files]
+    )
 
     mtimes: dict[Path, float] = {
         f: f.stat().st_mtime for f in included_files if f.exists()
     }
 
     # Collect all output directories to ignore
-    out_dirs = [Path(b["out"]).resolve() for b in resolved_builds if "out" in b]
+    out_dirs: list[Path] = [
+        (b["out"]["base"] / b["out"]["path"]).resolve() for b in resolved_builds
+    ]
 
     rebuild_func()  # initial build
 
@@ -185,43 +190,34 @@ def run_selftest() -> bool:
 
     log("info", "🧪 Running self-test...")
 
-    tmp_dir = Path(tempfile.mkdtemp(prefix=f"{PROGRAM_SCRIPT}-selftest-"))
-    src = tmp_dir / "src"
-    out = tmp_dir / "out"
-    src.mkdir()
-
-    # Create a tiny file to copy
-    file = src / "hello.txt"
-    file.write_text(f"hello {PROGRAM_DISPLAY}!", encoding="utf-8")
-
-    # Minimal fake config for internal run
-    config: dict[str, list[BuildConfig]] = {
-        "builds": [
-            {"include": [str(src / "**")], "out": str(out)},
-        ]
-    }
-
+    tmp_dir: Path | None = None
     try:
+        tmp_dir = Path(tempfile.mkdtemp(prefix=f"{PROGRAM_SCRIPT}-selftest-"))
+        src = tmp_dir / "src"
+        out = tmp_dir / "out"
+        src.mkdir()
+
+        # Create a tiny file to copy
+        file = src / "hello.txt"
+        file.write_text(f"hello {PROGRAM_DISPLAY}!", encoding="utf-8")
+
+        # --- Construct minimal BuildConfig using helpers ---
+        build_cfg: BuildConfig = {
+            "include": [make_includeresolved(str(src / "**"), tmp_dir, "code")],
+            "exclude": [],
+            "out": make_pathresolved(out, tmp_dir, "code"),
+            "respect_gitignore": False,
+            "log_level": "info",
+            "dry_run": False,
+            "__meta__": {"cli_base": tmp_dir, "config_base": tmp_dir},
+        }
+
         log("debug", f"[SELFTEST] using temp dir: {tmp_dir}")
-        builds = parse_builds(config)
-        for b in builds:
-            resolved = resolve_build_config(
-                b,
-                argparse.Namespace(
-                    include=None,
-                    exclude=None,
-                    add_include=None,
-                    add_exclude=None,
-                    out=None,
-                    dry_run=False,
-                    respect_gitignore=None,
-                    log_level=current_runtime.get("log_level", "info"),
-                ),
-                config_dir=tmp_dir,
-                cwd=tmp_dir,
-                root_cfg={"respect_gitignore": False},
-            )
-            run_build(resolved)
+
+        # --- Run the build directly ---
+        for dry_run in (True, False):
+            build_cfg["dry_run"] = dry_run
+            run_build(build_cfg)
 
         # Verify file copy
         copied = out / "hello.txt"
@@ -242,4 +238,5 @@ def run_selftest() -> bool:
         return False
 
     finally:
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+        if tmp_dir and tmp_dir.exists():
+            shutil.rmtree(tmp_dir, ignore_errors=True)

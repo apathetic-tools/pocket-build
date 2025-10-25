@@ -8,7 +8,7 @@ import sys
 from typing import Generator
 
 import pytest
-from _pytest.monkeypatch import MonkeyPatch
+from pytest import MonkeyPatch
 
 from pocket_build.meta import PROGRAM_ENV
 
@@ -33,7 +33,7 @@ def reset_runtime() -> Generator[None, None, None]:
 def log_and_capture_output(level: str, current_level: str = "debug") -> tuple[str, str]:
     """Capture stdout/stderr when calling log()."""
     import pocket_build.runtime as mod_runtime
-    import pocket_build.utils_runtime as mod_utils_runtime
+    import pocket_build.utils_using_runtime as mod_utils_runtime
 
     mod_runtime.current_runtime["log_level"] = current_level
 
@@ -53,7 +53,7 @@ def test_is_bypass_capture_env_vars(
 ) -> None:
     """is_bypass_capture() should return True
     when *_BYPASS_CAPTURE or BYPASS_CAPTURE is set."""
-    import pocket_build.utils_runtime as mod_utils_runtime
+    import pocket_build.utils_using_runtime as mod_utils_runtime
 
     with monkeypatch.context() as mp:
         # Clear all possibly conflicting env vars first
@@ -128,7 +128,7 @@ def test_log_respects_current_log_level(
     runtime_level: str, visible_levels: set[str]
 ) -> None:
     """Messages below the current log level should not be printed."""
-    import pocket_build.utils_runtime as mod_utils_runtime
+    import pocket_build.utils_using_runtime as mod_utils_runtime
 
     for level in mod_utils_runtime.LEVEL_ORDER:
         out, err = log_and_capture_output(level, runtime_level)
@@ -145,7 +145,7 @@ def test_log_bypass_capture_env(
 ) -> None:
     """When *_BYPASS_CAPTURE=1, log() should write to __stdout__/__stderr__."""
     import pocket_build.runtime as mod_runtime
-    import pocket_build.utils_runtime as mod_utils_runtime
+    import pocket_build.utils_using_runtime as mod_utils_runtime
 
     with monkeypatch.context() as mp:
         # Sneaky program tries to escape our capture,
@@ -184,7 +184,7 @@ def test_log_bypass_capture_env(
 def test_log_includes_default_prefix(level: str, expected_prefix: str) -> None:
     """log() should include the correct default prefix based on level."""
     import pocket_build.runtime as mod_runtime
-    import pocket_build.utils_runtime as mod_utils_runtime
+    import pocket_build.utils_using_runtime as mod_utils_runtime
 
     mod_runtime.current_runtime["log_level"] = "trace"
 
@@ -207,7 +207,7 @@ def test_log_includes_default_prefix(level: str, expected_prefix: str) -> None:
 def test_log_allows_custom_prefix() -> None:
     """Explicit prefix argument should override default prefix entirely."""
     import pocket_build.runtime as mod_runtime
-    import pocket_build.utils_runtime as mod_utils_runtime
+    import pocket_build.utils_using_runtime as mod_utils_runtime
 
     mod_runtime.current_runtime["log_level"] = "debug"
 
@@ -238,3 +238,33 @@ def test_log_includes_some_prefix_for_non_info() -> None:
 
     # There should be something before "msg:debug"
     assert any(cleaned.startswith(p) for p in ("[", "⚠️", "❌", "💥"))
+
+
+def test_log_below_threshold_suppressed(monkeypatch: MonkeyPatch):
+    import pocket_build.runtime as mod_runtime
+    import pocket_build.utils_using_runtime as mod_utils_runtime
+
+    mod_runtime.current_runtime["log_level"] = "error"
+    out, err = io.StringIO(), io.StringIO()
+    sys_stdout, sys_stderr = sys.stdout, sys.stderr
+    sys.stdout, sys.stderr = out, err
+    try:
+        mod_utils_runtime.log("info", "hidden")
+    finally:
+        sys.stdout, sys.stderr = sys_stdout, sys_stderr
+    assert not out.getvalue() and not err.getvalue()
+
+
+def test_log_includes_ansi_when_color_enabled(monkeypatch: MonkeyPatch):
+    import pocket_build.runtime as mod_runtime
+    import pocket_build.utils_using_runtime as mod_utils_runtime
+
+    mod_runtime.current_runtime.update({"log_level": "debug", "use_color": True})
+    buf = io.StringIO()
+    sys_stdout, sys.stdout = sys.stdout, buf
+    try:
+        mod_utils_runtime.log("debug", "colored")
+    finally:
+        sys.stdout = sys_stdout
+    output = buf.getvalue()
+    assert "\033[" in output
