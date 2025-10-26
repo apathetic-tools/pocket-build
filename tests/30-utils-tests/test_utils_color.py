@@ -102,20 +102,20 @@ def test_colorize_respects_reset(
     assert result == test_string
 
 
-def test_colorize_respects_runtime_flag() -> None:
+def test_colorize_respects_runtime_flag(monkeypatch: MonkeyPatch) -> None:
     """colorize() should follow current_runtime['use_color'] exactly."""
 
     # --- setup ---
     text = "sample"
 
-    # --- execute and verify ---
+    # --- patch, execute and verify ---
     # Force runtime to enable color
-    mod_runtime.current_runtime["use_color"] = True
+    monkeypatch.setitem(mod_runtime.current_runtime, "use_color", True)
     result = mod_utils_runtime.colorize(text, GREEN)
     assert result == f"{GREEN}{text}{RESET}"
 
     # Force runtime to disable color
-    mod_runtime.current_runtime["use_color"] = False
+    monkeypatch.setitem(mod_runtime.current_runtime, "use_color", False)
     result = mod_utils_runtime.colorize(text, GREEN)
     assert result == text
 

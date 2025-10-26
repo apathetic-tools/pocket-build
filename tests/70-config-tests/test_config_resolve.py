@@ -24,22 +24,22 @@ from tests.utils import (
 
 def _args(**kwargs: object) -> argparse.Namespace:
     """Build a fake argparse.Namespace with common CLI defaults."""
-    ns = argparse.Namespace()
+    arg_namespace = argparse.Namespace()
     # default fields expected by resolver
-    ns.include = None
-    ns.exclude = None
-    ns.add_include = None
-    ns.add_exclude = None
-    ns.out = None
-    ns.watch = None
-    ns.log_level = None
-    ns.respect_gitignore = None
-    ns.use_color = None
-    ns.config = None
-    ns.dry_run = False
+    arg_namespace.include = None
+    arg_namespace.exclude = None
+    arg_namespace.add_include = None
+    arg_namespace.add_exclude = None
+    arg_namespace.out = None
+    arg_namespace.watch = None
+    arg_namespace.log_level = None
+    arg_namespace.respect_gitignore = None
+    arg_namespace.use_color = None
+    arg_namespace.config = None
+    arg_namespace.dry_run = False
     for k, v in kwargs.items():
-        setattr(ns, k, v)
-    return ns
+        setattr(arg_namespace, k, v)
+    return arg_namespace
 
 
 # ---------------------------------------------------------------------------

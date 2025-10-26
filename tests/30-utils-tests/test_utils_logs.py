@@ -5,7 +5,7 @@
 import io
 import re
 import sys
-from typing import Generator
+from typing import Any
 
 import pytest
 from pytest import MonkeyPatch
@@ -26,31 +26,36 @@ def strip_ansi(s: str) -> str:
     return ANSI_PATTERN.sub("", s)
 
 
-@pytest.fixture(autouse=True)
-def reset_runtime() -> Generator[None, None, None]:
-    """Reset runtime log level between tests."""
-    import pocket_build.runtime as mod_runtime
+def capture_log_output(
+    monkeypatch: MonkeyPatch,
+    msg_level: str,
+    runtime_level: str = "debug",
+    *,
+    msg: str | None = None,
+    **kwargs: Any,
+) -> tuple[str, str]:
+    """Set the runtime log level, call log() once, and capture stdout/stderr output."""
+    # --- configure runtime ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", runtime_level)
 
-    mod_runtime.current_runtime["log_level"] = "info"
-    yield
-    mod_runtime.current_runtime["log_level"] = "info"
-
-
-def log_and_capture_output(level: str, current_level: str = "debug") -> tuple[str, str]:
-    """Capture stdout/stderr when calling log()."""
-    import pocket_build.runtime as mod_runtime
-    import pocket_build.utils_using_runtime as mod_utils_runtime
-
-    mod_runtime.current_runtime["log_level"] = current_level
-
-    out_buf, err_buf = io.StringIO(), io.StringIO()
+    # record old buffers (respecting any existing redirection)
     old_out, old_err = sys.stdout, sys.stderr
-    sys.stdout, sys.stderr = out_buf, err_buf
-    try:
-        mod_utils_runtime.log(level, f"msg:{level}")
-    finally:
-        sys.stdout, sys.stderr = old_out, old_err
 
+    # --- capture output temporarily ---
+    out_buf, err_buf = io.StringIO(), io.StringIO()
+    monkeypatch.setattr(sys, "stdout", out_buf)
+    monkeypatch.setattr(sys, "stderr", err_buf)
+
+    # --- execute ---
+    try:
+        final_msg: str = msg if msg is not None else f"msg:{msg_level}"
+        mod_utils_runtime.log(msg_level, final_msg, **kwargs)
+    finally:
+        # --- restore output capture mechanism ---
+        monkeypatch.setattr(sys, "stdout", old_out)
+        monkeypatch.setattr(sys, "stderr", old_err)
+
+    # --- return captured text ---
     return out_buf.getvalue(), err_buf.getvalue()
 
 
@@ -94,7 +99,7 @@ def test_is_bypass_capture_env_vars(
 
 
 @pytest.mark.parametrize(
-    "level,expected_stream",
+    "msg_level,expected_stream",
     [
         ("debug", "stdout"),
         ("info", "stdout"),
@@ -104,16 +109,19 @@ def test_is_bypass_capture_env_vars(
         ("trace", "stdout"),
     ],
 )
-def test_log_routes_correct_stream(level: str, expected_stream: str) -> None:
+def test_log_routes_correct_stream(
+    monkeypatch: MonkeyPatch, msg_level: str, expected_stream: str
+) -> None:
     """Ensure log() routes to the correct stream and message appears,
     ignoring prefixes/colors."""
-    # --- execute ---
-    out, err = log_and_capture_output(level, "trace")
+    # --- setup, patch, and execute ---
+    text = f"msg:{msg_level}"
+    out, err = capture_log_output(monkeypatch, msg_level, "trace", msg=text)
     out, err = strip_ansi(out.strip()), strip_ansi(err.strip())
 
     # --- verify ---
     combined = out or err
-    assert f"msg:{level}" in combined  # message always present
+    assert text in combined  # message always present
 
     if expected_stream == "stdout":
         assert out  # message goes to stdout
@@ -135,15 +143,15 @@ def test_log_routes_correct_stream(level: str, expected_stream: str) -> None:
     ],
 )
 def test_log_respects_current_log_level(
-    runtime_level: str, visible_levels: set[str]
+    monkeypatch: MonkeyPatch, runtime_level: str, visible_levels: set[str]
 ) -> None:
     """Messages below the current log level should not be printed."""
-    # --- setup, execute, and verify ---
-    for level in mod_utils_runtime.LEVEL_ORDER:
-        out, err = log_and_capture_output(level, runtime_level)
-        text = f"msg:{level}"
+    # --- setup, patch, execute, and verify ---
+    for msg_level in mod_utils_runtime.LEVEL_ORDER:
+        text = f"msg:{msg_level}"
+        out, err = capture_log_output(monkeypatch, msg_level, runtime_level, msg=text)
         combined = out + err
-        if level in visible_levels:
+        if msg_level in visible_levels:
             assert text in combined
         else:
             assert text not in combined
@@ -165,7 +173,7 @@ def test_log_bypass_capture_env(
     monkeypatch.setenv(f"{PROGRAM_ENV}_BYPASS_CAPTURE", "1")
     monkeypatch.setenv("BYPASS_CAPTURE", "1")
 
-    mod_runtime.current_runtime["log_level"] = "debug"
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
 
     # Info should go to stdout
     mod_utils_runtime.log("info", "out-msg")
@@ -178,7 +186,7 @@ def test_log_bypass_capture_env(
 
 
 @pytest.mark.parametrize(
-    "level,expected_prefix",
+    "msg_level,expected_prefix",
     [
         ("info", ""),  # info has no prefix
         ("debug", "[DEBUG] "),  # debug has one
@@ -188,43 +196,30 @@ def test_log_bypass_capture_env(
         ("critical", "💥 "),
     ],
 )
-def test_log_includes_default_prefix(level: str, expected_prefix: str) -> None:
+def test_log_includes_default_prefix(
+    monkeypatch: MonkeyPatch, msg_level: str, expected_prefix: str
+) -> None:
     """log() should include the correct default prefix based on level."""
-    # --- setup and execute ---
-    mod_runtime.current_runtime["log_level"] = "trace"
+    # --- setup, patch, and execute ---
+    text = "hello"
+    out, err = capture_log_output(monkeypatch, msg_level, "trace", msg=text)
+    output = (out or err).strip()
 
-    out_buf, err_buf = io.StringIO(), io.StringIO()
-    sys_stdout, sys_stderr = sys.stdout, sys.stderr
-    sys.stdout, sys.stderr = out_buf, err_buf
-    try:
-        mod_utils_runtime.log(level, "hello")
-    finally:
-        sys.stdout, sys.stderr = sys_stdout, sys_stderr
-
-    output = (out_buf.getvalue() or err_buf.getvalue()).strip()
     # Strip any ANSI codes before comparing
-    clean = __import__("re").sub(r"\033\[[0-9;]*m", "", output)
+    clean = re.sub(r"\033\[[0-9;]*m", "", output)
 
     # --- verify ---
     assert clean.startswith(expected_prefix)
-    assert "hello" in clean
+    assert text in clean
 
 
-def test_log_allows_custom_prefix() -> None:
+def test_log_allows_custom_prefix(monkeypatch: MonkeyPatch) -> None:
     """Explicit prefix argument should override default prefix entirely."""
-    # --- setup and execute ---
-    mod_runtime.current_runtime["log_level"] = "debug"
-
-    buf = io.StringIO()
-    sys_stdout, sys.stderr = sys.stdout, sys.stderr
-    sys.stdout = buf
-    try:
-        mod_utils_runtime.log("debug", "world", prefix="[CUSTOM] ")
-    finally:
-        sys.stdout = sys_stdout
-
-    output = buf.getvalue().strip()
-    clean = __import__("re").sub(r"\033\[[0-9;]*m", "", output)
+    # --- patch and execute ---
+    out, _ = capture_log_output(
+        monkeypatch, "debug", "debug", msg="world", prefix="[CUSTOM] "
+    )
+    clean = strip_ansi(out.strip())
 
     # --- verify ---
     assert clean.startswith("[CUSTOM] ")
@@ -233,43 +228,29 @@ def test_log_allows_custom_prefix() -> None:
     assert "[DEBUG]" not in clean
 
 
-def test_log_includes_some_prefix_for_non_info() -> None:
+def test_log_includes_some_prefix_for_non_info(monkeypatch: MonkeyPatch) -> None:
     """Non-info levels should include some kind of prefix (emoji or tag)."""
-    # --- setup and execute ---
-    mod_runtime.current_runtime["log_level"] = "trace"
-    out, _ = log_and_capture_output("debug", "trace")
-    cleaned = strip_ansi(out.strip())
+    # --- patch and execute ---
+    out, _ = capture_log_output(monkeypatch, "debug", "trace")
 
     # --- verify ---
+    cleaned = strip_ansi(out.strip())
     # There should be something before "msg:debug"
     assert any(cleaned.startswith(p) for p in ("[", "⚠️", "❌", "💥"))
 
 
 def test_log_below_threshold_suppressed(monkeypatch: MonkeyPatch):
-    # --- setup and execute ---
-    mod_runtime.current_runtime["log_level"] = "error"
-    out, err = io.StringIO(), io.StringIO()
-    sys_stdout, sys_stderr = sys.stdout, sys.stderr
-    sys.stdout, sys.stderr = out, err
-    try:
-        mod_utils_runtime.log("info", "hidden")
-    finally:
-        sys.stdout, sys.stderr = sys_stdout, sys_stderr
+    # --- patch and execute ---
+    out, err = capture_log_output(monkeypatch, "info", "error", msg="hidden")
 
-        # --- verify ---
-    assert not out.getvalue() and not err.getvalue()
+    # --- verify ---
+    assert not out and not err
 
 
 def test_log_includes_ansi_when_color_enabled(monkeypatch: MonkeyPatch):
-    # --- setup and execute ---
-    mod_runtime.current_runtime.update({"log_level": "debug", "use_color": True})
-    buf = io.StringIO()
-    sys_stdout, sys.stdout = sys.stdout, buf
-    try:
-        mod_utils_runtime.log("debug", "colored")
-    finally:
-        sys.stdout = sys_stdout
-    output = buf.getvalue()
+    # --- patch and execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "use_color", True)
+    out, _ = capture_log_output(monkeypatch, "debug", "debug", msg="colored")
 
     # --- verify ---
-    assert "\033[" in output
+    assert "\033[" in out

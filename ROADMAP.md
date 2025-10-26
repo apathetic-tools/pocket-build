@@ -11,7 +11,7 @@ Planned command-line flags for future releases:
 
 - [ ] Add key to disable update checks directly in config
 - [ ] Provide a JSON Schema for validation and autocomplete
-- [ ] How does IncludePath dest configured and handled?
+- [ ] How is IncludePath dest configured in the config file and handled?
 
 ## 🧩 Joiner Scripts (Build System)
 Exploring bundling options for generating the single-file release:
@@ -20,10 +20,6 @@ Exploring bundling options for generating the single-file release:
 
 ## 🧪 Tests
 
-- [ ] update tests to new form
-- [ ] for all runtime changes consider using mp.setitem
-- [ ] make sure with monkeypatch.context is warranted
-- [ ] make sure importing inside each test function is warranted
 
 ## 🧑‍💻 Development
 - [ ] Deploy action when I tag a release should create a release and attach it to the tagged release.
