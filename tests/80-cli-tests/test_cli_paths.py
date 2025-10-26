@@ -283,8 +283,6 @@ def test_json_and_jsonc_config_supported(
 
 def test_absolute_include_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     """Absolute paths on CLI should copy correctly and not resolve relative to cwd."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     abs_src = tmp_path / "abs_src"
     abs_src.mkdir()

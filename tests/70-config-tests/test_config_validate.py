@@ -25,6 +25,12 @@ def mute_log(monkeypatch: MonkeyPatch) -> None:
 #     """Silence all logs during tests via LOG_LEVEL=silent."""
 #     monkeypatch.setenv("LOG_LEVEL", "silent")
 
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
 # ---------------------------------------------------------------------------
 # Basic “known good” configurations
 # ---------------------------------------------------------------------------
@@ -182,6 +188,7 @@ def test_root_and_build_strict_config(monkeypatch: MonkeyPatch) -> None:
 def test_invalid_missing_builds_key():
     # --- setup ---
     cfg: dict[str, Any] = {"not_builds": []}
+
     # --- execute and validate ---
     assert mod_validate.validate_config(cfg) is False
 
@@ -193,13 +200,15 @@ def test_valid_with_optional_fields():
         "log_level": "debug",
         "respect_gitignore": True,
         "watch_interval": 2.5,
-        # --- execute and validate ---
     }
+
+    # --- execute and validate ---
     assert mod_validate.validate_config(cfg) is True
 
 
 def test_empty_build_dict():
     # --- setup ---
     cfg: dict[str, Any] = {"builds": [{}]}
+
     # --- execute and validate ---
     assert mod_validate.validate_config(cfg) is True

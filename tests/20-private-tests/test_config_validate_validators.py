@@ -22,10 +22,16 @@ class Nested(TypedDict):
     name: str
 
 
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
 # --- _infer_type_label ------------------------------------------------------
 
 
 def test_infer_type_label_basic_types():
+    # --- setup, execute, verify ---
     assert "str" in mod_validate._infer_type_label(str)
     assert "list" in mod_validate._infer_type_label(list[str])
     assert "MiniBuild" in mod_validate._infer_type_label(MiniBuild)
@@ -34,8 +40,10 @@ def test_infer_type_label_basic_types():
 def test_infer_type_label_handles_unusual_types():
     """Covers edge cases like custom classes and typing.Any."""
 
+    # --- setup ---
     class Custom: ...
 
+    # --- execute, verify ---
     assert "Custom" in mod_validate._infer_type_label(Custom)
     assert "Any" in mod_validate._infer_type_label(list[Any])
     # Should fall back gracefully on unknown types
@@ -46,6 +54,7 @@ def test_infer_type_label_handles_unusual_types():
 
 
 def test_validate_scalar_value_returns_bool():
+    # --- setup, execute ---
     result = mod_validate._validate_scalar_value(
         strict=True,
         context="ctx",
@@ -53,6 +62,8 @@ def test_validate_scalar_value_returns_bool():
         val="abc",
         expected_type=str,
     )
+
+    # --- verify ---
     assert isinstance(result, bool)
 
 
@@ -107,6 +118,7 @@ def test_validate_scalar_value_handles_fallback_path(monkeypatch: MonkeyPatch):
 
 
 def test_validate_list_value_accepts_list():
+    # --- setup, execute ---
     result = mod_validate._validate_list_value(
         strict=False,
         context="root",
@@ -114,77 +126,100 @@ def test_validate_list_value_accepts_list():
         val=[1, 2, 3],
         subtype=int,
     )
+
+    # --- verify ---
     assert isinstance(result, bool)
 
 
 def test_validate_list_value_rejects_nonlist(monkeypatch: MonkeyPatch):
+    # --- setup ---
     called: list[str] = []
 
     def _fake_log_strict(strict_config: bool, msg: str) -> None:
         called.append(msg)
 
+    # --- execute ---
     monkeypatch.setattr(mod_validate, "_log_strict", _fake_log_strict)
     ok = mod_validate._validate_list_value(True, "ctx", "nums", "notalist", int)
+
+    # --- verify ---
     assert ok is False
     assert any("expected list" in m for m in called)
 
 
 def test_validate_list_value_rejects_wrong_element_type(monkeypatch: MonkeyPatch):
+    # --- setup ---
     called: list[str] = []
 
     def _fake_log_strict(strict_config: bool, msg: str) -> None:
         called.append(msg)
 
+    # --- execute ---
     monkeypatch.setattr(mod_validate, "_log_strict", _fake_log_strict)
     ok = mod_validate._validate_list_value(True, "ctx", "nums", [1, "two", 3], int)
+
+    # --- verify ---
     assert ok is False
     assert any("expected int" in m for m in called)
 
 
 def test_validate_list_value_handles_typed_dict_elements(monkeypatch: MonkeyPatch):
+    # --- setup ---
     called: list[str] = []
 
     def _fake_log_strict(strict_config: bool, msg: str) -> None:
         called.append(msg)
 
-    monkeypatch.setattr(mod_validate, "_log_strict", _fake_log_strict)
     val: list[dict[str, Any]] = [
         {"include": ["src"], "out": "dist"},
         {"include": [123], "out": "x"},
     ]
+
+    # --- execute ---
+    monkeypatch.setattr(mod_validate, "_log_strict", _fake_log_strict)
     ok = mod_validate._validate_list_value(True, "ctx", "builds", val, MiniBuild)
+
+    # --- verify ---
     assert isinstance(ok, bool)
 
 
 def test_validate_list_value_accepts_empty_list():
+    # --- setup, execute, verify ---
     assert mod_validate._validate_list_value(True, "ctx", "empty", [], int) is True
 
 
 def test_validate_list_value_rejects_nested_mixed_types(monkeypatch: MonkeyPatch):
     """Nested lists with wrong inner types should fail."""
+    # --- setup ---
     called: list[str] = []
 
     def _fake_log_strict(strict_config: bool, msg: str) -> None:
         called.append(msg)
 
+    # --- execute ---
     monkeypatch.setattr(mod_validate, "_log_strict", _fake_log_strict)
     ok = mod_validate._validate_list_value(
         True, "ctx", "nums", [[1, 2], ["a"]], list[int]
     )
+
+    # --- verify ---
     assert not ok
     assert any("expected list" in msg or "expected int" in msg for msg in called)
 
 
 def test_validate_list_value_mixed_types_like_integration(monkeypatch: MonkeyPatch):
     """Ensure behavior matches validate_config scenario with list[str] violation."""
+    # --- setup ---
     called: list[str] = []
 
     def _fake_log_strict(strict_config: bool, msg: str) -> None:
         called.append("x")
 
+    # --- execute ---
     monkeypatch.setattr(mod_validate, "_log_strict", _fake_log_strict)
-
     ok = mod_validate._validate_list_value(True, "ctx", "include", ["src", 42], str)
+
+    # --- verify ---
     assert ok is False
     assert called  # log was triggered
 
@@ -193,56 +228,71 @@ def test_validate_list_value_mixed_types_like_integration(monkeypatch: MonkeyPat
 
 
 def test_validate_typed_dict_accepts_dict():
+    # --- setup and execute ---
     result = mod_validate._validate_typed_dict(
         strict=True,
         context="root",
         val={"include": ["src"], "out": "dist"},
         typedict_cls=MiniBuild,
     )
+
+    # --- verify ---
     assert isinstance(result, bool)
 
 
 def test_validate_typed_dict_rejects_non_dict(monkeypatch: MonkeyPatch):
+    # --- setup ---
     called: list[str] = []
 
     def _fake_log_strict(strict_config: bool, msg: str) -> None:
         called.append(msg)
 
+    # --- execute ---
     monkeypatch.setattr(mod_validate, "_log_strict", _fake_log_strict)
     ok = mod_validate._validate_typed_dict(True, "root", "notadict", MiniBuild)
+
+    # --- verify ---
     assert ok is False
     assert any("expected dict" in m for m in called)
 
 
 def test_validate_typed_dict_detects_unknown_keys(monkeypatch: MonkeyPatch):
+    # --- setup ---
     called: list[str] = []
 
     def _fake_log_strict(strict_config: bool, msg: str) -> None:
         called.append(msg)
 
+    # --- execute ---
     monkeypatch.setattr(mod_validate, "_log_strict", _fake_log_strict)
     ok = mod_validate._validate_typed_dict(
         True, "root", {"include": ["x"], "out": "y", "weird": 1}, MiniBuild
     )
+
+    # --- verify ---
     assert ok is False
     assert any("unknown key" in m for m in called)
 
 
 def test_validate_typed_dict_allows_missing_field():
     """Missing field should not cause failure."""
+    # --- setup ---
     val = {"out": "dist"}  # 'include' missing
+
+    # --- execute ---
     ok = mod_validate._validate_typed_dict(True, "ctx", val, MiniBuild)
+
+    # --- verify ---
     assert ok is True
 
 
 def test_validate_typed_dict_nested_recursion(monkeypatch: MonkeyPatch):
     """Nested TypedDict structures should validate recursively."""
+    # --- setup ---
     called: list[str] = []
 
     def _fake_log_strict(strict_config: bool, msg: str) -> None:
         called.append("bad")
-
-    monkeypatch.setattr(mod_validate, "_log_strict", _fake_log_strict)
 
     class Outer(TypedDict):
         inner: MiniBuild
@@ -250,6 +300,8 @@ def test_validate_typed_dict_nested_recursion(monkeypatch: MonkeyPatch):
     good: Outer = {"inner": {"include": ["src"], "out": "dist"}}
     bad: Outer = {"inner": {"include": [123], "out": "dist"}}  # type: ignore[assignment]
 
+    # --- execute and verify ---
+    monkeypatch.setattr(mod_validate, "_log_strict", _fake_log_strict)
     assert mod_validate._validate_typed_dict(True, "root", good, Outer)
     assert not mod_validate._validate_typed_dict(True, "root", bad, Outer)
 
@@ -258,28 +310,37 @@ def test_validate_typed_dict_nested_recursion(monkeypatch: MonkeyPatch):
 
 
 def test_check_schema_conformance_smoke():
+    # --- setup ---
     schema: dict[str, Any] = {"include": list[str], "out": str}
     cfg: dict[str, Any] = {"include": ["src"], "out": "dist"}
+
+    # --- execute ---
     result = mod_validate._check_schema_conformance(True, cfg, schema, "root")
+
+    # --- verify ---
     assert isinstance(result, bool)
 
 
 def test_check_schema_conformance_matches_list_validator(monkeypatch: MonkeyPatch):
     """Ensures _check_schema_conformance returns
     same validity as low-level list validator."""
+    # --- setup ---
     called: list[str] = []
 
     def _fake_log_strict(strict_config: bool, msg: str) -> None:
         called.append("x")
 
-    monkeypatch.setattr(mod_validate, "_log_strict", _fake_log_strict)
-
     schema: dict[str, Any] = {"include": list[str], "out": str}
     cfg: dict[str, Any] = {"include": ["src", 42], "out": "dist"}
+
+    # --- execute ---
+    monkeypatch.setattr(mod_validate, "_log_strict", _fake_log_strict)
+
     ok_list = mod_validate._validate_list_value(
         True, "ctx", "include", ["src", 42], str
     )
     ok_schema = mod_validate._check_schema_conformance(True, cfg, schema, "ctx")
 
+    # --- verify ---
     assert not ok_list
     assert not ok_schema

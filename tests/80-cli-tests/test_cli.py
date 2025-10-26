@@ -1,40 +1,21 @@
 # tests/test_cli.py
 """Tests for package.cli (module and single-file versions)."""
 
-# we import `_` private for testing purposes only
-# pyright: reportPrivateUsage=false
-# ruff: noqa: F401
-
-import inspect
 import json
 import os
 import re
-import sys
 from pathlib import Path
 
 import pytest
 from pytest import MonkeyPatch
 
 import pocket_build.cli as mod_cli
-import pocket_build.runtime as mod_runtime
 from pocket_build.meta import PROGRAM_DISPLAY, PROGRAM_SCRIPT
 from tests.utils import TRACE
 
-
-def debug_runtime_identity(label: str = "") -> None:
-    """Prints what module is currently loaded and from where."""
-    import pocket_build.cli as cli
-    import pocket_build.meta as meta
-
-    cli_file = inspect.getsourcefile(cli)
-    meta_file = inspect.getsourcefile(meta)
-    mode = os.getenv("RUNTIME_MODE", "unknown")
-
-    TRACE(f"{label or 'runtime'} mode = {mode}")
-    TRACE(f"pocket_build.cli  → {cli_file}")
-    TRACE(f"pocket_build.meta → {meta_file}")
-    TRACE(f"sys.modules['pocket_build'] = {sys.modules.get('pocket_build')}")
-    TRACE(f"sys.modules['pocket_build.cli'] = {sys.modules.get('pocket_build.cli')}")
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
 
 def test_main_no_config(
@@ -95,14 +76,9 @@ def test_help_flag(
 
 def test_version_flag(
     capsys: pytest.CaptureFixture[str],
-    monkeypatch: MonkeyPatch,
 ) -> None:
     """Should print version and commit info cleanly."""
-    # import pocket_build.cli as mod_cli
-
     # --- execute ---
-    debug_runtime_identity("test_version_flag start")
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "trace")
     code = mod_cli.main(["--version"])
     out = capsys.readouterr().out
 

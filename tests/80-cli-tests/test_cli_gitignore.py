@@ -11,6 +11,10 @@ from pytest import MonkeyPatch
 import pocket_build.cli as mod_cli
 from pocket_build.meta import PROGRAM_SCRIPT
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
 
 def make_config(tmp_path: Path, builds: list[dict[str, object]]) -> Path:
     """Helper to write a .script.json file."""
@@ -23,6 +27,11 @@ def write_gitignore(tmp_path: Path, patterns: str) -> Path:
     path = tmp_path / ".gitignore"
     path.write_text(patterns)
     return path
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
 
 def test_default_respects_gitignore(

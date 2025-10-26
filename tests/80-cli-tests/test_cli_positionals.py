@@ -9,6 +9,10 @@ from pytest import MonkeyPatch
 
 import pocket_build.cli as mod_cli
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
 
 def _run_cli(monkeypatch: MonkeyPatch, tmp_path: Path, argv: list[str]) -> int:
     """Helper to run CLI with a temporary working directory."""
@@ -29,6 +33,10 @@ def _make_src(tmp_path: Path, *names: str) -> Path:
         (src / n).write_text("x")
     return src
 
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
 # Basic shorthand: src dist

@@ -5,11 +5,11 @@ from pathlib import Path
 
 import pytest
 
+import pocket_build.utils as mod_utils_core
+
 
 def test_load_jsonc_empty_file(tmp_path: Path) -> None:
     """Empty JSONC file should return {} or raise clean error."""
-    import pocket_build.utils as mod_utils_core
-
     # --- setup ---
     cfg = tmp_path / "empty.jsonc"
     cfg.write_text("")
@@ -23,8 +23,6 @@ def test_load_jsonc_empty_file(tmp_path: Path) -> None:
 
 def test_load_jsonc_only_comments(tmp_path: Path) -> None:
     """File with only comments should behave like empty."""
-    import pocket_build.utils as mod_utils_core
-
     # --- setup ---
     cfg = tmp_path / "comments.jsonc"
     cfg.write_text("// comment only\n/* another */")
@@ -38,8 +36,6 @@ def test_load_jsonc_only_comments(tmp_path: Path) -> None:
 
 def test_load_jsonc_trailing_comma_in_list(tmp_path: Path) -> None:
     """Trailing commas in top-level lists should be handled."""
-    import pocket_build.utils as mod_utils_core
-
     # --- setup ---
     cfg = tmp_path / "list.jsonc"
     cfg.write_text('[ "a", "b", ]')
@@ -53,8 +49,6 @@ def test_load_jsonc_trailing_comma_in_list(tmp_path: Path) -> None:
 
 def test_load_jsonc_inline_block_comment(tmp_path: Path) -> None:
     """Inline block comments should be removed cleanly."""
-    import pocket_build.utils as mod_utils_core
-
     # --- setup ---
     cfg = tmp_path / "inline.jsonc"
     cfg.write_text('{"foo": 1, /* skip */ "bar": 2}')
@@ -68,8 +62,6 @@ def test_load_jsonc_inline_block_comment(tmp_path: Path) -> None:
 
 def test_load_jsonc_comment_in_array(tmp_path: Path) -> None:
     """Line comments in arrays should be stripped."""
-    import pocket_build.utils as mod_utils_core
-
     # --- setup ---
     cfg = tmp_path / "array.jsonc"
     cfg.write_text("[1, 2, // hi\n 3]")
@@ -88,8 +80,6 @@ def test_load_jsonc_strips_comments_and_trailing_commas(
 ) -> None:
     """Ensure both JSONC loader removes
     comments and trailing commas in JSON and JSONC files."""
-    import pocket_build.utils as mod_utils_core
-
     # --- setup ---
     cfg = tmp_path / f"config.{ext}"
     cfg.write_text(
@@ -117,8 +107,6 @@ def test_load_jsonc_strips_comments_and_trailing_commas(
 
 def test_load_jsonc_preserves_urls(tmp_path: Path) -> None:
     """Ensure JSONC loader does not strip // inside string literals (e.g. URLs)."""
-    import pocket_build.utils as mod_utils_core
-
     # --- setup ---
     cfg = tmp_path / "config.jsonc"
     cfg.write_text(
@@ -144,8 +132,6 @@ def test_load_jsonc_preserves_urls(tmp_path: Path) -> None:
 
 def test_load_jsonc_invalid_json(tmp_path: Path) -> None:
     """Invalid JSONC should raise ValueError with file context."""
-    import pocket_build.utils as mod_utils_core
-
     # --- setup ---
     cfg = tmp_path / "bad.jsonc"
     cfg.write_text("{ unquoted_key: 1 }")
@@ -159,8 +145,6 @@ def test_load_jsonc_invalid_json(tmp_path: Path) -> None:
 
 
 def test_load_jsonc_rejects_scalar_root(tmp_path: Path):
-    import pocket_build.utils as mod_utils_core
-
     # --- setup ---
     cfg = tmp_path / "scalar.jsonc"
     cfg.write_text('"hello"')
@@ -171,8 +155,6 @@ def test_load_jsonc_rejects_scalar_root(tmp_path: Path):
 
 
 def test_load_jsonc_multiline_block_comment(tmp_path: Path):
-    import pocket_build.utils as mod_utils_core
-
     # --- setup ---
     cfg = tmp_path / "multi.jsonc"
     cfg.write_text('{"a": 1, /* comment\nspanning\nlines */ "b": 2}')

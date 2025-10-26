@@ -10,7 +10,14 @@ from typing import Generator
 import pytest
 from pytest import MonkeyPatch
 
+import pocket_build.runtime as mod_runtime
+import pocket_build.utils as mod_utils_core
+import pocket_build.utils_using_runtime as mod_utils_runtime
 from pocket_build.utils_using_runtime import GREEN, RESET
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
 
 
 @pytest.fixture(autouse=True)
@@ -22,16 +29,18 @@ def clean_env(monkeypatch: MonkeyPatch) -> Generator[None, None, None]:
     yield
 
 
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
 def test_should_use_color_no_color(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """Disables color if NO_COLOR is present in environment."""
-    import pocket_build.utils as mod_utils_core
-
-    # --- patch and execute and verify ---
-    with monkeypatch.context() as mp:
-        mp.setenv("NO_COLOR", "1")
-        assert mod_utils_core.should_use_color() is False
+    # --- setup, execute, and verify ---
+    monkeypatch.setenv("NO_COLOR", "1")
+    assert mod_utils_core.should_use_color() is False
 
 
 @pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes", "Yes"])
@@ -40,34 +49,29 @@ def test_should_use_color_force_color(
     value: str,
 ) -> None:
     """Enables color when FORCE_COLOR is set to truthy value."""
-    import pocket_build.utils as mod_utils_core
 
-    # --- patch and execute and verify ---
-    with monkeypatch.context() as mp:
-        mp.setenv("FORCE_COLOR", value)
-        assert mod_utils_core.should_use_color() is True
+    # --- setup, execute, and verify ---
+    monkeypatch.setenv("FORCE_COLOR", value)
+    assert mod_utils_core.should_use_color() is True
 
 
 def test_should_use_color_tty(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """Falls back to TTY detection when no env vars set."""
-    import pocket_build.utils as mod_utils_core
+    # --- setup, execute, and verify ---
 
-    # --- patch and execute and verify ---
-    with monkeypatch.context() as mp:
-        fake_stdout = types.SimpleNamespace(isatty=lambda: True)
-        mp.setattr(sys, "stdout", fake_stdout)
-        assert mod_utils_core.should_use_color() is True
+    fake_stdout = types.SimpleNamespace(isatty=lambda: True)
+    monkeypatch.setattr(sys, "stdout", fake_stdout)
+    assert mod_utils_core.should_use_color() is True
 
-        fake_stdout = types.SimpleNamespace(isatty=lambda: False)
-        mp.setattr(sys, "stdout", fake_stdout)
-        assert mod_utils_core.should_use_color() is False
+    fake_stdout = types.SimpleNamespace(isatty=lambda: False)
+    monkeypatch.setattr(sys, "stdout", fake_stdout)
+    assert mod_utils_core.should_use_color() is False
 
 
 def test_colorize_explicit_true_false() -> None:
     """Explicit use_color argument forces color on or off."""
-    import pocket_build.utils_using_runtime as mod_utils_runtime
 
     # --- setup ---
     test_string = "test string"
@@ -85,17 +89,15 @@ def test_colorize_respects_reset(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """Recomputes cache if manually cleared."""
-    import pocket_build.runtime as mod_runtime
-    import pocket_build.utils_using_runtime as mod_utils_runtime
 
     # --- setup ---
     test_string = "test string"
 
-    # --- patch and execute and verify ---
-    with monkeypatch.context() as mp:
-        # Force color disabled at runtime
-        mp.setitem(mod_runtime.current_runtime, "use_color", False)
-        result = mod_utils_runtime.colorize(test_string, GREEN)
+    # --- execute and verify ---
+
+    # Force color disabled at runtime
+    monkeypatch.setitem(mod_runtime.current_runtime, "use_color", False)
+    result = mod_utils_runtime.colorize(test_string, GREEN)
 
     # --- verify ---
     assert result == test_string
@@ -103,8 +105,6 @@ def test_colorize_respects_reset(
 
 def test_colorize_respects_runtime_flag() -> None:
     """colorize() should follow current_runtime['use_color'] exactly."""
-    import pocket_build.runtime as mod_runtime
-    import pocket_build.utils_using_runtime as mod_utils_runtime
 
     # --- setup ---
     text = "sample"
@@ -122,10 +122,7 @@ def test_colorize_respects_runtime_flag() -> None:
 
 
 def test_no_color_overrides_force_color(monkeypatch: MonkeyPatch):
-    import pocket_build.utils as mod_utils_core
-
     # --- execute and verify ---
-    with monkeypatch.context() as mp:
-        mp.setenv("NO_COLOR", "1")
-        mp.setenv("FORCE_COLOR", "1")
-        assert mod_utils_core.should_use_color() is False
+    monkeypatch.setenv("NO_COLOR", "1")
+    monkeypatch.setenv("FORCE_COLOR", "1")
+    assert mod_utils_core.should_use_color() is False

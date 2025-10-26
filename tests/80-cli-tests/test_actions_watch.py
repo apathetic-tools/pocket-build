@@ -9,6 +9,7 @@ import time
 from pathlib import Path
 from typing import Any, Callable
 
+import pytest
 from pytest import approx  # type: ignore[reportUnknownVariableType]
 from pytest import MonkeyPatch
 
@@ -59,6 +60,7 @@ def test_collect_included_files_handles_nonexistent_paths(tmp_path: Path) -> Non
     assert files == []  # no crash, empty result
 
 
+@pytest.mark.slow
 def test_watch_for_changes_triggers_rebuild(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:

@@ -357,7 +357,7 @@ def test_run_build_preserves_pattern_and_shallow_behavior(
         called.append(src_entry)
         return real_copy_item(src_entry, dest_entry, exclude_patterns, dry_run)
 
-    # --- patch and execute ---
+    # --- execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
     monkeypatch.setattr(mod_build, "copy_item", fake_copy_item)
     mod_build.run_build(cfg)

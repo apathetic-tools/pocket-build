@@ -9,7 +9,11 @@ from pytest import MonkeyPatch, fixture
 
 import pocket_build.config_validate as mod_validate
 
-# --- sample schema types -----------------------------------------------------
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+# --- fixtures --------------------------------------------------------------
 
 
 class MiniBuild(TypedDict, total=False):
@@ -34,7 +38,11 @@ def mute_log(monkeypatch: MonkeyPatch) -> None:
 #     monkeypatch.setenv("LOG_LEVEL", "silent")
 
 
-# --- core behavior -----------------------------------------------------------
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+# --- core behavior ---------------------------------------------------------
 
 
 def test_accepts_matching_simple_types() -> None:

@@ -21,6 +21,10 @@ import pocket_build.utils as mod_utils  # must be top-level
 from pocket_build.meta import PROGRAM_PACKAGE, PROGRAM_SCRIPT  # must be top-level
 from tests.utils import make_trace
 
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
 TRACE = make_trace("🪞")
 
 PROJ_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -73,6 +77,11 @@ def dump_snapshot(*, include_full: bool = False) -> None:
     TRACE("===============================")
 
 
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+
 def test_pytest_runtime_cache_integrity() -> None:
     """Tests top-of-file module imports in a test file to see if it has a stale cache"""
     # --- setup ---
@@ -114,6 +123,7 @@ def test_pytest_runtime_cache_integrity() -> None:
         # path peeks
         assert utils_file.startswith(str(SRC_ROOT)), f"{utils_file} not in src/"
 
+    # --- verify both ---
     important_modules = list_important_modules()
     for submodule in important_modules:
         mod = importlib.import_module(f"{submodule}")
@@ -134,6 +144,8 @@ def test_debug_dump_all_module_origins() -> None:
     TRACE=1 poetry run pytest -k debug -s
     RUNTIME_MODE=singlefile TRACE=1 poetry run pytest -k debug -s
     """
+
+    # --- verify ---
 
     # dump everything we know
     dump_snapshot(include_full=True)

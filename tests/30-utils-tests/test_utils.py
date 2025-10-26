@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from pytest import CaptureFixture
 
+import pocket_build.utils_using_runtime as mod_utils_runtime
 from pocket_build.utils_types import make_includeresolved
 
 # ---------------------------------------------------------------------------
@@ -47,9 +48,10 @@ def test_get_glob_root_extracts_static_prefix(
     expected: Path,
 ):
     """get_glob_root() should return the non-glob portion of a path pattern."""
-    import pocket_build.utils_using_runtime as mod_utils_runtime
-
+    # --- setup and execute --
     result = mod_utils_runtime.get_glob_root(pattern)
+
+    # --- verify ---
     assert result == expected, f"{pattern!r} → {result}, expected {expected}"
 
 
@@ -91,12 +93,11 @@ def test_normalize_path_string_behavior(
     capsys: CaptureFixture[str],
 ):
     """normalize_path_string() should produce normalized cross-platform paths."""
-    import pocket_build.utils_using_runtime as mod_utils_runtime
-
     # --- execute ---
     result = mod_utils_runtime.normalize_path_string(raw)
 
-    # --- verify normalization ---
+    # --- verify ---
+    # normalization
     assert result == expected, f"{raw!r} → {result!r}, expected {expected!r}"
 
     # --- if escaped spaces were present, ensure we warned once ---
@@ -109,7 +110,10 @@ def test_normalize_path_string_behavior(
 
 
 def test_make_includeresolved_preserves_trailing_slash():
+    # --- setup and execute --
     entry = make_includeresolved("src/", base=".", origin="test")
+
+    # --- verify ---
     assert isinstance(entry["path"], str)
     assert entry["path"].endswith("/"), (
         f"expected trailing slash, got {entry['path']!r}"

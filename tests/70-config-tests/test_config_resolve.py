@@ -9,6 +9,9 @@ from pathlib import Path
 from pytest import MonkeyPatch
 
 import pocket_build.config_resolve as mod_resolve
+import pocket_build.constants as mod_const  # for changing constants using monkeypatch
+import pocket_build.runtime as mod_runtime
+from pocket_build.constants import DEFAULT_WATCH_INTERVAL
 from pocket_build.types import BuildConfigInput, RootConfigInput
 from tests.utils import (
     make_build_input,
@@ -40,6 +43,10 @@ def _args(**kwargs: object) -> argparse.Namespace:
 
 
 # ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
+
+# ---------------------------------------------------------------------------
 # resolve_build_config()
 # ---------------------------------------------------------------------------
 
@@ -48,16 +55,12 @@ def test_resolve_build_config_from_config_paths(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Ensure config-based include/out/exclude resolve relative to config_dir."""
-    import pocket_build.config_resolve as mod_resolve
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     raw = make_build_input(include=["src/**"], exclude=["*.tmp"], out="dist")
-
     args = _args()
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
 
     # --- execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
@@ -78,15 +81,12 @@ def test_resolve_build_config_cli_overrides_include_and_out(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """CLI --include and --out should override config include/out."""
-    import pocket_build.config_resolve as mod_resolve
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     raw = make_build_input(include=["src/**"], out="dist")
     args = _args(include=["cli_src/**"], out="cli_dist")
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
 
     # --- execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
@@ -103,15 +103,12 @@ def test_resolve_build_config_add_include_extends(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """--add-include should append to config includes, not override."""
-    import pocket_build.config_resolve as mod_resolve
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     raw = make_build_input(include=["src/**"])
     args = _args(add_include=["extra/**"])
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
 
     # --- execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
@@ -126,17 +123,14 @@ def test_resolve_build_config_gitignore_patterns_added(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """When .gitignore exists, its patterns should be appended as gitignore excludes."""
-    import pocket_build.config_resolve as mod_resolve
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     gitignore = tmp_path / ".gitignore"
     gitignore.write_text("*.log\n# comment\ncache/\n")
     raw = make_build_input(include=["src/**"])
     args = _args()
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
 
     # --- execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
@@ -150,15 +144,15 @@ def test_resolve_build_config_respects_cli_exclude_override(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """CLI --exclude should override config excludes."""
-    import pocket_build.config_resolve as mod_resolve
-    import pocket_build.runtime as mod_runtime
-
+    # --- setup ---
     raw = make_build_input(exclude=["*.tmp"], include=["src/**"])
     args = _args(exclude=["*.bak"])
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
 
+    # --- execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
+    # --- validate ---
     excl = [str(e["path"]) for e in resolved["exclude"]]
     assert "*.bak" in excl
     assert "*.tmp" not in excl
@@ -168,15 +162,12 @@ def test_resolve_build_config_respects_dest_override(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """IncludeResolved with explicit dest should survive resolution unchanged."""
-    import pocket_build.config_resolve as mod_resolve
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     raw = make_build_input(include=["src/**"], out="dist")
     args = _args()
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
 
     # --- execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
@@ -190,17 +181,14 @@ def test_resolve_build_config_respect_gitignore_false(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """If --no-gitignore is passed, .gitignore patterns are not loaded."""
-    import pocket_build.config_resolve as mod_resolve
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     gitignore = tmp_path / ".gitignore"
     gitignore.write_text("*.log\n")
     raw = make_build_input(include=["src/**"], respect_gitignore=False)
     args = _args(respect_gitignore=False)
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
 
     # --- execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
@@ -217,9 +205,6 @@ def test_resolve_config_aggregates_builds_and_defaults(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Ensure resolve_config merges builds and assigns default values."""
-    import pocket_build.config_resolve as mod_resolve
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     root: RootConfigInput = {
         "builds": [
@@ -229,9 +214,9 @@ def test_resolve_config_aggregates_builds_and_defaults(
         "log_level": "warning",
     }
     args = _args()
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
 
     # --- execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
 
     # --- validate ---
@@ -245,18 +230,14 @@ def test_resolve_config_aggregates_builds_and_defaults(
 
 def test_resolve_config_env_overrides(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     """Environment variables for watch interval and log level should override."""
-    import pocket_build.config_resolve as mod_resolve
-    import pocket_build.constants as mod_const
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     root: RootConfigInput = {"builds": [{"include": ["src/**"], "out": "dist"}]}
     args = _args()
+
+    # --- execute ---
     monkeypatch.setenv(mod_const.DEFAULT_ENV_WATCH_INTERVAL, "9.9")
     monkeypatch.setenv(mod_const.DEFAULT_ENV_LOG_LEVEL, "debug")
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-
-    # --- execute ---
     resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
 
     # --- validate ---
@@ -268,22 +249,16 @@ def test_resolve_config_invalid_env_watch_falls_back(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
     """Invalid watch interval env var should log warning and use default."""
-    import pocket_build.config_resolve as mod_resolve
-    import pocket_build.constants as mod_const
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     root: RootConfigInput = {"builds": [{"include": ["src/**"], "out": "dist"}]}
     args = _args()
-    monkeypatch.setenv(mod_const.DEFAULT_ENV_WATCH_INTERVAL, "badvalue")
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
 
     # --- execute ---
+    monkeypatch.setenv(mod_const.DEFAULT_ENV_WATCH_INTERVAL, "badvalue")
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
 
     # --- validate ---
-    from pocket_build.constants import DEFAULT_WATCH_INTERVAL
-
     assert isinstance(resolved["watch_interval"], float)
     assert resolved["watch_interval"] == DEFAULT_WATCH_INTERVAL
 
@@ -292,9 +267,6 @@ def test_resolve_config_propagates_cli_log_level(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """CLI --log-level should propagate into resolved root and runtime."""
-    import pocket_build.config_resolve as mod_resolve
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     args = _args(log_level="trace")
     root: RootConfigInput = {"builds": [{"include": ["src/**"], "out": "dist"}]}
@@ -311,9 +283,6 @@ def test_resolve_config_propagates_cli_log_level(
 def test_resolve_build_config_add_exclude_extends(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    import pocket_build.config_resolve as mod_resolve
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     raw = make_build_input(exclude=["*.tmp"], include=["src/**"])
     args = _args(add_exclude=["*.log"])
@@ -331,8 +300,6 @@ def test_resolve_build_config_add_exclude_extends(
 
 
 def test_resolve_build_config_handles_empty_include(tmp_path: Path) -> None:
-    import pocket_build.config_resolve as mod_resolve
-
     # --- setup ---
     args = _args()
     raw = make_build_input(include=[])
@@ -345,8 +312,6 @@ def test_resolve_build_config_handles_empty_include(tmp_path: Path) -> None:
 
 
 def test_resolve_build_config_with_absolute_include(tmp_path: Path) -> None:
-    import pocket_build.config_resolve as mod_resolve
-
     # --- setup ---
     abs_src = tmp_path / "src"
     abs_src.mkdir()
@@ -363,8 +328,6 @@ def test_resolve_build_config_with_absolute_include(tmp_path: Path) -> None:
 
 
 def test_resolve_build_config_inherits_root_gitignore_setting(tmp_path: Path) -> None:
-    import pocket_build.config_resolve as mod_resolve
-
     # --- setup ---
     root_cfg: RootConfigInput = {"respect_gitignore": False}
     raw = make_build_input(include=["src/**"])
@@ -378,9 +341,14 @@ def test_resolve_build_config_inherits_root_gitignore_setting(tmp_path: Path) ->
 
 
 def test_resolve_build_config_preserves_trailing_slash(tmp_path: Path):
+    # --- setup ---
     raw: BuildConfigInput = {"include": ["src/"], "out": "dist"}
     args = Namespace()  # empty placeholder
+
+    # --- execute ---
     result = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path, {})
     inc_path = result["include"][0]["path"]
+
+    # --- validate ---
     assert isinstance(inc_path, str)
     assert inc_path.endswith("/"), f"trailing slash lost: {inc_path!r}"

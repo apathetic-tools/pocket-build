@@ -27,7 +27,17 @@ from pocket_build.meta import PROGRAM_SCRIPT
 # --- only for singlefile runs ---
 __runtime_mode__ = "singlefile"
 
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
 PROJ_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
+# ---------------------------------------------------------------------------
+# Tests
+# ---------------------------------------------------------------------------
 
 
 def test_bundled_script_metadata_and_execution() -> None:

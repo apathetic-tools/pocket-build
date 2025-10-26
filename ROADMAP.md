@@ -24,8 +24,6 @@ Exploring bundling options for generating the single-file release:
 - [ ] for all runtime changes consider using mp.setitem
 - [ ] make sure with monkeypatch.context is warranted
 - [ ] make sure importing inside each test function is warranted
-- [ ] tests should only output when they fail so we can trace them
-- [ ] how to get pytest to show each file with dots for progress instead of all together?
 
 ## 🧑‍💻 Development
 - [ ] Deploy action when I tag a release should create a release and attach it to the tagged release.
