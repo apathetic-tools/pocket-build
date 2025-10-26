@@ -7,7 +7,7 @@ import pocket_build.utils_types as mod_utils_types
 
 
 def test_plain_types_work_normally() -> None:
-    # --- setup, execute, and verify ---
+    # --- execute, and verify ---
     assert mod_utils_types.safe_isinstance("x", str)
     assert not mod_utils_types.safe_isinstance(123, str)
     assert mod_utils_types.safe_isinstance(123, int)
@@ -17,7 +17,7 @@ def test_union_types() -> None:
     # --- setup ---
     U = typing.Union[str, int]
 
-    # --- setup, execute, and verify ---
+    # --- execute and verify ---
     assert mod_utils_types.safe_isinstance("abc", U)
     assert mod_utils_types.safe_isinstance(42, U)
     assert not mod_utils_types.safe_isinstance(3.14, U)
@@ -41,7 +41,7 @@ def test_any_type_always_true() -> None:
 
 
 def test_list_type_accepts_lists() -> None:
-    # --- setup, execute, and verify ---
+    # --- execute and verify ---
     assert mod_utils_types.safe_isinstance([], list)
     assert not mod_utils_types.safe_isinstance({}, list)
 

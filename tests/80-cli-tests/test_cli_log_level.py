@@ -79,7 +79,7 @@ def test_verbose_and_quiet_mutually_exclusive(
     config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
 
-    # --- patch and execute and verify ---
+    # --- patch, execute and verify ---
     monkeypatch.chdir(tmp_path)
 
     # argparse should exit with SystemExit(2)
@@ -128,7 +128,7 @@ def test_log_level_from_env_var(
     config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
-    # --- patch and execute and verify ---
+    # --- patch, execute and verify ---
     monkeypatch.chdir(tmp_path)
 
     # 1️⃣ Specific env var wins

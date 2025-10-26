@@ -289,7 +289,7 @@ def test_absolute_include_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> N
     (abs_src / "x.txt").write_text("absolute")
     abs_out = tmp_path / "abs_out"
 
-    # --- execute ---
+    # --- patch and execute ---
     subdir = tmp_path / "subdir"
     subdir.mkdir()
     monkeypatch.chdir(subdir)  # move cwd away from src/out
@@ -314,7 +314,7 @@ def test_relative_include_with_parent_reference(
     cwd = tmp_path / "project"
     cwd.mkdir()
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.chdir(cwd)
     code = mod_cli.main(["--include", "../shared/**", "--out", "dist"])
 
@@ -338,7 +338,7 @@ def test_mixed_relative_and_absolute_includes(
 
     abs_out = tmp_path / "mixed_out"
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.chdir(tmp_path)
     code = mod_cli.main(
         ["--include", "rel_src/**", str(abs_src / "**"), "--out", str(abs_out)]
@@ -357,7 +357,7 @@ def test_trailing_slash_include(monkeypatch: MonkeyPatch, tmp_path: Path) -> Non
     src.mkdir()
     (src / "inner.txt").write_text("ok")
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.chdir(tmp_path)
     code = mod_cli.main(["--include", "src/", "--out", "outdir"])
 
@@ -378,7 +378,7 @@ def test_absolute_out_does_not_create_relative_copy(
     (src / "one.txt").write_text("1")
     abs_out = tmp_path / "absolute_out"
 
-    # --- execute ---
+    # --- patch and execute ---
     subdir = tmp_path / "subdir"
     subdir.mkdir()
     monkeypatch.chdir(subdir)
@@ -398,7 +398,7 @@ def test_dot_prefix_include(monkeypatch: MonkeyPatch, tmp_path: Path):
     src.mkdir()
     (src / "file.txt").write_text("x")
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.chdir(tmp_path)
     code = mod_cli.main(["--include", "./src/**", "--out", "dist"])
 
@@ -414,7 +414,7 @@ def test_trailing_slash_on_out(monkeypatch: MonkeyPatch, tmp_path: Path):
     src.mkdir()
     (src / "foo.txt").write_text("bar")
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.chdir(tmp_path)
     code = mod_cli.main(["--include", "src/**", "--out", "dist/"])
 

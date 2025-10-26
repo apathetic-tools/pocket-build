@@ -254,7 +254,7 @@ def test_cli_gitignore_disable_then_enable(
     write_gitignore(tmp_path, "*.tmp\n")
     make_config(tmp_path, [{"include": ["src/**"], "out": "dist"}])
 
-    # --- execute and verify ---
+    # --- patch, execute and verify ---
     monkeypatch.chdir(tmp_path)
     mod_cli.main(["--no-gitignore"])
     assert (tmp_path / "dist/a.tmp").exists()

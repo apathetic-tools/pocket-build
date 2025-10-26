@@ -64,7 +64,7 @@ def test_is_bypass_capture_env_vars(
 ) -> None:
     """is_bypass_capture() should return True
     when *_BYPASS_CAPTURE or BYPASS_CAPTURE is set."""
-    # --- setup, execute, and verify ---
+    # --- patch, execute, and verify ---
     # Clear all possibly conflicting env vars first
     monkeypatch.delenv(f"{PROGRAM_ENV}_BYPASS_CAPTURE", raising=False)
     monkeypatch.delenv("BYPASS_CAPTURE", raising=False)
@@ -107,9 +107,8 @@ def test_is_bypass_capture_env_vars(
 def test_log_routes_correct_stream(level: str, expected_stream: str) -> None:
     """Ensure log() routes to the correct stream and message appears,
     ignoring prefixes/colors."""
-    # --- setup, execute ---
+    # --- execute ---
     out, err = log_and_capture_output(level, "trace")
-
     out, err = strip_ansi(out.strip()), strip_ansi(err.strip())
 
     # --- verify ---
@@ -154,7 +153,7 @@ def test_log_bypass_capture_env(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """When *_BYPASS_CAPTURE=1, log() should write to __stdout__/__stderr__."""
-    # --- setup and execute ---
+    # --- setup, patch, and execute ---
     # Sneaky program tries to escape our capture,
     #   we are sneakier and capture it anyways!
     #   What are you going to do now program?

@@ -48,7 +48,7 @@ def test_get_glob_root_extracts_static_prefix(
     expected: Path,
 ):
     """get_glob_root() should return the non-glob portion of a path pattern."""
-    # --- setup and execute --
+    # --- execute --
     result = mod_utils_runtime.get_glob_root(pattern)
 
     # --- verify ---
@@ -110,7 +110,7 @@ def test_normalize_path_string_behavior(
 
 
 def test_make_includeresolved_preserves_trailing_slash():
-    # --- setup and execute --
+    # --- execute --
     entry = make_includeresolved("src/", base=".", origin="test")
 
     # --- verify ---

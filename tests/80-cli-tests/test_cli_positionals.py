@@ -18,7 +18,7 @@ def _run_cli(monkeypatch: MonkeyPatch, tmp_path: Path, argv: list[str]) -> int:
     """Helper to run CLI with a temporary working directory."""
     full_argv = [*argv, "--log-level", "trace"]
 
-    # --- patch + execute ---
+    # --- patch and execute ---
     monkeypatch.chdir(tmp_path)
     code = mod_cli.main(full_argv)
     return code
@@ -48,7 +48,7 @@ def test_positional_include_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) ->
     # --- setup ---
     _make_src(tmp_path, "file.txt")
 
-    # --- execute ---
+    # --- patch and execute ---
     code = _run_cli(monkeypatch, tmp_path, ["src/", "dist"])
 
     # --- verify ---
@@ -66,7 +66,7 @@ def test_multiple_includes_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> 
     (tmp_path / "src1" / "a.txt").write_text("A")
     (tmp_path / "src2" / "b.txt").write_text("B")
 
-    # --- execute ---
+    # --- patch and execute ---
     code = _run_cli(monkeypatch, tmp_path, ["src1/", "src2/", "dist"])
 
     # --- verify ---
@@ -92,7 +92,7 @@ def test_explicit_out_allows_many_includes(
     src2.mkdir()
     (src2 / "two.txt").write_text("two")
 
-    # --- execute ---
+    # --- patch and execute ---
     code = _run_cli(monkeypatch, tmp_path, ["src/", "src2/", "--out", "dist"])
 
     # --- verify ---
@@ -122,7 +122,7 @@ def test_error_on_positional_with_include(
     # --- setup ---
     _make_src(tmp_path, "a.txt")
 
-    # --- execute + verify ---
+    # --- patch, execute and verify ---
     with pytest.raises(SystemExit) as e:
         _run_cli(monkeypatch, tmp_path, argv)
     assert e.value.code == 2
@@ -132,7 +132,7 @@ def test_positional_with_dry_run(monkeypatch: MonkeyPatch, tmp_path: Path) -> No
     # --- setup ---
     _make_src(tmp_path, "x.txt")
 
-    # --- execute ---
+    # --- patch and execute ---
     code = _run_cli(monkeypatch, tmp_path, ["src", "dist", "--dry-run"])
 
     # --- verify ---
@@ -144,7 +144,7 @@ def test_trailing_slash_handled(monkeypatch: MonkeyPatch, tmp_path: Path) -> Non
     # --- setup ---
     _make_src(tmp_path, "x.txt")
 
-    # --- execute ---
+    # --- patch and execute ---
     code = _run_cli(monkeypatch, tmp_path, ["src/", "dist/"])
 
     # --- verify ---

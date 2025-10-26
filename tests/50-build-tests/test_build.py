@@ -26,7 +26,7 @@ def test_run_build_includes_directory_itself(
 
     cfg = make_build_cfg(tmp_path, [make_include_resolved("src", tmp_path)])
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     mod_build.run_build(cfg)
 
@@ -46,7 +46,7 @@ def test_run_build_includes_directory_contents_slash(
 
     cfg = make_build_cfg(tmp_path, [make_include_resolved("src/**", tmp_path)])
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     mod_build.run_build(cfg)
 
@@ -72,10 +72,11 @@ def test_run_build_includes_directory_contents_single_star(
     pattern = "src/*"
     cfg = make_build_cfg(tmp_path, [make_include_resolved("src/*", tmp_path)])
 
-    # --- capture PathResolved entries passed to copy_item ---
+    # capture PathResolved entries passed to copy_item
     called: list[PathResolved] = []
     real_copy_item = mod_build.copy_item
 
+    # --- stubs ---
     def fake_copy_item(
         src_entry: PathResolved,
         dest_entry: PathResolved,
@@ -85,7 +86,7 @@ def test_run_build_includes_directory_contents_single_star(
         called.append(src_entry)
         return real_copy_item(src_entry, dest_entry, exclude_patterns, dry_run)
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     monkeypatch.setattr(mod_build, "copy_item", fake_copy_item)
     mod_build.run_build(cfg)
@@ -96,7 +97,7 @@ def test_run_build_includes_directory_contents_single_star(
     assert (dist / "one.txt").exists()
     assert not (dist / "nested" / "deep.txt").exists()
 
-    # --- verify metadata propagation ---
+    # verify metadata propagation
     assert called, "copy_item should have been called at least once"
     for entry in called:
         assert "pattern" in entry, "pattern should be preserved in PathResolved"
@@ -115,7 +116,7 @@ def test_run_build_includes_directory_contents_double_star(
 
     cfg = make_build_cfg(tmp_path, [make_include_resolved("src/**", tmp_path)])
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     mod_build.run_build(cfg)
 
@@ -135,7 +136,7 @@ def test_run_build_includes_single_file(
 
     cfg = make_build_cfg(tmp_path, [make_include_resolved(file, tmp_path)])
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     mod_build.run_build(cfg)
 
@@ -155,7 +156,7 @@ def test_run_build_includes_nested_subdir_glob(
 
     cfg = make_build_cfg(tmp_path, [make_include_resolved("src/utils/**", tmp_path)])
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     mod_build.run_build(cfg)
 
@@ -208,7 +209,7 @@ def test_run_build_includes_top_level_glob_only(
 
     cfg = make_build_cfg(tmp_path, [make_include_resolved("*.txt", tmp_path)])
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     mod_build.run_build(cfg)
 
@@ -226,7 +227,7 @@ def test_run_build_skips_missing_matches(
     # --- setup ---
     cfg = make_build_cfg(tmp_path, [make_include_resolved("doesnotexist/**", tmp_path)])
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
     mod_build.run_build(cfg)
 
@@ -247,7 +248,7 @@ def test_run_build_respects_dest_override(
         tmp_path, [make_include_resolved("source", tmp_path, dest="renamed")]
     )
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     mod_build.run_build(cfg)
 
@@ -270,7 +271,7 @@ def test_run_build_dry_run_does_not_write(
         tmp_path, [make_include_resolved("src", tmp_path)], dry_run=True
     )
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
     mod_build.run_build(cfg)
 
@@ -298,9 +299,8 @@ def test_run_build_dry_run_does_not_delete_existing_out(
         tmp_path, [make_include_resolved("src/**", tmp_path)], dry_run=True
     )
 
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
-
-    # --- execute ---
     mod_build.run_build(cfg)
 
     # --- verify ---
@@ -318,7 +318,7 @@ def test_run_build_no_includes_warns(
     # --- setup ---
     cfg = make_build_cfg(tmp_path, [])
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     mod_build.run_build(cfg)
 
@@ -344,10 +344,11 @@ def test_run_build_preserves_pattern_and_shallow_behavior(
     pattern = "src/*"
     cfg = make_build_cfg(tmp_path, [make_include_resolved(pattern, tmp_path)])
 
-    # --- capture copy_item calls ---
+    # capture copy_item calls
     called: list[PathResolved] = []
     real_copy_item = mod_build.copy_item
 
+    # --- stubs ---
     def fake_copy_item(
         src_entry: PathResolved,
         dest_entry: PathResolved,
@@ -357,7 +358,7 @@ def test_run_build_preserves_pattern_and_shallow_behavior(
         called.append(src_entry)
         return real_copy_item(src_entry, dest_entry, exclude_patterns, dry_run)
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
     monkeypatch.setattr(mod_build, "copy_item", fake_copy_item)
     mod_build.run_build(cfg)
@@ -387,7 +388,7 @@ def test_run_build_includes_directory_contents_trailing_slash(
 
     cfg = make_build_cfg(tmp_path, [make_include_resolved("src/", tmp_path)])
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     mod_build.run_build(cfg)
 

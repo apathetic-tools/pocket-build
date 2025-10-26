@@ -25,7 +25,7 @@ def test_copy_file_creates_and_copies(
     src.write_text("hi")
     dest = tmp_path / "out" / "a.txt"
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
     mod_build.copy_file(src, dest, tmp_path, False)
 
@@ -48,7 +48,7 @@ def test_copy_directory_respects_excludes(
     (src_dir / "skip.txt").write_text("no")
     dest = tmp_path / "out"
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
     mod_build.copy_directory(src_dir, dest, ["**/skip.txt"], tmp_path, False)
 
@@ -70,7 +70,7 @@ def test_copy_item_copies_single_file(tmp_path: Path, monkeypatch: MonkeyPatch) 
     src_entry = make_resolved(src_file, tmp_path)
     dest_entry = make_resolved(tmp_path / "out" / "file.txt", tmp_path)
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     mod_build.copy_item(src_entry, dest_entry, [], False)
 
@@ -89,7 +89,7 @@ def test_copy_item_handles_directory(tmp_path: Path, monkeypatch: MonkeyPatch) -
     src_entry = make_resolved(src_dir, tmp_path)
     dest_entry = make_resolved(tmp_path / "out", tmp_path)
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "critical")
     mod_build.copy_item(src_entry, dest_entry, [], False)
 
@@ -115,7 +115,7 @@ def test_copy_item_respects_excludes(
 
     excludes = [make_resolved("**/skip.txt", tmp_path)]
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "critical")
     mod_build.copy_item(src_entry, dest_entry, excludes, False)
 
@@ -139,7 +139,7 @@ def test_copy_item_respects_nested_excludes(
     dest_entry = make_resolved(tmp_path / "out" / "src", tmp_path)
     excludes = [make_resolved("**/skip.txt", tmp_path)]
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "critical")
     mod_build.copy_item(src_entry, dest_entry, excludes, False)
 
@@ -163,7 +163,7 @@ def test_copy_item_respects_directory_excludes(
     dest_entry = make_resolved(tmp_path / "out" / "src", tmp_path)
     excludes = [make_resolved("tmp/", tmp_path)]
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "critical")
     mod_build.copy_item(src_entry, dest_entry, excludes, False)
 
@@ -188,7 +188,7 @@ def test_copy_file_overwrites_existing(
     dest.parent.mkdir(parents=True)
     dest.write_text("old")
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "error")
     mod_build.copy_file(src, dest, tmp_path, False)
 
@@ -203,7 +203,7 @@ def test_copy_directory_empty_source(tmp_path: Path, monkeypatch: MonkeyPatch) -
     src_dir.mkdir()
     dest = tmp_path / "out"
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "warning")
     mod_build.copy_directory(src_dir, dest, [], tmp_path, False)
 
@@ -223,7 +223,7 @@ def test_copy_item_dry_run_skips_writing(
     src_entry = make_resolved(src_file, tmp_path)
     dest_entry = make_resolved(tmp_path / "out" / "foo.txt", tmp_path)
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     mod_build.copy_item(src_entry, dest_entry, [], True)
 
@@ -243,7 +243,7 @@ def test_copy_item_nested_relative_path(
     src_entry = make_resolved(tmp_path / "src", tmp_path)
     dest_entry = make_resolved(tmp_path / "out", tmp_path)
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "warning")
     mod_build.copy_item(src_entry, dest_entry, [], False)
 
@@ -259,7 +259,7 @@ def test_copy_file_symlink(tmp_path: Path, monkeypatch: MonkeyPatch):
     link.symlink_to(target)
     dest = tmp_path / "out" / "link.txt"
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
     mod_build.copy_file(link, dest, tmp_path, False)
 

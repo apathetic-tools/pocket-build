@@ -59,7 +59,7 @@ def test_resolve_build_config_from_config_paths(
     raw = make_build_input(include=["src/**"], exclude=["*.tmp"], out="dist")
     args = _args()
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
@@ -85,7 +85,7 @@ def test_resolve_build_config_cli_overrides_include_and_out(
     raw = make_build_input(include=["src/**"], out="dist")
     args = _args(include=["cli_src/**"], out="cli_dist")
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
@@ -107,7 +107,7 @@ def test_resolve_build_config_add_include_extends(
     raw = make_build_input(include=["src/**"])
     args = _args(add_include=["extra/**"])
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
@@ -129,7 +129,7 @@ def test_resolve_build_config_gitignore_patterns_added(
     raw = make_build_input(include=["src/**"])
     args = _args()
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
@@ -148,7 +148,7 @@ def test_resolve_build_config_respects_cli_exclude_override(
     raw = make_build_input(exclude=["*.tmp"], include=["src/**"])
     args = _args(exclude=["*.bak"])
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
@@ -166,7 +166,7 @@ def test_resolve_build_config_respects_dest_override(
     raw = make_build_input(include=["src/**"], out="dist")
     args = _args()
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
@@ -187,7 +187,7 @@ def test_resolve_build_config_respect_gitignore_false(
     raw = make_build_input(include=["src/**"], respect_gitignore=False)
     args = _args(respect_gitignore=False)
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
@@ -215,7 +215,7 @@ def test_resolve_config_aggregates_builds_and_defaults(
     }
     args = _args()
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
 
@@ -234,7 +234,7 @@ def test_resolve_config_env_overrides(monkeypatch: MonkeyPatch, tmp_path: Path) 
     root: RootConfigInput = {"builds": [{"include": ["src/**"], "out": "dist"}]}
     args = _args()
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setenv(mod_const.DEFAULT_ENV_WATCH_INTERVAL, "9.9")
     monkeypatch.setenv(mod_const.DEFAULT_ENV_LOG_LEVEL, "debug")
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
@@ -253,7 +253,7 @@ def test_resolve_config_invalid_env_watch_falls_back(
     root: RootConfigInput = {"builds": [{"include": ["src/**"], "out": "dist"}]}
     args = _args()
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setenv(mod_const.DEFAULT_ENV_WATCH_INTERVAL, "badvalue")
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
@@ -270,9 +270,9 @@ def test_resolve_config_propagates_cli_log_level(
     # --- setup ---
     args = _args(log_level="trace")
     root: RootConfigInput = {"builds": [{"include": ["src/**"], "out": "dist"}]}
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
 
-    # --- execute ---
+    # --- patch and execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
 
     # --- validate ---
@@ -287,7 +287,7 @@ def test_resolve_build_config_add_exclude_extends(
     raw = make_build_input(exclude=["*.tmp"], include=["src/**"])
     args = _args(add_exclude=["*.log"])
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 

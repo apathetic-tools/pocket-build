@@ -27,7 +27,7 @@ def test_parse_builds_accepts_list_and_single_object() -> None:
 
 
 def test_parse_builds_handles_single_and_multiple() -> None:
-    # --- setup, execute and verify ---
+    # --- execute and verify ---
     assert mod_config.parse_config({"builds": [{"include": []}]}) == {
         "builds": [{"include": []}]
     }
@@ -35,7 +35,7 @@ def test_parse_builds_handles_single_and_multiple() -> None:
 
 
 def test_parse_config_returns_none_for_empty_values() -> None:
-    # --- setup, execute and verify ---
+    # --- execute and verify ---
     assert mod_config.parse_config(None) is None
     assert mod_config.parse_config({}) is None
     assert mod_config.parse_config([]) is None
@@ -43,7 +43,7 @@ def test_parse_config_returns_none_for_empty_values() -> None:
 
 def test_parse_config_list_of_strings_single_build() -> None:
     """List of strings should normalize into one build with include list."""
-    # --- setup and execute ---
+    # --- execute ---
     result = mod_config.parse_config(["src/**", "lib/**"])
 
     # --- verify ---
@@ -52,7 +52,7 @@ def test_parse_config_list_of_strings_single_build() -> None:
 
 def test_parse_config_dict_with_build_key() -> None:
     """Dict with a single 'build' key should lift it to builds=[...] form."""
-    # --- setup and execute ---
+    # --- execute ---
     result = mod_config.parse_config({"build": {"include": ["src"], "out": "dist"}})
 
     # --- verify ---
@@ -60,7 +60,7 @@ def test_parse_config_dict_with_build_key() -> None:
 
 
 def test_parse_config_watch_interval_hoisting() -> None:
-    # --- setup and execute ---
+    # --- execute ---
     result = mod_config.parse_config(
         [{"include": ["src"], "out": "dist", "watch_interval": 5.0}]
     )

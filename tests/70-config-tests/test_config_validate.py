@@ -138,7 +138,7 @@ def test_warn_keys_once_behavior(monkeypatch: MonkeyPatch) -> None:
     def _mock_log(lvl: str, msg: str) -> None:
         called.append((lvl, msg))
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setattr(mod_validate, "log", _mock_log)
     mod_validate.validate_config(cfg)
 
@@ -148,7 +148,7 @@ def test_warn_keys_once_behavior(monkeypatch: MonkeyPatch) -> None:
     assert len(dry_msgs) == 1
 
 
-def test_invalid_type_at_root(monkeypatch: MonkeyPatch) -> None:
+def test_invalid_type_at_root() -> None:
     """Root-level key of wrong type should fail."""
 
     # --- setup ---
@@ -175,7 +175,7 @@ def test_root_and_build_strict_config(monkeypatch: MonkeyPatch) -> None:
     def _mock_log(lvl: str, msg: str) -> None:
         called.append((lvl, msg))
 
-    # --- execute ---
+    # --- patch and execute ---
     monkeypatch.setattr(mod_validate, "log", _mock_log)
     valid = mod_validate.validate_config(cfg)
 

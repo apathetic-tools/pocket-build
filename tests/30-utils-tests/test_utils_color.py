@@ -38,7 +38,7 @@ def test_should_use_color_no_color(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """Disables color if NO_COLOR is present in environment."""
-    # --- setup, execute, and verify ---
+    # --- patch, execute, and verify ---
     monkeypatch.setenv("NO_COLOR", "1")
     assert mod_utils_core.should_use_color() is False
 
@@ -50,7 +50,7 @@ def test_should_use_color_force_color(
 ) -> None:
     """Enables color when FORCE_COLOR is set to truthy value."""
 
-    # --- setup, execute, and verify ---
+    # --- patch, execute, and verify ---
     monkeypatch.setenv("FORCE_COLOR", value)
     assert mod_utils_core.should_use_color() is True
 
@@ -59,8 +59,7 @@ def test_should_use_color_tty(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """Falls back to TTY detection when no env vars set."""
-    # --- setup, execute, and verify ---
-
+    # --- patch, execute, and verify ---
     fake_stdout = types.SimpleNamespace(isatty=lambda: True)
     monkeypatch.setattr(sys, "stdout", fake_stdout)
     assert mod_utils_core.should_use_color() is True
@@ -93,7 +92,7 @@ def test_colorize_respects_reset(
     # --- setup ---
     test_string = "test string"
 
-    # --- execute and verify ---
+    # --- patch, execute and verify ---
 
     # Force color disabled at runtime
     monkeypatch.setitem(mod_runtime.current_runtime, "use_color", False)
@@ -122,7 +121,7 @@ def test_colorize_respects_runtime_flag() -> None:
 
 
 def test_no_color_overrides_force_color(monkeypatch: MonkeyPatch):
-    # --- execute and verify ---
+    # --- patch, execute and verify ---
     monkeypatch.setenv("NO_COLOR", "1")
     monkeypatch.setenv("FORCE_COLOR", "1")
     assert mod_utils_core.should_use_color() is False
