@@ -9,21 +9,29 @@ Each pytest run now targets a single runtime mode:
 Switch mode with: RUNTIME_MODE=singlefile pytest
 """
 
-import importlib.util
 import os
 import subprocess
 import sys
 from pathlib import Path
-from types import ModuleType
-from typing import Generator
 
 import pytest
+from pytest import Config, Item as PytestItem
 
 from pocket_build.meta import PROGRAM_PACKAGE, PROGRAM_SCRIPT
+from tests.utils import make_trace, runtime_swap
+
+TRACE = make_trace("⚡️")
+
+# early jank hook
+runtime_swap()
 
 
-def pytest_report_header(config: pytest.Config) -> str:
-    mode: str = os.getenv("RUNTIME_MODE", "module")
+def _mode() -> str:
+    return os.getenv("RUNTIME_MODE", "module")
+
+
+def pytest_report_header(config: Config) -> str:
+    mode = _mode()
     return f"Runtime mode: {mode}"
 
 
@@ -55,41 +63,29 @@ def ensure_bundled_script_up_to_date(root: Path) -> Path:
     return bin_path
 
 
-# ------------------------------------------------------------
-# 🔁 Fixture: load either the module or the bundled script
-# ------------------------------------------------------------
-@pytest.fixture(scope="session", autouse=True)
-def runtime_env() -> Generator[None, None, None]:
-    """
-    Automatically load the correct runtime module based on RUNTIME_MODE.
-
-    When RUNTIME_MODE=singlefile, replaces `<package name>` in sys.modules
-    with the single-file bundled version. Otherwise uses the normal package.
-    """
-    mode: str = os.getenv("RUNTIME_MODE", "module")
-    root: Path = Path(__file__).resolve().parent.parent
-
-    if mode == "module":
-        yield
-        return
-
-    bin_path: Path = ensure_bundled_script_up_to_date(root)
-    spec = importlib.util.spec_from_file_location(PROGRAM_PACKAGE, bin_path)
-    assert spec and spec.loader, f"Failed to load spec from {bin_path}"
-
-    mod: ModuleType = importlib.util.module_from_spec(spec)
-    sys.modules[PROGRAM_PACKAGE] = mod
-    spec.loader.exec_module(mod)
-    yield
-    return
-
-
 def pytest_collection_modifyitems(
-    config: pytest.Config,
-    items: list[pytest.Item],
+    config: Config,
+    items: list[PytestItem],
 ) -> None:
-    """Filter and record runtime-specific tests for later reporting."""
-    mode = os.getenv("RUNTIME_MODE", "module")
+    """Filter and record runtime-specific tests for later reporting.
+    also automatically skips debug tests unless asked for"""
+
+    # --- debug filtering ---
+    # detect if the user is filtering for debug tests
+    keywords = config.getoption("-k") or ""
+    running_debug = "debug" in keywords.lower()
+
+    if running_debug:
+        return  # user explicitly requested them, don't skip
+
+    for item in items:
+        if "debug" in item.keywords:
+            item.add_marker(
+                pytest.mark.skip(reason="Skipped debug test (use -k debug to run)")
+            )
+
+    # --- mode-specific tests ---
+    mode = _mode()
 
     # file → number of tests
     included_map: dict[str, int] = {}

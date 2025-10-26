@@ -5,13 +5,10 @@ from pathlib import Path
 
 from pytest import MonkeyPatch
 
+import pocket_build.build as mod_build
+import pocket_build.runtime as mod_runtime
 from pocket_build.types import PathResolved
 from tests.utils import make_build_cfg, make_include_resolved
-
-# ---------------------------------------------------------------------------
-# Local helpers
-# ---------------------------------------------------------------------------
-
 
 # ---------------------------------------------------------------------------
 # End-to-end tests for run_build()
@@ -22,9 +19,6 @@ def test_run_build_includes_directory_itself(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Including 'src' should copy directory itself → dist/src/..."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -45,9 +39,6 @@ def test_run_build_includes_directory_contents_slash(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Including 'src/' should copy contents only → dist/..."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -70,9 +61,6 @@ def test_run_build_includes_directory_contents_single_star(
 ) -> None:
     """Including 'src/*' should copy non-hidden immediate contents → dist/...
     Also ensures that the original pattern is stored in PathResolved entries."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -119,9 +107,6 @@ def test_run_build_includes_directory_contents_double_star(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Including 'src/**' should copy recursive contents → dist/..."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     src = tmp_path / "src"
     nested = src / "deep"
@@ -144,9 +129,6 @@ def test_run_build_includes_single_file(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Including a single file should copy it directly to out."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     file = tmp_path / "only.txt"
     file.write_text("one")
@@ -166,9 +148,6 @@ def test_run_build_includes_nested_subdir_glob(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Including 'src/utils/**' should copy contents of utils only → dist/..."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     src = tmp_path / "src" / "utils"
     src.mkdir(parents=True)
@@ -190,9 +169,6 @@ def test_run_build_includes_multiple_glob_patterns(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Including both 'src/*' and 'lib/**' should merge multiple roots cleanly."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     src = tmp_path / "src"
     lib = tmp_path / "lib" / "core"
@@ -223,9 +199,6 @@ def test_run_build_includes_top_level_glob_only(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Including '*.txt' should copy all top-level files only → dist/..."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     (tmp_path / "a.txt").write_text("a")
     (tmp_path / "b.txt").write_text("b")
@@ -250,9 +223,6 @@ def test_run_build_skips_missing_matches(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Missing include pattern should not raise or create anything."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     cfg = make_build_cfg(tmp_path, [make_include_resolved("doesnotexist/**", tmp_path)])
 
@@ -268,9 +238,6 @@ def test_run_build_respects_dest_override(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """IncludeResolved with explicit dest should place inside that subfolder."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     src = tmp_path / "source"
     src.mkdir()
@@ -294,9 +261,6 @@ def test_run_build_dry_run_does_not_write(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Dry-run mode should not create dist folder or copy files."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -320,9 +284,6 @@ def test_run_build_dry_run_does_not_delete_existing_out(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """Existing out_dir should not be deleted or modified during dry-run builds."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -354,9 +315,6 @@ def test_run_build_no_includes_warns(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ):
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     cfg = make_build_cfg(tmp_path, [])
 
@@ -374,10 +332,6 @@ def test_run_build_preserves_pattern_and_shallow_behavior(
 ) -> None:
     """Each PathResolved should preserve its original pattern,
     and shallow globs ('*') should not recurse."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-    from pocket_build.utils_types import PathResolved
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -426,9 +380,6 @@ def test_run_build_includes_directory_contents_trailing_slash(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Including 'src/' should copy the contents only (rsync/git-style) → dist/..."""
-    import pocket_build.build as mod_build
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()

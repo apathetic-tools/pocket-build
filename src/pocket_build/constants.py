@@ -1,3 +1,4 @@
+# src/pocket_build/constants.py
 """
 Central constants used across the project.
 """

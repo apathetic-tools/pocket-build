@@ -21,11 +21,11 @@ Exploring bundling options for generating the single-file release:
 ## 🧪 Tests
 
 - [ ] update tests to new form
-- [ ] audit the need for new tests
 - [ ] for all runtime changes consider using mp.setitem
 - [ ] make sure with monkeypatch.context is warranted
 - [ ] make sure importing inside each test function is warranted
 - [ ] tests should only output when they fail so we can trace them
+- [ ] how to get pytest to show each file with dots for progress instead of all together?
 
 ## 🧑‍💻 Development
 - [ ] Deploy action when I tag a release should create a release and attach it to the tagged release.
@@ -55,6 +55,8 @@ Exploring bundling options for generating the single-file release:
       Path.home() / ".pocket_build" / "runtime.json"
 - [ ] clean up "base" to "root" and "_normalize_base_and_path()" to "_normalize_path_with_root()"
 - [ ] validate_config should use a log() wrapper that prints a "Syntax errors in your config <filename>:" before starting error output.
+- [ ] review the run_build flow and private functions to make sure they are not full of while-debugging logic.
+- [ ] converge on single term for package/module vs singlefile vs pyz
 
 ## 💡 Ideas & Experiments
 Potential quality-of-life features:

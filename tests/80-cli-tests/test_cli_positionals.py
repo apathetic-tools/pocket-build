@@ -7,23 +7,21 @@ from pathlib import Path
 import pytest
 from pytest import MonkeyPatch
 
+import pocket_build.cli as mod_cli
+
 
 def _run_cli(monkeypatch: MonkeyPatch, tmp_path: Path, argv: list[str]) -> int:
     """Helper to run CLI with a temporary working directory."""
-    import pocket_build.cli as mod_cli
-
     full_argv = [*argv, "--log-level", "trace"]
 
     # --- patch + execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(full_argv)
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(full_argv)
     return code
 
 
 def _make_src(tmp_path: Path, *names: str) -> Path:
     """Create dummy source files and return the directory."""
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -39,7 +37,6 @@ def _make_src(tmp_path: Path, *names: str) -> Path:
 
 def test_positional_include_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     """`src dist/` should treat src as include and dist/ as out."""
-
     # --- setup ---
     _make_src(tmp_path, "file.txt")
 
@@ -55,7 +52,6 @@ def test_positional_include_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) ->
 
 def test_multiple_includes_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     """`src1 src2 dist` should treat src1/src2 as includes and dist as out."""
-
     # --- setup ---
     (tmp_path / "src1").mkdir()
     (tmp_path / "src2").mkdir()
@@ -82,7 +78,6 @@ def test_explicit_out_allows_many_includes(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
     """If --out is given, all positionals become includes."""
-
     # --- setup ---
     _make_src(tmp_path, "one.txt")
     src2 = tmp_path / "src2"
@@ -116,7 +111,6 @@ def test_error_on_positional_with_include(
     monkeypatch: MonkeyPatch, tmp_path: Path, argv: list[str]
 ) -> None:
     """Any positional args combined with --include should error."""
-
     # --- setup ---
     _make_src(tmp_path, "a.txt")
 

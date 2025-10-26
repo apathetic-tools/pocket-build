@@ -113,6 +113,8 @@ def _get_metadata_from_header(script_path: Path) -> tuple[str, str]:
     version = "unknown"
     commit = "unknown"
 
+    log("trace", "reading commit from header:", script_path)
+
     try:
         text = script_path.read_text(encoding="utf-8")
 
@@ -146,9 +148,12 @@ def get_metadata() -> Metadata:
     """
     script_path = Path(__file__)
 
+    log("trace", "get_metadata ran from:", Path(__file__).resolve())
+
     # --- Heuristic: bundled script lives outside `src/` ---
-    if "src" not in str(script_path):
+    if globals().get("__STITCHED__", False):
         version, commit = _get_metadata_from_header(script_path)
+        log("trace", f"got stiched version {version} with commit {commit}")
         return Metadata(version, commit)
 
     # --- Modular / source package case ---
@@ -159,9 +164,9 @@ def get_metadata() -> Metadata:
 
     # Try pyproject.toml for version
     root = Path(__file__).resolve().parents[2]
-
     pyproject = root / "pyproject.toml"
     if pyproject.exists():
+        log("trace", f"trying to read metadata from {pyproject}")
         text = pyproject.read_text()
         match = re.search(r'(?m)^\s*version\s*=\s*["\']([^"\']+)["\']', text)
         if match:
@@ -169,6 +174,7 @@ def get_metadata() -> Metadata:
 
     # Try git for commit
     try:
+        log("trace", "trying to get commit from git")
         result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],
             cwd=root,
@@ -180,6 +186,7 @@ def get_metadata() -> Metadata:
     except Exception:
         pass
 
+    log("trace", f"got module version {version} with commit {commit}")
     return Metadata(version, commit)
 
 

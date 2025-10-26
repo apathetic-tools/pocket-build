@@ -207,10 +207,13 @@ def main(argv: list[str] | None = None) -> int:
         use_color = getattr(args, "use_color", should_use_color())
         current_runtime["use_color"] = use_color
 
+        print("[TRACE] main ran from:", Path(__file__).resolve(), file=sys.__stderr__)
+
         # --- Version flag ---
         if getattr(args, "version", None):
             meta = get_metadata()
-            print(f"{PROGRAM_DISPLAY} {meta.version} ({meta.commit})")
+            stitched = " [stitched]" if globals().get("__STITCHED__", False) else ""
+            print(f"{PROGRAM_DISPLAY} {meta.version} ({meta.commit}){stitched}")
             return 0
 
         # --- Python version check ---

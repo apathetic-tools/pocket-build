@@ -18,6 +18,9 @@ import pytest
 __runtime_mode__ = "singlefile"
 
 
+PROJ_ROOT = Path(__file__).resolve().parent.parent.parent
+
+
 @pytest.mark.parametrize(
     "env_vars, expected_pattern",
     [
@@ -35,8 +38,7 @@ def test_make_script_respects_ci_env(
     """
 
     # --- setup ---
-    root = Path(__file__).resolve().parent.parent
-    builder = root / "dev" / "make_script.py"
+    builder = PROJ_ROOT / "dev" / "make_script.py"
     tmp_script = tmp_path / "script-test.py"
 
     # Ensure a clean rebuild every time -
@@ -60,7 +62,7 @@ def test_make_script_respects_ci_env(
         text=True,
         check=True,
         env=env,
-        cwd=root,
+        cwd=PROJ_ROOT,
     )
     assert not proc.stderr.strip(), f"Bundler stderr not empty: {proc.stderr}"
 
@@ -73,7 +75,7 @@ def test_make_script_respects_ci_env(
         capture_output=True,
         text=True,
         check=True,
-        cwd=root,
+        cwd=PROJ_ROOT,
     )
 
     out = result.stdout.strip()

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from pytest import MonkeyPatch
 
+import pocket_build.cli as mod_cli
 from pocket_build.meta import PROGRAM_SCRIPT
 
 
@@ -16,8 +17,6 @@ def test_include_flag_overrides_config(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--include should override config include patterns."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
@@ -36,10 +35,9 @@ def test_include_flag_overrides_config(
     )
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        # Override include at CLI level
-        code = mod_cli.main(["--include", "src/**"])
+    monkeypatch.chdir(tmp_path)
+    # Override include at CLI level
+    code = mod_cli.main(["--include", "src/**"])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -58,8 +56,6 @@ def test_exclude_flag_overrides_config(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--exclude should override config exclude patterns."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
@@ -71,10 +67,9 @@ def test_exclude_flag_overrides_config(
     config.write_text(json.dumps({"builds": [{"include": ["src/**"], "out": "dist"}]}))
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        # Pass exclude override on CLI
-        code = mod_cli.main(["--exclude", "*.tmp"])
+    monkeypatch.chdir(tmp_path)
+    # Pass exclude override on CLI
+    code = mod_cli.main(["--exclude", "*.tmp"])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -93,8 +88,6 @@ def test_add_include_extends_config(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--add-include should extend config include patterns, not override them."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
@@ -111,10 +104,9 @@ def test_add_include_extends_config(
     )
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        # Run with --add-include extra/**
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--add-include", "extra/**"])
+    # Run with --add-include extra/**
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--add-include", "extra/**"])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -136,8 +128,6 @@ def test_add_exclude_extends_config(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--add-exclude should extend config exclude patterns, not override them."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
@@ -154,10 +144,9 @@ def test_add_exclude_extends_config(
     )
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        # Add an extra exclude via CLI
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--add-exclude", "*.tmp"])
+    # Add an extra exclude via CLI
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--add-exclude", "*.tmp"])
 
     # --- verify ---
     out = capsys.readouterr().out

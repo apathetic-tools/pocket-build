@@ -55,3 +55,10 @@ def load_jsonc(path: Path) -> dict[str, Any] | list[Any] | None:
 
     # narrow type
     return cast(dict[str, Any] | list[Any], data)
+
+
+def is_stitched() -> bool:
+    """
+    Return True if running from a stitched single-file build.
+    """
+    return bool(globals().get("__STITCHED__", False))

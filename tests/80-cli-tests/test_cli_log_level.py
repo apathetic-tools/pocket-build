@@ -7,6 +7,8 @@ from pathlib import Path
 import pytest
 from pytest import MonkeyPatch
 
+import pocket_build.cli as mod_cli
+import pocket_build.runtime as mod_runtime
 from pocket_build.meta import PROGRAM_ENV, PROGRAM_SCRIPT
 
 
@@ -16,16 +18,13 @@ def test_quiet_flag(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Should suppress most output but still succeed."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--quiet"])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--quiet"])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -41,9 +40,6 @@ def test_verbose_flag(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Should print detailed file-level logs when --verbose is used."""
-    import pocket_build.cli as mod_cli
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     # create a tiny input directory with a file to copy
     src_dir = tmp_path / "src"
@@ -56,9 +52,8 @@ def test_verbose_flag(
     )
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--verbose"])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--verbose"])
 
     # --- verify ---
     captured = capsys.readouterr()
@@ -80,21 +75,18 @@ def test_verbose_and_quiet_mutually_exclusive(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Should fail when both --verbose and --quiet are provided."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
 
     # --- patch and execute and verify ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
+    monkeypatch.chdir(tmp_path)
 
-        # argparse should exit with SystemExit(2)
-        with pytest.raises(SystemExit) as e:
-            mod_cli.main(["--quiet", "--verbose"])
+    # argparse should exit with SystemExit(2)
+    with pytest.raises(SystemExit) as e:
+        mod_cli.main(["--quiet", "--verbose"])
 
-        assert e.value.code == 2  # argparse error exit code # must be outside context
+    assert e.value.code == 2  # argparse error exit code # must be outside context
 
     # --- verify only ---
     captured = capsys.readouterr()
@@ -110,17 +102,13 @@ def test_log_level_flag_sets_runtime(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--log-level should override config and environment."""
-    import pocket_build.cli as mod_cli
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--log-level", "debug"])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--log-level", "debug"])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -136,33 +124,29 @@ def test_log_level_from_env_var(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """LOG_LEVEL and {PROGRAM_ENV}_LOG_LEVEL should be respected when flag not given."""
-    import pocket_build.cli as mod_cli
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     # --- patch and execute and verify ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
+    monkeypatch.chdir(tmp_path)
 
-        # 1️⃣ Specific env var wins
-        mp.setenv(f"{PROGRAM_ENV}_LOG_LEVEL", "warning")
-        code = mod_cli.main([])
+    # 1️⃣ Specific env var wins
+    monkeypatch.setenv(f"{PROGRAM_ENV}_LOG_LEVEL", "warning")
+    code = mod_cli.main([])
 
-        assert code == 0
-        assert mod_runtime.current_runtime["log_level"] == "warning"
+    assert code == 0
+    assert mod_runtime.current_runtime["log_level"] == "warning"
 
-        # 2️⃣ Generic LOG_LEVEL fallback works
-        mp.delenv(f"{PROGRAM_ENV}_LOG_LEVEL")
-        mp.setenv("LOG_LEVEL", "error")
-        code = mod_cli.main([])
+    # 2️⃣ Generic LOG_LEVEL fallback works
+    monkeypatch.delenv(f"{PROGRAM_ENV}_LOG_LEVEL")
+    monkeypatch.setenv("LOG_LEVEL", "error")
+    code = mod_cli.main([])
 
-        assert code == 0
-        assert mod_runtime.current_runtime["log_level"] == "error"
+    assert code == 0
+    assert mod_runtime.current_runtime["log_level"] == "error"
 
-        mp.delenv("LOG_LEVEL", raising=False)
+    monkeypatch.delenv("LOG_LEVEL", raising=False)
 
 
 def test_per_build_log_level_override(
@@ -171,9 +155,6 @@ def test_per_build_log_level_override(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """A build's own log_level should temporarily override the runtime level."""
-    import pocket_build.cli as mod_cli
-    import pocket_build.runtime as mod_runtime
-
     # --- setup ---
     # Root config sets info, but the build overrides to debug
     config = tmp_path / f".{PROGRAM_SCRIPT}.json"
@@ -190,9 +171,8 @@ def test_per_build_log_level_override(
     )
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main([])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main([])
 
     # --- verify ---
     captured = capsys.readouterr()

@@ -7,6 +7,7 @@ from pathlib import Path
 import pytest
 from pytest import CaptureFixture, MonkeyPatch
 
+import pocket_build.cli as mod_cli
 from pocket_build.meta import PROGRAM_SCRIPT
 
 
@@ -16,18 +17,15 @@ def test_configless_run_with_include_flag(
     capsys: CaptureFixture[str],
 ) -> None:
     """Should run successfully without a config file when --include is provided."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
     (src_dir / "foo.txt").write_text("hello")
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        # No config file on purpose
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--include", "src/**", "--out", "dist"])
+    # No config file on purpose
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--include", "src/**", "--out", "dist"])
 
     # --- verify ---
     captured = capsys.readouterr()
@@ -52,17 +50,14 @@ def test_configless_run_with_add_include_flag(
     capsys: CaptureFixture[str],
 ) -> None:
     """Should run in CLI-only mode when --add-include is provided (no config)."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
     (src / "bar.txt").write_text("world")
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--add-include", "src/**", "--out", "outdir"])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--add-include", "src/**", "--out", "outdir"])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -77,16 +72,13 @@ def test_custom_config_path(
     monkeypatch: MonkeyPatch,
     capsys: CaptureFixture[str],
 ) -> None:
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     cfg = tmp_path / "custom.json"
     cfg.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--config", str(cfg)])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--config", str(cfg)])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -100,8 +92,6 @@ def test_out_flag_overrides_config(
     capsys: CaptureFixture[str],
 ) -> None:
     """Should use the --out flag instead of the config-defined output path."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
@@ -115,9 +105,8 @@ def test_out_flag_overrides_config(
     )
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--out", "override-dist"])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--out", "override-dist"])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -139,8 +128,6 @@ def test_out_flag_relative_to_cwd(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """--out should be relative to where the command is run (cwd)."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     project = tmp_path / "project"
     project.mkdir()
@@ -156,9 +143,8 @@ def test_out_flag_relative_to_cwd(
     cwd.mkdir()
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(cwd)
-        code = mod_cli.main(["--config", str(config), "--out", "output"])
+    monkeypatch.chdir(cwd)
+    code = mod_cli.main(["--config", str(config), "--out", "output"])
 
     # --- verify ---
     assert code == 0
@@ -174,8 +160,6 @@ def test_config_out_relative_to_config_file(
     monkeypatch: MonkeyPatch,
 ) -> None:
     """Out path in config should be relative to the config file itself."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     project = tmp_path / "project"
     project.mkdir()
@@ -186,11 +170,10 @@ def test_config_out_relative_to_config_file(
     config.write_text(json.dumps({"builds": [{"include": ["src/**"], "out": "dist"}]}))
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        cwd = tmp_path / "runner"
-        cwd.mkdir()
-        mp.chdir(cwd)
-        code = mod_cli.main(["--config", str(config)])
+    cwd = tmp_path / "runner"
+    cwd.mkdir()
+    monkeypatch.chdir(cwd)
+    code = mod_cli.main(["--config", str(config)])
 
     # --- verify ---
     assert code == 0
@@ -208,8 +191,6 @@ def test_python_config_preferred_over_json(
     capsys: CaptureFixture[str],
 ) -> None:
     """A .script.py config should take precedence over .jsonc/.json."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
@@ -237,9 +218,8 @@ builds = [
     json_cfg.write_text(json_dump)
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main([])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main([])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -263,8 +243,6 @@ def test_json_and_jsonc_config_supported(
     Both .script.jsonc and .script.json
     configs should be detected and used.
     """
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src_dir = tmp_path / "src"
     src_dir.mkdir()
@@ -286,9 +264,8 @@ def test_json_and_jsonc_config_supported(
     )
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main([])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main([])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -315,12 +292,11 @@ def test_absolute_include_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> N
     abs_out = tmp_path / "abs_out"
 
     # --- execute ---
-    with monkeypatch.context() as mp:
-        subdir = tmp_path / "subdir"
-        subdir.mkdir()
-        mp.chdir(subdir)  # move cwd away from src/out
+    subdir = tmp_path / "subdir"
+    subdir.mkdir()
+    monkeypatch.chdir(subdir)  # move cwd away from src/out
 
-        code = mod_cli.main(["--include", str(abs_src / "**"), "--out", str(abs_out)])
+    code = mod_cli.main(["--include", str(abs_src / "**"), "--out", str(abs_out)])
 
     # --- verify ---
     assert code == 0
@@ -333,8 +309,6 @@ def test_relative_include_with_parent_reference(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
     """Relative include like ../shared/** should resolve against cwd correctly."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     shared = tmp_path / "shared"
     shared.mkdir()
@@ -343,9 +317,8 @@ def test_relative_include_with_parent_reference(
     cwd.mkdir()
 
     # --- execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(cwd)
-        code = mod_cli.main(["--include", "../shared/**", "--out", "dist"])
+    monkeypatch.chdir(cwd)
+    code = mod_cli.main(["--include", "../shared/**", "--out", "dist"])
 
     # --- verify ---
     assert code == 0
@@ -357,8 +330,6 @@ def test_mixed_relative_and_absolute_includes(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
     """Mixing relative and absolute include paths should work with distinct bases."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     rel_src = tmp_path / "rel_src"
     abs_src = tmp_path / "abs_src"
@@ -370,11 +341,10 @@ def test_mixed_relative_and_absolute_includes(
     abs_out = tmp_path / "mixed_out"
 
     # --- execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(
-            ["--include", "rel_src/**", str(abs_src / "**"), "--out", str(abs_out)]
-        )
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(
+        ["--include", "rel_src/**", str(abs_src / "**"), "--out", str(abs_out)]
+    )
 
     # --- verify ---
     assert code == 0
@@ -384,17 +354,14 @@ def test_mixed_relative_and_absolute_includes(
 
 def test_trailing_slash_include(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     """Ensure `src/` copies contents directly (not nested src/src)."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
     (src / "inner.txt").write_text("ok")
 
     # --- execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--include", "src/", "--out", "outdir"])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--include", "src/", "--out", "outdir"])
 
     # --- verify ---
     assert code == 0
@@ -407,8 +374,6 @@ def test_absolute_out_does_not_create_relative_copy(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
     """Absolute --out should not create nested relative copies."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -416,14 +381,11 @@ def test_absolute_out_does_not_create_relative_copy(
     abs_out = tmp_path / "absolute_out"
 
     # --- execute ---
-    with monkeypatch.context() as mp:
-        subdir = tmp_path / "subdir"
-        subdir.mkdir()
-        mp.chdir(subdir)
+    subdir = tmp_path / "subdir"
+    subdir.mkdir()
+    monkeypatch.chdir(subdir)
 
-        code = mod_cli.main(
-            ["--include", str(tmp_path / "src/**"), "--out", str(abs_out)]
-        )
+    code = mod_cli.main(["--include", str(tmp_path / "src/**"), "--out", str(abs_out)])
 
     # --- verify ---
     assert code == 0
@@ -433,27 +395,31 @@ def test_absolute_out_does_not_create_relative_copy(
 
 def test_dot_prefix_include(monkeypatch: MonkeyPatch, tmp_path: Path):
     """'./src' include should behave the same as 'src'."""
-    import pocket_build.cli as mod_cli
-
+    # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
     (src / "file.txt").write_text("x")
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--include", "./src/**", "--out", "dist"])
+
+    # --- execute ---
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--include", "./src/**", "--out", "dist"])
+
+    # --- verify ---
     assert code == 0
     assert (tmp_path / "dist" / "file.txt").exists()
 
 
 def test_trailing_slash_on_out(monkeypatch: MonkeyPatch, tmp_path: Path):
     """Trailing slash in --out should not change output directory."""
-    import pocket_build.cli as mod_cli
-
+    # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
     (src / "foo.txt").write_text("bar")
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--include", "src/**", "--out", "dist/"])
+
+    # --- execute ---
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--include", "src/**", "--out", "dist/"])
+
+    # --- verify ---
     assert code == 0
     assert (tmp_path / "dist" / "foo.txt").exists()

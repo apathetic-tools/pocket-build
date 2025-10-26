@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 from pytest import MonkeyPatch
 
+import pocket_build.cli as mod_cli
 from pocket_build.meta import PROGRAM_SCRIPT
 
 
@@ -30,8 +31,6 @@ def test_default_respects_gitignore(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """By default, .gitignore patterns are respected."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -42,9 +41,8 @@ def test_default_respects_gitignore(
     make_config(tmp_path, [{"include": ["src/**"], "out": "dist"}])
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main([])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main([])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -62,8 +60,6 @@ def test_config_disables_gitignore(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Root config can globally disable .gitignore."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -82,9 +78,8 @@ def test_config_disables_gitignore(
     )
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main([])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main([])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -102,8 +97,6 @@ def test_build_enables_gitignore_even_if_root_disabled(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """A specific build can override root and re-enable .gitignore."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -125,9 +118,8 @@ def test_build_enables_gitignore_even_if_root_disabled(
     )
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main([])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main([])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -145,8 +137,6 @@ def test_cli_disables_gitignore_even_if_enabled_in_config(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--no-gitignore should always take precedence over config."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -157,9 +147,8 @@ def test_cli_disables_gitignore_even_if_enabled_in_config(
     make_config(tmp_path, [{"include": ["src/**"], "out": "dist"}])
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--no-gitignore"])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--no-gitignore"])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -178,8 +167,6 @@ def test_cli_enables_gitignore_even_if_config_disables_it(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--gitignore should re-enable even if config disables it."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -199,9 +186,8 @@ def test_cli_enables_gitignore_even_if_config_disables_it(
     )
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main(["--gitignore"])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main(["--gitignore"])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -219,8 +205,6 @@ def test_gitignore_patterns_append_to_existing_excludes(
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Patterns from .gitignore should merge with config exclude list."""
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -235,9 +219,8 @@ def test_gitignore_patterns_append_to_existing_excludes(
     )
 
     # --- patch and execute ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        code = mod_cli.main([])
+    monkeypatch.chdir(tmp_path)
+    code = mod_cli.main([])
 
     # --- verify ---
     out = capsys.readouterr().out
@@ -254,8 +237,6 @@ def test_cli_gitignore_disable_then_enable(
     tmp_path: Path,
     monkeypatch: MonkeyPatch,
 ):
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -265,10 +246,9 @@ def test_cli_gitignore_disable_then_enable(
     make_config(tmp_path, [{"include": ["src/**"], "out": "dist"}])
 
     # --- execute and verify ---
-    with monkeypatch.context() as mp:
-        mp.chdir(tmp_path)
-        mod_cli.main(["--no-gitignore"])
-        assert (tmp_path / "dist/a.tmp").exists()
-        shutil.rmtree(tmp_path / "dist")
-        mod_cli.main(["--gitignore"])
-        assert not (tmp_path / "dist/a.tmp").exists()
+    monkeypatch.chdir(tmp_path)
+    mod_cli.main(["--no-gitignore"])
+    assert (tmp_path / "dist/a.tmp").exists()
+    shutil.rmtree(tmp_path / "dist")
+    mod_cli.main(["--gitignore"])
+    assert not (tmp_path / "dist/a.tmp").exists()
