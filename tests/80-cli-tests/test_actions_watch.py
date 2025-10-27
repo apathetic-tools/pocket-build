@@ -14,6 +14,7 @@ from pytest import approx  # type: ignore[reportUnknownVariableType]
 from pytest import MonkeyPatch
 
 import pocket_build.actions as mod_actions
+import pocket_build.cli as mod_cli
 from pocket_build.cli import _setup_parser
 from pocket_build.constants import DEFAULT_WATCH_INTERVAL
 from pocket_build.meta import PROGRAM_SCRIPT
@@ -135,14 +136,6 @@ def test_watch_flag_invokes_watch_mode(
     resolves it as a global symbol within its own function body.
     That means we must patch the *namespace of main()*, not the module itself.
     """
-
-    # NOTE: These imports must occur inside the test (not at top of file).
-    # pocket_build.cli imports functions from pocket_build.actions at module load time.
-    # Importing both here ensures the test patches take effect *before* cli binds them,
-    # so mod_cli.main() uses the faked watch_for_changes() instead of the real one.
-    import pocket_build.actions as mod_actions
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
@@ -276,14 +269,6 @@ def test_watch_uses_config_interval_when_flag_passed(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Ensure that --watch (no value) uses watch_interval from config when defined."""
-
-    # NOTE: These imports must occur inside the test (not at top of file).
-    # pocket_build.cli imports functions from pocket_build.actions at module load time.
-    # Importing both here ensures the test patches take effect *before* cli binds them,
-    # so mod_cli.main() uses the faked watch_for_changes() instead of the real one.
-    import pocket_build.actions as mod_actions
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text(
@@ -319,14 +304,6 @@ def test_watch_falls_back_to_default_interval_when_no_config(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
     """Ensure --watch uses DEFAULT_WATCH_INTERVAL when no config interval is defined."""
-
-    # NOTE: These imports must occur inside the test (not at top of file).
-    # pocket_build.cli imports functions from pocket_build.actions at module load time.
-    # Importing both here ensures the test patches take effect *before* cli binds them,
-    # so mod_cli.main() uses the faked watch_for_changes() instead of the real one.
-    import pocket_build.actions as mod_actions
-    import pocket_build.cli as mod_cli
-
     # --- setup ---
     config = tmp_path / f".{PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
