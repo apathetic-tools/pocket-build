@@ -30,14 +30,14 @@ class Nested(TypedDict):
 # --- _infer_type_label ------------------------------------------------------
 
 
-def test_infer_type_label_basic_types():
+def test_infer_type_label_basic_types() -> None:
     # --- execute and verify ---
     assert "str" in mod_validate._infer_type_label(str)
     assert "list" in mod_validate._infer_type_label(list[str])
     assert "MiniBuild" in mod_validate._infer_type_label(MiniBuild)
 
 
-def test_infer_type_label_handles_unusual_types():
+def test_infer_type_label_handles_unusual_types() -> None:
     """Covers edge cases like custom classes and typing.Any."""
 
     # --- setup ---
@@ -53,7 +53,7 @@ def test_infer_type_label_handles_unusual_types():
 # --- _validate_scalar_value -------------------------------------------------
 
 
-def test_validate_scalar_value_returns_bool():
+def test_validate_scalar_value_returns_bool() -> None:
     # --- execute ---
     result = mod_validate._validate_scalar_value(
         strict=True,
@@ -67,7 +67,7 @@ def test_validate_scalar_value_returns_bool():
     assert isinstance(result, bool)
 
 
-def test_validate_scalar_value_accepts_correct_type(monkeypatch: MonkeyPatch):
+def test_validate_scalar_value_accepts_correct_type(monkeypatch: MonkeyPatch) -> None:
     # --- setup ---
     called: list[str] = []
 
@@ -83,7 +83,7 @@ def test_validate_scalar_value_accepts_correct_type(monkeypatch: MonkeyPatch):
     assert called == []
 
 
-def test_validate_scalar_value_rejects_wrong_type(monkeypatch: MonkeyPatch):
+def test_validate_scalar_value_rejects_wrong_type(monkeypatch: MonkeyPatch) -> None:
     # --- setup ---
     called: list[str] = []
 
@@ -99,7 +99,7 @@ def test_validate_scalar_value_rejects_wrong_type(monkeypatch: MonkeyPatch):
     assert any("expected int" in m for m in called)
 
 
-def test_validate_scalar_value_handles_fallback_path(monkeypatch: MonkeyPatch):
+def test_validate_scalar_value_handles_fallback_path(monkeypatch: MonkeyPatch) -> None:
     """If safe_isinstance raises, fallback isinstance check still works."""
 
     # --- setup ---
@@ -117,7 +117,7 @@ def test_validate_scalar_value_handles_fallback_path(monkeypatch: MonkeyPatch):
 # --- _validate_list_value ---------------------------------------------------
 
 
-def test_validate_list_value_accepts_list():
+def test_validate_list_value_accepts_list() -> None:
     # --- execute ---
     result = mod_validate._validate_list_value(
         strict=False,
@@ -131,7 +131,7 @@ def test_validate_list_value_accepts_list():
     assert isinstance(result, bool)
 
 
-def test_validate_list_value_rejects_nonlist(monkeypatch: MonkeyPatch):
+def test_validate_list_value_rejects_nonlist(monkeypatch: MonkeyPatch) -> None:
     # --- setup ---
     called: list[str] = []
 
@@ -147,7 +147,9 @@ def test_validate_list_value_rejects_nonlist(monkeypatch: MonkeyPatch):
     assert any("expected list" in m for m in called)
 
 
-def test_validate_list_value_rejects_wrong_element_type(monkeypatch: MonkeyPatch):
+def test_validate_list_value_rejects_wrong_element_type(
+    monkeypatch: MonkeyPatch,
+) -> None:
     # --- setup ---
     called: list[str] = []
 
@@ -163,7 +165,9 @@ def test_validate_list_value_rejects_wrong_element_type(monkeypatch: MonkeyPatch
     assert any("expected int" in m for m in called)
 
 
-def test_validate_list_value_handles_typed_dict_elements(monkeypatch: MonkeyPatch):
+def test_validate_list_value_handles_typed_dict_elements(
+    monkeypatch: MonkeyPatch,
+) -> None:
     # --- setup ---
     called: list[str] = []
 
@@ -183,12 +187,14 @@ def test_validate_list_value_handles_typed_dict_elements(monkeypatch: MonkeyPatc
     assert isinstance(ok, bool)
 
 
-def test_validate_list_value_accepts_empty_list():
+def test_validate_list_value_accepts_empty_list() -> None:
     # --- execute and verify ---
     assert mod_validate._validate_list_value(True, "ctx", "empty", [], int) is True
 
 
-def test_validate_list_value_rejects_nested_mixed_types(monkeypatch: MonkeyPatch):
+def test_validate_list_value_rejects_nested_mixed_types(
+    monkeypatch: MonkeyPatch,
+) -> None:
     """Nested lists with wrong inner types should fail."""
     # --- setup ---
     called: list[str] = []
@@ -207,7 +213,9 @@ def test_validate_list_value_rejects_nested_mixed_types(monkeypatch: MonkeyPatch
     assert any("expected list" in msg or "expected int" in msg for msg in called)
 
 
-def test_validate_list_value_mixed_types_like_integration(monkeypatch: MonkeyPatch):
+def test_validate_list_value_mixed_types_like_integration(
+    monkeypatch: MonkeyPatch,
+) -> None:
     """Ensure behavior matches validate_config scenario with list[str] violation."""
     # --- setup ---
     called: list[str] = []
@@ -227,7 +235,7 @@ def test_validate_list_value_mixed_types_like_integration(monkeypatch: MonkeyPat
 # --- _validate_typed_dict ---------------------------------------------------
 
 
-def test_validate_typed_dict_accepts_dict():
+def test_validate_typed_dict_accepts_dict() -> None:
     # --- execute ---
     result = mod_validate._validate_typed_dict(
         strict=True,
@@ -240,7 +248,7 @@ def test_validate_typed_dict_accepts_dict():
     assert isinstance(result, bool)
 
 
-def test_validate_typed_dict_rejects_non_dict(monkeypatch: MonkeyPatch):
+def test_validate_typed_dict_rejects_non_dict(monkeypatch: MonkeyPatch) -> None:
     # --- setup ---
     called: list[str] = []
 
@@ -256,7 +264,7 @@ def test_validate_typed_dict_rejects_non_dict(monkeypatch: MonkeyPatch):
     assert any("expected dict" in m for m in called)
 
 
-def test_validate_typed_dict_detects_unknown_keys(monkeypatch: MonkeyPatch):
+def test_validate_typed_dict_detects_unknown_keys(monkeypatch: MonkeyPatch) -> None:
     # --- setup ---
     called: list[str] = []
 
@@ -274,7 +282,7 @@ def test_validate_typed_dict_detects_unknown_keys(monkeypatch: MonkeyPatch):
     assert any("unknown key" in m for m in called)
 
 
-def test_validate_typed_dict_allows_missing_field():
+def test_validate_typed_dict_allows_missing_field() -> None:
     """Missing field should not cause failure."""
     # --- setup ---
     val = {"out": "dist"}  # 'include' missing
@@ -286,7 +294,7 @@ def test_validate_typed_dict_allows_missing_field():
     assert ok is True
 
 
-def test_validate_typed_dict_nested_recursion(monkeypatch: MonkeyPatch):
+def test_validate_typed_dict_nested_recursion(monkeypatch: MonkeyPatch) -> None:
     """Nested TypedDict structures should validate recursively."""
     # --- setup ---
     called: list[str] = []
@@ -309,7 +317,7 @@ def test_validate_typed_dict_nested_recursion(monkeypatch: MonkeyPatch):
 # --- _check_schema_conformance smoke ---------------------------------------
 
 
-def test_check_schema_conformance_smoke():
+def test_check_schema_conformance_smoke() -> None:
     # --- setup ---
     schema: dict[str, Any] = {"include": list[str], "out": str}
     cfg: dict[str, Any] = {"include": ["src"], "out": "dist"}
@@ -321,7 +329,9 @@ def test_check_schema_conformance_smoke():
     assert isinstance(result, bool)
 
 
-def test_check_schema_conformance_matches_list_validator(monkeypatch: MonkeyPatch):
+def test_check_schema_conformance_matches_list_validator(
+    monkeypatch: MonkeyPatch,
+) -> None:
     """Ensures _check_schema_conformance returns
     same validity as low-level list validator."""
     # --- setup ---

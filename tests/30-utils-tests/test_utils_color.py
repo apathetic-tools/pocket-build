@@ -120,7 +120,7 @@ def test_colorize_respects_runtime_flag(monkeypatch: MonkeyPatch) -> None:
     assert result == text
 
 
-def test_no_color_overrides_force_color(monkeypatch: MonkeyPatch):
+def test_no_color_overrides_force_color(monkeypatch: MonkeyPatch) -> None:
     # --- patch, execute and verify ---
     monkeypatch.setenv("NO_COLOR", "1")
     monkeypatch.setenv("FORCE_COLOR", "1")

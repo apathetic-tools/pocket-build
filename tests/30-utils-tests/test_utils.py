@@ -110,7 +110,7 @@ def test_normalize_path_string_behavior(
         assert stderr == ""
 
 
-def test_make_includeresolved_preserves_trailing_slash():
+def test_make_includeresolved_preserves_trailing_slash() -> None:
     # --- execute --
     entry = make_includeresolved("src/", base=".", origin="test")
 

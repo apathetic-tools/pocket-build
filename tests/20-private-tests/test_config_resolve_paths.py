@@ -9,7 +9,7 @@ from pathlib import Path
 import pocket_build.config_resolve as mod_resolve
 
 
-def test_relative_path_preserves_string(tmp_path: Path):
+def test_relative_path_preserves_string(tmp_path: Path) -> None:
     # --- setup ---
     base = tmp_path
     rel = "src/"
@@ -24,7 +24,7 @@ def test_relative_path_preserves_string(tmp_path: Path):
     assert p == "src/"
 
 
-def test_relative_path_as_path_object(tmp_path: Path):
+def test_relative_path_as_path_object(tmp_path: Path) -> None:
     # --- setup ---
     rel = Path("src")
 
@@ -37,7 +37,7 @@ def test_relative_path_as_path_object(tmp_path: Path):
     assert str(p) == "src"
 
 
-def test_absolute_literal_dir(tmp_path: Path):
+def test_absolute_literal_dir(tmp_path: Path) -> None:
     # --- setup ---
     abs_dir = tmp_path / "absdir"
     abs_dir.mkdir()
@@ -50,7 +50,7 @@ def test_absolute_literal_dir(tmp_path: Path):
     assert p == "."
 
 
-def test_absolute_trailing_slash_means_contents(tmp_path: Path):
+def test_absolute_trailing_slash_means_contents(tmp_path: Path) -> None:
     # --- setup ---
     abs_dir = tmp_path / "absdir"
     abs_dir.mkdir()
@@ -64,7 +64,7 @@ def test_absolute_trailing_slash_means_contents(tmp_path: Path):
     assert p == "**"  # trailing slash → copy contents
 
 
-def test_absolute_glob_preserves_pattern(tmp_path: Path):
+def test_absolute_glob_preserves_pattern(tmp_path: Path) -> None:
     # --- setup ---
     abs_dir = tmp_path / "absdir"
     abs_dir.mkdir()
@@ -78,7 +78,7 @@ def test_absolute_glob_preserves_pattern(tmp_path: Path):
     assert p == "**"
 
 
-def test_returns_resolved_base_for_relative_context(tmp_path: Path):
+def test_returns_resolved_base_for_relative_context(tmp_path: Path) -> None:
     # --- setup ---
     cwd = tmp_path / "proj"
     cwd.mkdir()
@@ -92,7 +92,7 @@ def test_returns_resolved_base_for_relative_context(tmp_path: Path):
     assert p == "foo/**"
 
 
-def test_handles_absolute_file(tmp_path: Path):
+def test_handles_absolute_file(tmp_path: Path) -> None:
     # --- setup ---
     f = tmp_path / "file.txt"
     f.write_text("x")

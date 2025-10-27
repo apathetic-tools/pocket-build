@@ -391,7 +391,7 @@ def test_absolute_out_does_not_create_relative_copy(
     assert not (tmp_path / "subdir" / "absolute_out").exists()
 
 
-def test_dot_prefix_include(monkeypatch: MonkeyPatch, tmp_path: Path):
+def test_dot_prefix_include(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     """'./src' include should behave the same as 'src'."""
     # --- setup ---
     src = tmp_path / "src"
@@ -407,7 +407,7 @@ def test_dot_prefix_include(monkeypatch: MonkeyPatch, tmp_path: Path):
     assert (tmp_path / "dist" / "file.txt").exists()
 
 
-def test_trailing_slash_on_out(monkeypatch: MonkeyPatch, tmp_path: Path):
+def test_trailing_slash_on_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     """Trailing slash in --out should not change output directory."""
     # --- setup ---
     src = tmp_path / "src"

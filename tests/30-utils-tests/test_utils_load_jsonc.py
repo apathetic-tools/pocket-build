@@ -144,7 +144,7 @@ def test_load_jsonc_invalid_json(tmp_path: Path) -> None:
     assert "bad.jsonc" in str(e.value)
 
 
-def test_load_jsonc_rejects_scalar_root(tmp_path: Path):
+def test_load_jsonc_rejects_scalar_root(tmp_path: Path) -> None:
     # --- setup ---
     cfg = tmp_path / "scalar.jsonc"
     cfg.write_text('"hello"')
@@ -154,7 +154,7 @@ def test_load_jsonc_rejects_scalar_root(tmp_path: Path):
         mod_utils_core.load_jsonc(cfg)
 
 
-def test_load_jsonc_multiline_block_comment(tmp_path: Path):
+def test_load_jsonc_multiline_block_comment(tmp_path: Path) -> None:
     # --- setup ---
     cfg = tmp_path / "multi.jsonc"
     cfg.write_text('{"a": 1, /* comment\nspanning\nlines */ "b": 2}')

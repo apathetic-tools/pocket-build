@@ -340,7 +340,7 @@ def test_resolve_build_config_inherits_root_gitignore_setting(tmp_path: Path) ->
     assert resolved["respect_gitignore"] is False
 
 
-def test_resolve_build_config_preserves_trailing_slash(tmp_path: Path):
+def test_resolve_build_config_preserves_trailing_slash(tmp_path: Path) -> None:
     # --- setup ---
     raw: BuildConfigInput = {"include": ["src/"], "out": "dist"}
     args = Namespace()  # empty placeholder

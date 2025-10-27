@@ -239,7 +239,7 @@ def test_log_includes_some_prefix_for_non_info(monkeypatch: MonkeyPatch) -> None
     assert any(cleaned.startswith(p) for p in ("[", "⚠️", "❌", "💥"))
 
 
-def test_log_below_threshold_suppressed(monkeypatch: MonkeyPatch):
+def test_log_below_threshold_suppressed(monkeypatch: MonkeyPatch) -> None:
     # --- patch and execute ---
     out, err = capture_log_output(monkeypatch, "info", "error", msg="hidden")
 
@@ -247,7 +247,7 @@ def test_log_below_threshold_suppressed(monkeypatch: MonkeyPatch):
     assert not out and not err
 
 
-def test_log_includes_ansi_when_color_enabled(monkeypatch: MonkeyPatch):
+def test_log_includes_ansi_when_color_enabled(monkeypatch: MonkeyPatch) -> None:
     # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "use_color", True)
     out, _ = capture_log_output(monkeypatch, "debug", "debug", msg="colored")

@@ -75,7 +75,7 @@ def test_parse_config_watch_interval_hoisting() -> None:
     assert "watch_interval" not in result["builds"][0]
 
 
-def test_parse_config_coerces_build_list_to_builds(monkeypatch: MonkeyPatch):
+def test_parse_config_coerces_build_list_to_builds(monkeypatch: MonkeyPatch) -> None:
     """Dict with 'build' as a list should coerce to 'builds' with a warning."""
     # --- setup ---
     data: dict[str, Any] = {"build": [{"include": ["src"]}, {"include": ["assets"]}]}
@@ -104,7 +104,7 @@ def test_parse_config_coerces_build_list_to_builds(monkeypatch: MonkeyPatch):
     assert any("Config key 'build' was a list" in msg for _, msg in logged)
 
 
-def test_parse_config_coerces_builds_dict_to_build(monkeypatch: MonkeyPatch):
+def test_parse_config_coerces_builds_dict_to_build(monkeypatch: MonkeyPatch) -> None:
     """Dict with 'builds' as a dict should coerce to 'build' list with a warning."""
     # --- setup ---
     data: dict[str, Any] = {"builds": {"include": ["src"], "out": "dist"}}
@@ -132,7 +132,7 @@ def test_parse_config_coerces_builds_dict_to_build(monkeypatch: MonkeyPatch):
     assert any("Config key 'builds' was a dict" in msg for _, msg in logged)
 
 
-def test_parse_config_does_not_coerce_when_both_keys_present():
+def test_parse_config_does_not_coerce_when_both_keys_present() -> None:
     """If both 'build' and 'builds' exist, parser should not guess."""
     # --- setup ---
     data: dict[str, Any] = {
@@ -148,7 +148,9 @@ def test_parse_config_does_not_coerce_when_both_keys_present():
     assert result == data
 
 
-def test_parse_config_accepts_explicit_builds_list_no_warning(monkeypatch: MonkeyPatch):
+def test_parse_config_accepts_explicit_builds_list_no_warning(
+    monkeypatch: MonkeyPatch,
+) -> None:
     """Explicit 'builds' list should pass through without coercion or warning."""
     # --- setup ---
     data: dict[str, Any] = {"builds": [{"include": ["src"]}, {"include": ["lib"]}]}
@@ -176,7 +178,7 @@ def test_parse_config_accepts_explicit_builds_list_no_warning(monkeypatch: Monke
     assert not logged
 
 
-def test_parse_config_rejects_invalid_root_type():
+def test_parse_config_rejects_invalid_root_type() -> None:
     """Non-dict or non-list root should raise a TypeError."""
     # --- execute and verify ---
     try:
@@ -223,7 +225,7 @@ def test_parse_config_build_list_does_not_warn_when_builds_also_present(
     assert not logged
 
 
-def test_parse_config_build_dict_with_extra_root_fields():
+def test_parse_config_build_dict_with_extra_root_fields() -> None:
     """Flat single build dict should hoist only shared keys, keep extras in build."""
     # --- setup ---
     data: dict[str, Any] = {
@@ -245,7 +247,7 @@ def test_parse_config_build_dict_with_extra_root_fields():
     assert "watch_interval" not in build
 
 
-def test_parse_config_empty_dict_inside_builds_list():
+def test_parse_config_empty_dict_inside_builds_list() -> None:
     """Ensure even an empty dict inside builds list is accepted as a valid build."""
     # --- setup ---
     data: dict[str, Any] = {"builds": [{}]}
@@ -257,7 +259,7 @@ def test_parse_config_empty_dict_inside_builds_list():
     assert result == {"builds": [{}]}
 
 
-def test_parse_config_builds_empty_list_is_returned_as_is():
+def test_parse_config_builds_empty_list_is_returned_as_is() -> None:
     """An explicit empty builds list should not trigger coercion or defaults."""
     # --- setup ---
     data: dict[str, Any] = {"builds": []}
@@ -270,7 +272,7 @@ def test_parse_config_builds_empty_list_is_returned_as_is():
     assert result == {"builds": []}
 
 
-def test_parse_config_list_of_dicts_hoists_first_watch_interval():
+def test_parse_config_list_of_dicts_hoists_first_watch_interval() -> None:
     """Multi-build shorthand list should hoist
     first watch_interval and clear it from builds."""
     # --- setup ---
@@ -288,7 +290,9 @@ def test_parse_config_list_of_dicts_hoists_first_watch_interval():
     assert all("watch_interval" not in b for b in result["builds"])
 
 
-def test_parse_config_prefers_builds_when_both_are_dicts(monkeypatch: MonkeyPatch):
+def test_parse_config_prefers_builds_when_both_are_dicts(
+    monkeypatch: MonkeyPatch,
+) -> None:
     """If both 'builds' and 'build' are dicts,
     parser should use 'builds' and not warn."""
     # --- setup ---

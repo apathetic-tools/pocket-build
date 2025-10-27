@@ -160,7 +160,7 @@ __commit__ = "abc1234"
     assert commit == "abc1234"
 
 
-def test__get_metadata_from_header_missing_all(tmp_path: Path):
+def test__get_metadata_from_header_missing_all(tmp_path: Path) -> None:
     # --- setup ---
     p = tmp_path / "script.py"
     p.write_text("# no metadata")

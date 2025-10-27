@@ -185,7 +185,7 @@ def test_root_and_build_strict_config(monkeypatch: MonkeyPatch) -> None:
     assert any("unknown key" in msg for _lvl, msg in called)
 
 
-def test_invalid_missing_builds_key():
+def test_invalid_missing_builds_key() -> None:
     # --- setup ---
     cfg: dict[str, Any] = {"not_builds": []}
 
@@ -193,7 +193,7 @@ def test_invalid_missing_builds_key():
     assert mod_validate.validate_config(cfg) is False
 
 
-def test_valid_with_optional_fields():
+def test_valid_with_optional_fields() -> None:
     # --- setup ---
     cfg: dict[str, Any] = {
         "builds": [{"include": ["src"], "out": "dist"}],
@@ -206,7 +206,7 @@ def test_valid_with_optional_fields():
     assert mod_validate.validate_config(cfg) is True
 
 
-def test_empty_build_dict():
+def test_empty_build_dict() -> None:
     # --- setup ---
     cfg: dict[str, Any] = {"builds": [{}]}
 

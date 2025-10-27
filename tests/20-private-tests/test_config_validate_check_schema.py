@@ -132,7 +132,7 @@ def test_prewarn_keys_ignored() -> None:
     )
 
 
-def test_list_of_typeddict_with_invalid_inner_type():
+def test_list_of_typeddict_with_invalid_inner_type() -> None:
     # --- setup ---
     schema = {"builds": list[MiniBuild]}
     cfg: dict[str, Any] = {"builds": [{"include": [123], "out": "dist"}]}
@@ -140,7 +140,7 @@ def test_list_of_typeddict_with_invalid_inner_type():
     assert mod_validate._check_schema_conformance(True, cfg, schema, "root") is False
 
 
-def test_extra_field_in_typeddict_strict():
+def test_extra_field_in_typeddict_strict() -> None:
     # --- setup ---
     schema = {"builds": list[MiniBuild]}
     cfg: dict[str, Any] = {
@@ -150,6 +150,6 @@ def test_extra_field_in_typeddict_strict():
     assert mod_validate._check_schema_conformance(True, cfg, schema, "root") is False
 
 
-def test_empty_schema_and_config():
+def test_empty_schema_and_config() -> None:
     # --- execute and validate ---
     assert mod_validate._check_schema_conformance(False, {}, {}, "root")

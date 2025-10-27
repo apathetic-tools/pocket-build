@@ -251,7 +251,7 @@ def test_copy_item_nested_relative_path(
     assert (tmp_path / "out" / "nested" / "deep.txt").exists()
 
 
-def test_copy_file_symlink(tmp_path: Path, monkeypatch: MonkeyPatch):
+def test_copy_file_symlink(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
     # --- setup ---
     target = tmp_path / "target.txt"
     target.write_text("hi")

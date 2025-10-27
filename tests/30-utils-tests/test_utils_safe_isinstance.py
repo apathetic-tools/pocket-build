@@ -93,7 +93,7 @@ def test_does_not_raise_on_weird_types() -> None:
     assert isinstance(result, bool)
 
 
-def test_nested_generics_work():
+def test_nested_generics_work() -> None:
     # --- setup ---
     L2 = list[list[int]]
 
@@ -102,7 +102,7 @@ def test_nested_generics_work():
     assert not mod_utils_types.safe_isinstance([[1, "a"]], L2)
 
 
-def test_literal_values_match():
+def test_literal_values_match() -> None:
     # --- setup ---
     Lit = typing.Literal["x", "y"]
 
@@ -111,7 +111,7 @@ def test_literal_values_match():
     assert not mod_utils_types.safe_isinstance("z", Lit)
 
 
-def test_tuple_generic_support():
+def test_tuple_generic_support() -> None:
     # --- setup ---
     Tup = tuple[int, str]
 
