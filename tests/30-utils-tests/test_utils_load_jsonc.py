@@ -150,7 +150,7 @@ def test_load_jsonc_rejects_scalar_root(tmp_path: Path):
     cfg.write_text('"hello"')
 
     # --- execute and verify ---
-    with pytest.raises(ValueError, match="Invalid config root type"):
+    with pytest.raises(ValueError, match="Invalid JSONC root type"):
         mod_utils_core.load_jsonc(cfg)
 
 

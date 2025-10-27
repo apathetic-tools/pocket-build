@@ -25,7 +25,6 @@ Exploring bundling options for generating the single-file release:
 - [ ] Deploy action when I tag a release should create a release and attach it to the tagged release.
 - [ ] put utils into a submodule
 - [ ] position args 1 for input s2 for outputs
-- [ ] load_config should log nice messages
 - [ ] exceptions need to be dealt with before they hit main
 - [ ] main is just high level orchestration and making sure the right command is run
 - [ ] a helper for API folks that adds stdout, stderr, and stdout+stderr to return values and exceptions

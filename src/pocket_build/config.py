@@ -21,7 +21,7 @@ from .types import (
     BuildConfigInput,
     RootConfigInput,
 )
-from .utils import load_jsonc
+from .utils import load_jsonc, remove_path_in_error_message
 from .utils_types import cast_hint, schema_from_typeddict
 from .utils_using_runtime import log
 
@@ -175,7 +175,13 @@ def load_config(config_path: Path) -> dict[str, Any] | list[Any] | None:
         )
 
     # JSONC / JSON fallback
-    return load_jsonc(config_path)
+    try:
+        return load_jsonc(config_path)
+    except ValueError as e:
+        clean_msg = remove_path_in_error_message(str(e), config_path)
+        raise ValueError(
+            f"Error while loading configuration file '{config_path.name}': {clean_msg}"
+        ) from e
 
 
 def parse_config(
