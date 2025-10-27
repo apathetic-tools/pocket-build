@@ -208,6 +208,8 @@ def parse_config(
     # NOTE: This function only normalizes shape — it does NOT validate or restrict keys.
     #       Unknown keys are preserved for the validation phase.
 
+    root: dict[str, Any]  # type it once
+
     # --- Case 1: empty config → one blank build ---
     # Includes None (empty file / config = None), [] (no builds), and {} (empty object)
     if not raw_config or raw_config == {}:  # handles None, [], {}
@@ -226,7 +228,7 @@ def parse_config(
         first_watch = next(
             (b.get("watch_interval") for b in builds if "watch_interval" in b), None
         )
-        root: dict[str, Any] = {"builds": builds}
+        root = {"builds": builds}
         if first_watch is not None:
             root["watch_interval"] = first_watch
             for b in builds:
@@ -240,14 +242,35 @@ def parse_config(
             "(expected dict, list of dicts, or list of strings)"
         )
 
-    # --- Case 4: dict with "builds" key → root with multi-builds ---
-    if isinstance(raw_config.get("builds"), list):
-        return dict(raw_config)  # preserve all user keys
+    builds_val = raw_config.get("builds")
+    build_val = raw_config.get("build")
 
-    # --- Case 5: dict with "build" key → root with single-build ---
-    if isinstance(raw_config.get("build"), dict):
-        root = dict(raw_config)
-        root["builds"] = [dict(root.pop("build"))]
+    # --- Case 4: dict with "build(s)" key → root with multi-builds ---
+    if isinstance(builds_val, list) or (
+        isinstance(build_val, list) and "builds" not in raw_config
+    ):
+        root = dict(raw_config)  # preserve all user keys
+
+        # If user used "build" with a list → coerce, warn
+        if isinstance(build_val, list) and "builds" not in raw_config:
+            log("warning", "Config key 'build' was a list — treating as 'builds'.")
+            root["builds"] = build_val
+            root.pop("build", None)
+
+        return root
+
+    # --- Case 5: dict with "build(s)" key → root with single-build ---
+    if isinstance(build_val, dict) or isinstance(builds_val, dict):
+        root = dict(raw_config)  # preserve all user keys
+
+        # If user used "builds" with a dict → coerce, warn
+        if isinstance(builds_val, dict):
+            log("warning", "Config key 'builds' was a dict — treating as 'build'.")
+            root["builds"] = [builds_val]
+            # keep the 'builds' key — it's now properly normalized
+        else:
+            root["builds"] = [dict(root.pop("build"))]
+
         # no hoisting since they specified a root
         return root
 
