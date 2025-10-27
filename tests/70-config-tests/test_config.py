@@ -10,7 +10,7 @@ import pocket_build.utils_using_runtime as mod_utils_runtime
 from tests.utils import patch_everywhere
 
 
-def test_parse_builds_accepts_list_and_single_object() -> None:
+def test_parse_config_builds_accepts_list_and_single_object() -> None:
     """Ensure parse_builds accepts both a list and a single build object."""
 
     # --- setup ---
@@ -30,7 +30,7 @@ def test_parse_builds_accepts_list_and_single_object() -> None:
     }
 
 
-def test_parse_builds_handles_single_and_multiple() -> None:
+def test_parse_config_builds_handles_single_and_multiple() -> None:
     # --- execute and verify ---
     assert mod_config.parse_config({"builds": [{"include": []}]}) == {
         "builds": [{"include": []}]
@@ -327,3 +327,44 @@ def test_parse_config_prefers_builds_when_both_are_dicts(
     assert "build" in result and result["build"] == {"include": ["lib"]}
     # warning was emitted for coercing 'builds' dict → list
     assert any("Config key 'builds' was a dict" in msg for _, msg in logged)
+
+
+def test_validate_config_suggests_similar_keys(monkeypatch: MonkeyPatch) -> None:
+    """Validator should suggest close matches for mistyped keys."""
+    # --- setup ---
+    # Build a minimal but valid config with two bad keys that look like
+    # legitimate ones so fuzzy suggestions trigger.
+    bad_cfg: dict[str, Any] = {
+        "buils": [],  # close to "builds"
+        "outt": "dist",  # close to "out"
+    }
+    logged: list[tuple[str, str]] = []
+
+    # --- stubs ---
+    def fake_log(
+        level: str,
+        *values: object,
+        sep: str = " ",
+        _end: str = "\n",
+        _file: TextIO | None = None,
+        _flush: bool = False,
+        _prefix: str | None = None,
+    ) -> None:
+        msg = sep.join(str(v) for v in values)
+        logged.append((level, msg))
+
+    # --- patch and execute ---
+    # Patch global log used by the validator
+    import pocket_build.config_validate as mod_validate
+
+    patch_everywhere(monkeypatch, mod_validate, "log", fake_log)
+    result = mod_validate.validate_config(bad_cfg)
+
+    # --- verify ---
+    assert result is True or result is False  # should return a bool
+    # Find all messages mentioning 'unknown key' and 'Hint:'
+    joined = "\n".join(msg for _, msg in logged)
+    assert "unknown key" in joined
+    # Each bad key should appear with a suggestion line
+    assert "'buils' → 'builds'" in joined
+    assert "'outt' → 'out'" in joined

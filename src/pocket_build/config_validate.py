@@ -1,9 +1,10 @@
 # src/pocket_build/config_validate.py
 from __future__ import annotations
 
+from difflib import get_close_matches
 from typing import Any, cast, get_args, get_origin
 
-from .constants import DEFAULT_STRICT_CONFIG
+from .constants import DEFAULT_HINT_CUTOFF, DEFAULT_STRICT_CONFIG
 from .types import BuildConfigInput, RootConfigInput
 from .utils_types import cast_hint, safe_isinstance, schema_from_typeddict
 from .utils_using_runtime import log
@@ -262,13 +263,21 @@ def _check_schema_conformance(
             )
 
     # --- unknown keys ---
-    unknown = [k for k in cfg if k not in schema and k not in prewarn]
+    unknown: list[str] = []
+    hints: list[str] = []
+    for k in cfg:
+        if k in schema or k in prewarn:
+            continue
+        unknown.append(k)
+        close = get_close_matches(k, schema.keys(), n=1, cutoff=DEFAULT_HINT_CUTOFF)
+        if close:
+            hints.append("'" + k + "' → '" + close[0] + "'")
     if unknown:
         plural = "s" if len(unknown) > 1 else ""
-        _log_strict(
-            strict_config,
-            f"{len(unknown)} unknown key{plural} {context}: {', '.join(unknown)}",
-        )
+        msg = f"{len(unknown)} unknown key{plural} {context}: {', '.join(unknown)}"
+        if hints:
+            msg += "\nHint: did you mean " + ", ".join(hints) + "?"
+        _log_strict(strict_config, msg)
         if strict_config:
             valid = False
 
