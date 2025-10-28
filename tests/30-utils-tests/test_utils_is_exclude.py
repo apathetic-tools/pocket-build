@@ -13,8 +13,6 @@ Checklist:
 - gitignore_double_star_diff — '**' not recursive unlike gitignore in ≤Py3.10.
 """
 
-from __future__ import annotations
-
 import sys
 from pathlib import Path
 

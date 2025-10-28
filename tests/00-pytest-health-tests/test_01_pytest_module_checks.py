@@ -7,8 +7,6 @@ If RUNTIME_MODE=singlefile, all modules must resolve to the stitched file.
 Otherwise, they must resolve to the src tree.
 """
 
-from __future__ import annotations
-
 import importlib
 import inspect
 import os

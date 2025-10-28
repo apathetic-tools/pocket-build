@@ -9,8 +9,6 @@ and matches the declared version from pyproject.toml.
 # pyright: reportPrivateUsage=false
 # ruff: noqa: F401
 
-from __future__ import annotations
-
 import os
 import re
 import subprocess

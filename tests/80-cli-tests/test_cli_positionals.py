@@ -2,8 +2,6 @@
 
 """Tests for positional argument and flag interaction in package.cli."""
 
-from __future__ import annotations
-
 from pathlib import Path
 
 import pytest

@@ -15,8 +15,6 @@ Checklist:
 # pyright: reportPrivateUsage=false
 # ruff: noqa: F401
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from pocket_build.build import _compute_dest

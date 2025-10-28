@@ -1,8 +1,6 @@
 # tests/test_utils_safe_isinstance.py
 """Focused tests for pocket_build.utils_core.safe_isinstance."""
 
-from __future__ import annotations
-
 import typing
 
 import pocket_build.utils_types as mod_utils_types

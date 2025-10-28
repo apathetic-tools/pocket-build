@@ -5,8 +5,6 @@
 # pyright: reportPrivateUsage=false
 # ruff: noqa: F401
 
-from __future__ import annotations
-
 import time
 from pathlib import Path
 from typing import Any, Callable

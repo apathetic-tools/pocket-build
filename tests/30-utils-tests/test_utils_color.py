@@ -3,8 +3,6 @@
 
 # not doing tests for resolved_use_color()
 
-from __future__ import annotations
-
 import sys
 import types
 from typing import Generator

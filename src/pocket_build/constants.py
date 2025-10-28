@@ -3,8 +3,6 @@
 Central constants used across the project.
 """
 
-from __future__ import annotations
-
 # --- env keys ---
 DEFAULT_ENV_LOG_LEVEL: str = "LOG_LEVEL"
 DEFAULT_ENV_RESPECT_GITIGNORE: str = "RESPECT_GITINGORE"

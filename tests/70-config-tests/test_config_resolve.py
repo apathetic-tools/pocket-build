@@ -2,8 +2,6 @@
 
 """Tests for pocket_build.config_resolve."""
 
-from __future__ import annotations
-
 import argparse
 from argparse import Namespace
 from pathlib import Path

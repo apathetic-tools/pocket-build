@@ -1,7 +1,5 @@
 # tests/test-utils-tests/test_test_utils.py
 
-from __future__ import annotations
-
 from pathlib import Path
 
 from tests.utils import make_build_cfg, make_include_resolved

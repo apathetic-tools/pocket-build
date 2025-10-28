@@ -1,7 +1,5 @@
 #!/usr/bin/env python3
 # src/pocket_build/__main__.py
-from __future__ import annotations
-
 import sys
 
 from .cli import main

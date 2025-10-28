@@ -1,8 +1,6 @@
 # tests/test_cli_gitignore.py
 """Tests for .gitignore handling and precedence in package.cli."""
 
-from __future__ import annotations
-
 import json
 import shutil
 from pathlib import Path

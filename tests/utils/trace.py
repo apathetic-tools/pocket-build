@@ -7,8 +7,6 @@ to bypass pytest’s capture system. This makes output visible even during
 setup or import-time execution. Enable by setting TRACE=1 (or 'true', 'yes').
 """
 
-from __future__ import annotations
-
 import builtins
 import importlib
 import os

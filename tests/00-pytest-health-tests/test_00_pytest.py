@@ -4,8 +4,6 @@
 #   tests here should always pass and do not invoke our
 #   module itself.
 
-from __future__ import annotations
-
 
 # this test does not use runtime_env
 def test_pytest_runs() -> None:

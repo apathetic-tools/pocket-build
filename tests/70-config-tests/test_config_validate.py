@@ -1,8 +1,6 @@
 # tests/test_config_validate.py
 """Tests for pocket_build.config_validate."""
 
-from __future__ import annotations
-
 from typing import Any
 
 import pocket_build.config_validate as mod_validate

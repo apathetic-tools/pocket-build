@@ -16,8 +16,6 @@ Highlights:
     - get_metadata()      → Retrieve version / commit info
 """
 
-from __future__ import annotations
-
 from .actions import (
     get_metadata,
     run_selftest,

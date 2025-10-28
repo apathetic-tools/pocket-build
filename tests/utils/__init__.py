@@ -1,7 +1,5 @@
 # tests/utils/__init__.py
 
-from __future__ import annotations
-
 from .buildconfig import (
     make_build_cfg,
     make_build_input,
