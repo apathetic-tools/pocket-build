@@ -1,5 +1,5 @@
 # src/pocket_build/utils_using_runtime.py
-from __future__ import annotations
+
 
 import os
 import re

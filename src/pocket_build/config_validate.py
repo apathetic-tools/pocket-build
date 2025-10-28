@@ -1,5 +1,5 @@
 # src/pocket_build/config_validate.py
-from __future__ import annotations
+
 
 from typing import Any
 

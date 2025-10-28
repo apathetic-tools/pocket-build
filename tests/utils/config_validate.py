@@ -1,6 +1,5 @@
 # tests/utils/config_validate.py
 
-from __future__ import annotations
 
 import pocket_build.utils_schema as mod_utils_schema
 

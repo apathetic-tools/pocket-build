@@ -1,5 +1,5 @@
 # src/pocket_build/utils_schema.py
-from __future__ import annotations
+
 
 from dataclasses import dataclass
 from difflib import get_close_matches

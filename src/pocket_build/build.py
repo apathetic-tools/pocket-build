@@ -1,5 +1,5 @@
 # src/pocket_build/build.py
-from __future__ import annotations
+
 
 import re
 import shutil

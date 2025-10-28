@@ -3,8 +3,6 @@
 
 # pyright: reportPrivateUsage=false
 
-from __future__ import annotations
-
 from typing import Any, TypedDict
 
 from pytest import MonkeyPatch

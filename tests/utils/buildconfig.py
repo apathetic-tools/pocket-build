@@ -1,8 +1,6 @@
 # tests/utils/buildconfig.py
 """Shared test helpers for constructing fake BuildConfig and related types."""
 
-from __future__ import annotations
-
 from pathlib import Path
 from typing import cast
 
