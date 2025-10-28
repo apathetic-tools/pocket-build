@@ -1,6 +1,8 @@
 # tests/test_build.py
 """Tests for package.build (module and single-file versions)."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 from pytest import MonkeyPatch

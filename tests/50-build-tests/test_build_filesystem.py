@@ -1,6 +1,8 @@
 # tests/test_build_filesystem.py
 """Tests for package.build (module and single-file versions)."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 from pytest import CaptureFixture, MonkeyPatch

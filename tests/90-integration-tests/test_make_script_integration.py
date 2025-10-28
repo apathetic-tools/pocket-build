@@ -6,6 +6,8 @@ These verify that the bundled single-file script (`bin/script.py`)
 embeds the correct commit information depending on environment variables.
 """
 
+from __future__ import annotations
+
 import os
 import re
 import subprocess

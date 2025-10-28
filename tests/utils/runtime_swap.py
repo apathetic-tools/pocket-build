@@ -9,6 +9,8 @@ Each pytest run now targets a single runtime mode:
 Switch mode with: RUNTIME_MODE=singlefile pytest
 """
 
+from __future__ import annotations
+
 import importlib.util
 import os
 import sys

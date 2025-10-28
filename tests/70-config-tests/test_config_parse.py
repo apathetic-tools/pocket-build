@@ -1,6 +1,8 @@
 # tests/test_config.py
 """Tests for package.config (module and single-file versions)."""
 
+from __future__ import annotations
+
 from typing import Any, TextIO
 
 from pytest import MonkeyPatch

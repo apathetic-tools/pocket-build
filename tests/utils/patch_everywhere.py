@@ -1,5 +1,7 @@
 # tests/utils/patch_everywhere.py
 
+from __future__ import annotations
+
 import sys
 from types import ModuleType
 from typing import Any, Callable

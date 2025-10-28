@@ -1,6 +1,8 @@
 # tests/test_cli.py
 """Tests for package.cli (module and single-file versions)."""
 
+from __future__ import annotations
+
 import json
 import os
 import re

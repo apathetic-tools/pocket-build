@@ -4,6 +4,8 @@
 
 # pyright: reportPrivateUsage=false
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import pocket_build.config_resolve as mod_resolve

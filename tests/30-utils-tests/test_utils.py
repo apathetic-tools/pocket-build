@@ -1,7 +1,9 @@
-# tests/test_utils.py
+# tests/30-utils-tests/test_utils.py
 """Tests for package.utils (module and single-file versions)."""
 
 # not doing tests for has_glob_chars()
+
+from __future__ import annotations
 
 import math
 from pathlib import Path

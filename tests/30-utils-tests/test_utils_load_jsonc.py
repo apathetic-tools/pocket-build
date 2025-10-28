@@ -1,6 +1,8 @@
 # tests/test_load_jsonc.py
 """Tests for package.utils (module and single-file versions)."""
 
+from __future__ import annotations
+
 from pathlib import Path
 
 import pytest

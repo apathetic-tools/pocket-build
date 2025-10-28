@@ -2,6 +2,8 @@
 
 """Centralized program identity constants for Pocket Build."""
 
+from __future__ import annotations
+
 from dataclasses import dataclass
 
 _BASE = "pocket-build"

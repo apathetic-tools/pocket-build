@@ -1,6 +1,8 @@
 # tests/test_cli_paths.py
 """Tests for package.cli (module and single-file versions)."""
 
+from __future__ import annotations
+
 import json
 from pathlib import Path
 

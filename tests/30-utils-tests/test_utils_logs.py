@@ -2,6 +2,8 @@
 
 # not doing tests for _is_error_level() and _should_log()
 
+from __future__ import annotations
+
 import io
 import re
 import sys
