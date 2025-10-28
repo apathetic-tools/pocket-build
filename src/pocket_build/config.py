@@ -8,7 +8,7 @@ import traceback
 from pathlib import Path
 from typing import Any, cast
 
-from .config_validate import ValidationSummary, validate_config
+from .config_validate import validate_config
 from .constants import (
     DEFAULT_LOG_LEVEL,
 )
@@ -22,6 +22,7 @@ from .types import (
     RootConfigInput,
 )
 from .utils import load_jsonc, plural, remove_path_in_error_message
+from .utils_schema import ValidationSummary
 from .utils_types import cast_hint, schema_from_typeddict
 from .utils_using_runtime import log
 

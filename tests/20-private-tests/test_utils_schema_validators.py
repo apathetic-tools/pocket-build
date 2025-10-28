@@ -1,14 +1,17 @@
-# tests/20-private/test_config_validate_validators.py
+# tests/20-private/test_utils_schema_validators.py
 """Smoke tests for pocket_build.config_validate internal validator helpers."""
 
 # pyright: reportPrivateUsage=false
+
+from __future__ import annotations
 
 from typing import Any, TypedDict
 
 from pytest import MonkeyPatch
 
-import pocket_build.config_validate as mod_validate
-from tests.utils import make_summary
+import pocket_build.utils_schema as mod_utils_schema
+import pocket_build.utils_types as mod_utils_types
+from tests.utils import make_summary, patch_everywhere
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -37,9 +40,9 @@ class Nested(TypedDict):
 
 def test_infer_type_label_basic_types() -> None:
     # --- execute and verify ---
-    assert "str" in mod_validate._infer_type_label(str)
-    assert "list" in mod_validate._infer_type_label(list[str])
-    assert "MiniBuild" in mod_validate._infer_type_label(MiniBuild)
+    assert "str" in mod_utils_schema._infer_type_label(str)
+    assert "list" in mod_utils_schema._infer_type_label(list[str])
+    assert "MiniBuild" in mod_utils_schema._infer_type_label(MiniBuild)
 
 
 def test_infer_type_label_handles_unusual_types() -> None:
@@ -49,10 +52,10 @@ def test_infer_type_label_handles_unusual_types() -> None:
     class Custom: ...
 
     # --- execute, verify ---
-    assert "Custom" in mod_validate._infer_type_label(Custom)
-    assert "Any" in mod_validate._infer_type_label(list[Any])
+    assert "Custom" in mod_utils_schema._infer_type_label(Custom)
+    assert "Any" in mod_utils_schema._infer_type_label(list[Any])
     # Should fall back gracefully on unknown types
-    assert isinstance(mod_validate._infer_type_label(Any), str)
+    assert isinstance(mod_utils_schema._infer_type_label(Any), str)
 
 
 # --- _validate_scalar_value -------------------------------------------------
@@ -60,7 +63,7 @@ def test_infer_type_label_handles_unusual_types() -> None:
 
 def test_validate_scalar_value_returns_bool() -> None:
     # --- execute ---
-    result = mod_validate._validate_scalar_value(
+    result = mod_utils_schema._validate_scalar_value(
         strict=True,
         context="ctx",
         key="x",
@@ -79,7 +82,9 @@ def test_validate_scalar_value_accepts_correct_type() -> None:
     print(summary)
 
     # --- patch and execute ---
-    ok = mod_validate._validate_scalar_value(True, "ctx", "x", 42, int, summary=summary)
+    ok = mod_utils_schema._validate_scalar_value(
+        True, "ctx", "x", 42, int, summary=summary
+    )
 
     # --- verify ---
     assert ok is True
@@ -91,7 +96,7 @@ def test_validate_scalar_value_rejects_wrong_type() -> None:
     summary = make_summary()
 
     # --- patch and execute ---
-    ok = mod_validate._validate_scalar_value(
+    ok = mod_utils_schema._validate_scalar_value(
         True, "ctx", "x", "abc", int, summary=summary
     )
 
@@ -108,8 +113,10 @@ def test_validate_scalar_value_handles_fallback_path(monkeypatch: MonkeyPatch) -
         raise TypeError("simulated typing bug")
 
     # --- patch and execute ---
-    monkeypatch.setattr(mod_validate, "safe_isinstance", _fake_safe_isinstance)
-    ok = mod_validate._validate_scalar_value(
+    patch_everywhere(
+        monkeypatch, mod_utils_types, "safe_isinstance", _fake_safe_isinstance
+    )
+    ok = mod_utils_schema._validate_scalar_value(
         True, "ctx", "x", 5, int, summary=make_summary()
     )
 
@@ -122,7 +129,7 @@ def test_validate_scalar_value_handles_fallback_path(monkeypatch: MonkeyPatch) -
 
 def test_validate_list_value_accepts_list() -> None:
     # --- execute ---
-    result = mod_validate._validate_list_value(
+    result = mod_utils_schema._validate_list_value(
         strict=False,
         context="root",
         key="nums",
@@ -141,7 +148,7 @@ def test_validate_list_value_rejects_nonlist() -> None:
     summary = make_summary()
 
     # --- patch and execute ---
-    ok = mod_validate._validate_list_value(
+    ok = mod_utils_schema._validate_list_value(
         True,
         "ctx",
         "nums",
@@ -161,7 +168,7 @@ def test_validate_list_value_rejects_wrong_element_type() -> None:
     summary = make_summary()
 
     # --- patch and execute ---
-    ok = mod_validate._validate_list_value(
+    ok = mod_utils_schema._validate_list_value(
         True,
         "ctx",
         "nums",
@@ -185,7 +192,7 @@ def test_validate_list_value_handles_typed_dict_elements() -> None:
     summary = make_summary()
 
     # --- patch and execute ---
-    ok = mod_validate._validate_list_value(
+    ok = mod_utils_schema._validate_list_value(
         True,
         "ctx",
         "builds",
@@ -204,7 +211,7 @@ def test_validate_list_value_handles_typed_dict_elements() -> None:
 def test_validate_list_value_accepts_empty_list() -> None:
     # --- execute and verify ---
     assert (
-        mod_validate._validate_list_value(
+        mod_utils_schema._validate_list_value(
             True,
             "ctx",
             "empty",
@@ -223,7 +230,7 @@ def test_validate_list_value_rejects_nested_mixed_types() -> None:
     summary = make_summary()
 
     # --- patch and execute ---
-    ok = mod_validate._validate_list_value(
+    ok = mod_utils_schema._validate_list_value(
         True,
         "ctx",
         "nums",
@@ -244,7 +251,7 @@ def test_validate_list_value_mixed_types_like_integration() -> None:
     summary = make_summary()
 
     # --- patch and execute ---
-    ok = mod_validate._validate_list_value(
+    ok = mod_utils_schema._validate_list_value(
         True,
         "ctx",
         "include",
@@ -270,7 +277,7 @@ def test_validate_list_value_respects_prewarn() -> None:
     ]
 
     # --- execute ---
-    ok = mod_validate._validate_list_value(
+    ok = mod_utils_schema._validate_list_value(
         True,
         "ctx",
         "builds",
@@ -291,7 +298,7 @@ def test_validate_list_value_respects_prewarn() -> None:
 
 def test_validate_typed_dict_accepts_dict() -> None:
     # --- execute ---
-    result = mod_validate._validate_typed_dict(
+    result = mod_utils_schema._validate_typed_dict(
         strict=True,
         context="root",
         val={"include": ["src"], "out": "dist"},
@@ -309,7 +316,7 @@ def test_validate_typed_dict_rejects_non_dict() -> None:
     summary = make_summary()
 
     # --- patch and execute ---
-    ok = mod_validate._validate_typed_dict(
+    ok = mod_utils_schema._validate_typed_dict(
         True,
         "root",
         "notadict",
@@ -328,7 +335,7 @@ def test_validate_typed_dict_detects_unknown_keys() -> None:
     summary = make_summary()
 
     # --- patch and execute ---
-    ok = mod_validate._validate_typed_dict(
+    ok = mod_utils_schema._validate_typed_dict(
         True,
         "root",
         {"include": ["x"], "out": "y", "weird": 1},
@@ -350,7 +357,7 @@ def test_validate_typed_dict_allows_missing_field() -> None:
     val = {"out": "dist"}  # 'include' missing
 
     # --- execute ---
-    ok = mod_validate._validate_typed_dict(
+    ok = mod_utils_schema._validate_typed_dict(
         True,
         "ctx",
         val,
@@ -374,8 +381,8 @@ def test_validate_typed_dict_nested_recursion() -> None:
     bad: Outer = {"inner": {"include": [123], "out": "dist"}}  # type: ignore[assignment]
 
     # --- patch, execute and verify ---
-    summary1 = mod_validate.ValidationSummary(True, [], [], [], True)
-    assert mod_validate._validate_typed_dict(
+    summary1 = mod_utils_schema.ValidationSummary(True, [], [], [], True)
+    assert mod_utils_schema._validate_typed_dict(
         True,
         "root",
         good,
@@ -384,8 +391,8 @@ def test_validate_typed_dict_nested_recursion() -> None:
         prewarn=set(),
     )
 
-    summary2 = mod_validate.ValidationSummary(True, [], [], [], True)
-    assert not mod_validate._validate_typed_dict(
+    summary2 = mod_utils_schema.ValidationSummary(True, [], [], [], True)
+    assert not mod_utils_schema._validate_typed_dict(
         True,
         "root",
         bad,
@@ -404,82 +411,11 @@ def test_validate_typed_dict_respects_prewarn() -> None:
     summary = make_summary()
 
     # --- execute ---
-    ok = mod_validate._validate_typed_dict(
+    ok = mod_utils_schema._validate_typed_dict(
         True,
         "ctx",
         cfg,
         MiniBuild,
-        summary=summary,
-        prewarn=prewarn,
-    )
-
-    # --- verify ---
-    assert ok is True
-    pool = summary.errors + summary.strict_warnings + summary.warnings
-    assert not any("dry_run" in m and "unknown key" in m for m in pool)
-
-
-# --- _check_schema_conformance smoke ---------------------------------------
-
-
-def test_check_schema_conformance_matches_list_validator() -> None:
-    """Ensures _check_schema_conformance returns
-    same validity as low-level list validator."""
-    # --- setup ---
-    schema: dict[str, Any] = {"include": list[str], "out": str}
-    cfg: dict[str, Any] = {"include": ["src", 42], "out": "dist"}
-
-    # --- patch and execute ---
-    summary1 = mod_validate.ValidationSummary(True, [], [], [], True)
-    ok_list = mod_validate._validate_list_value(
-        True,
-        "ctx",
-        "include",
-        ["src", 42],
-        str,
-        summary=summary1,
-        prewarn=set(),
-    )
-
-    summary2 = mod_validate.ValidationSummary(True, [], [], [], True)
-    ok_schema = mod_validate._check_schema_conformance(
-        True, cfg, schema, "ctx", summary=summary2
-    )
-
-    # --- verify ---
-    assert not ok_list
-    assert not ok_schema
-    assert summary2.errors  # schema check should have recorded an error
-
-
-def test_check_schema_conformance_smoke() -> None:
-    # --- setup ---
-    schema: dict[str, Any] = {"include": list[str], "out": str}
-    cfg: dict[str, Any] = {"include": ["src"], "out": "dist"}
-
-    # --- execute ---
-    result = mod_validate._check_schema_conformance(
-        True, cfg, schema, "root", summary=make_summary()
-    )
-
-    # --- verify ---
-    assert isinstance(result, bool)
-
-
-def test_check_schema_conformance_respects_prewarn() -> None:
-    """Prewarned keys should be skipped during schema checking."""
-    # --- setup ---
-    schema: dict[str, Any] = {"include": list[str], "out": str}
-    cfg: dict[str, Any] = {"include": ["src"], "out": "dist", "dry_run": True}
-    prewarn = {"dry_run"}
-
-    # --- execute ---
-    summary = make_summary()
-    ok = mod_validate._check_schema_conformance(
-        True,
-        cfg,
-        schema,
-        "ctx",
         summary=summary,
         prewarn=prewarn,
     )

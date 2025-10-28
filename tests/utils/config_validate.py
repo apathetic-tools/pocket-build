@@ -1,6 +1,8 @@
 # tests/utils/config_validate.py
 
-import pocket_build.config_validate as mod_validate
+from __future__ import annotations
+
+import pocket_build.utils_schema as mod_utils_schema
 
 
 def make_summary(
@@ -10,9 +12,9 @@ def make_summary(
     strict_warnings: list[str] | None = None,
     warnings: list[str] | None = None,
     strict: bool = True,
-) -> mod_validate.ValidationSummary:
+) -> mod_utils_schema.ValidationSummary:
     """Helper to create a clean ValidationSummary."""
-    return mod_validate.ValidationSummary(
+    return mod_utils_schema.ValidationSummary(
         valid=valid,
         errors=errors or [],
         strict_warnings=strict_warnings or [],

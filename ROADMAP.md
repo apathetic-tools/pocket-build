@@ -20,6 +20,8 @@ Exploring bundling options for generating the single-file release:
 
 ## 🧪 Tests
 
+- linter that warns for `from pocket_build.<blah>` imports instead of `import pocket_build.<blah>`
+- linter that checks from `from future` import in every .py file that has non-comment content
 
 ## 🧑‍💻 Development
 

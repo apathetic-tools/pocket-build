@@ -34,6 +34,7 @@ ORDER_NAMES: list[str] = [
     "types",
     "utils",  # needed before runtime.py
     "utils_types",
+    "utils_schema",
     "runtime",
     "utils_using_runtime",
     "config",
