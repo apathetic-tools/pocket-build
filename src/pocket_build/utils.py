@@ -104,3 +104,18 @@ def remove_path_in_error_message(inner_msg: str, path: Path) -> str:
     clean_msg = re.sub(r"\s*:\s*", ": ", clean_msg)
 
     return clean_msg
+
+
+def plural(obj: Any) -> str:
+    """Return 's' if obj represents a plural count.
+
+    Accepts ints, floats, and any object implementing __len__().
+    Returns '' for singular or zero.
+    """
+    count: int | float
+    try:
+        count = len(obj)
+    except TypeError:
+        # fallback for numbers or uncountable types
+        count = obj if isinstance(obj, (int, float)) else 0
+    return "s" if count != 1 else ""

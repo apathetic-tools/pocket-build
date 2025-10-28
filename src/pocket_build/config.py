@@ -8,7 +8,7 @@ import traceback
 from pathlib import Path
 from typing import Any, cast
 
-from .config_validate import validate_config
+from .config_validate import ValidationSummary, validate_config
 from .constants import (
     DEFAULT_LOG_LEVEL,
 )
@@ -21,7 +21,7 @@ from .types import (
     BuildConfigInput,
     RootConfigInput,
 )
-from .utils import load_jsonc, remove_path_in_error_message
+from .utils import load_jsonc, plural, remove_path_in_error_message
 from .utils_types import cast_hint, schema_from_typeddict
 from .utils_using_runtime import log
 
@@ -303,6 +303,59 @@ def parse_config(
     return root
 
 
+def _validation_summary(
+    summary: ValidationSummary,
+    config_path: Path,
+) -> None:
+    """Pretty-print a validation summary using the standard log() interface."""
+    mode = "strict mode" if summary.strict else "lenient mode"
+
+    # --- Build concise counts line ---
+    counts: list[str] = []
+    if summary.errors:
+        counts.append(f"{len(summary.errors)} error{plural(summary.errors)}")
+    if summary.strict_warnings:
+        counts.append(
+            f"{len(summary.strict_warnings)} strict warning"
+            f"{plural(summary.strict_warnings)}"
+        )
+    if summary.warnings:
+        counts.append(
+            f"{len(summary.warnings)} normal warning{plural(summary.warnings)}"
+        )
+    counts_msg = f"\nFound {', '.join(counts)}." if counts else ""
+
+    # --- Header (single icon) ---
+    if not summary.valid:
+        log(
+            "error",
+            f"Failed to validate configuration file {config_path.name} ({mode})."
+            + counts_msg,
+        )
+    elif counts:
+        log(
+            "warning",
+            f"Validated configuration file {config_path.name} ({mode}) with warnings."
+            + counts_msg,
+        )
+    else:
+        log("debug", f"Validated {config_path.name} ({mode}) successfully.")
+
+    # --- Detailed sections ---
+    if summary.errors:
+        log("error", "\nErrors:\n  • " + "\n  • ".join(summary.errors))
+    if summary.strict_warnings:
+        log(
+            "error",
+            "\nStrict warnings (treated as errors):\n"
+            "  • " + "\n  • ".join(summary.strict_warnings),
+        )
+    if summary.warnings:
+        log(
+            "warning", "\nWarnings (non-fatal):\n  • " + "\n  • ".join(summary.warnings)
+        )
+
+
 def load_and_validate_config(
     args: argparse.Namespace,
 ) -> tuple[Path, RootConfigInput] | None:
@@ -351,8 +404,14 @@ def load_and_validate_config(
         return None
 
     # --- Validate schema ---
-    if not validate_config(parsed_cfg):
-        # validate_config should already log the failure
+    validation_result = validate_config(parsed_cfg)
+    _validation_summary(validation_result, config_path)
+    if not validation_result.valid:
+        # TODO: make this a blank exception now that we print the path above instead
+        # should we perhaps add a ".silent" attribute to exceptions
+        #  where we want to raise a blank exception to the user, but still
+        # want to keep an exception message in case it is intercepted elsewhere?
+        # Perhaps we could even attach the summary to the exception
         raise ValueError(
             f"Configuration file {config_path.name} contains validation errors."
         )

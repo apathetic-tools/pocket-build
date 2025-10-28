@@ -7,6 +7,7 @@ from .buildconfig import (
     make_meta,
     make_resolved,
 )
+from .config_validate import make_summary
 from .force_mtime_advance import force_mtime_advance
 from .patch_everywhere import patch_everywhere
 from .runtime_swap import runtime_swap
@@ -23,4 +24,5 @@ __all__ = [
     "make_build_cfg",
     "make_build_input",
     "TRACE",
+    "make_summary",
 ]

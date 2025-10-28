@@ -1,15 +1,39 @@
 # src/pocket_build/config_validate.py
 from __future__ import annotations
 
+from dataclasses import dataclass
 from difflib import get_close_matches
-from typing import Any, cast, get_args, get_origin
+from typing import Any, TypedDict, cast, get_args, get_origin
 
 from .constants import DEFAULT_HINT_CUTOFF, DEFAULT_STRICT_CONFIG
 from .types import BuildConfigInput, RootConfigInput
+from .utils import plural
 from .utils_types import cast_hint, safe_isinstance, schema_from_typeddict
-from .utils_using_runtime import log
+
+# --- types ----------------------------------------------------------
+
+# Aggregator structure:
+# {
+#   "strict_warnings": {
+#       "dry-run": {"msg": DRYRUN_MSG, "contexts": ["in build #0", "in build #2"]},
+#       ...
+#   },
+#   "warnings": { ... }
+# }
+
+
+class _AggEntry(TypedDict):
+    msg: str
+    contexts: list[str]
+
+
+# severity, tag
+Aggregator = dict[str, dict[str, _AggEntry]]
 
 # --- constants ------------------------------------------------------
+
+AGG_STRICT_WARN = "strict_warnings"
+AGG_WARN = "warnings"
 
 DRYRUN_KEYS = {"dry-run", "dry_run", "dryrun", "no-op", "no_op", "noop"}
 DRYRUN_MSG = (
@@ -20,11 +44,39 @@ DRYRUN_MSG = (
 ROOT_ONLY_KEYS = {"watch_interval"}
 ROOT_ONLY_MSG = "Ignored {keys} {ctx}: these options only apply at the root level."
 
+# --- dataclasses ------------------------------------------------------
+
+
+@dataclass
+class ValidationSummary:
+    valid: bool
+    errors: list[str]
+    strict_warnings: list[str]
+    warnings: list[str]
+    strict: bool  # strictness somewhere in our config?
+
+
 # --- helpers --------------------------------------------------------
 
 
-def _log_strict(strict_config: bool, msg: str) -> None:
-    log("error" if strict_config else "warning", msg)
+def _collect_msg(
+    strict: bool,
+    msg: str,
+    summary: ValidationSummary,  # modified in function, not returned
+    *,
+    is_error: bool = False,
+) -> None:
+    """
+    Route a message to the appropriate bucket.
+    Errors are always fatal.
+    Warnings may escalate to strict_warnings in strict mode.
+    """
+    if is_error:
+        summary.errors.append(msg)
+    elif strict:
+        summary.strict_warnings.append(msg)
+    else:
+        summary.warnings.append(msg)
 
 
 def _warn_keys_once(
@@ -34,29 +86,81 @@ def _warn_keys_once(
     cfg: dict[str, Any],
     context: str,
     msg: str,
+    summary: ValidationSummary,  # modified in function, not returned
+    *,
+    agg: dict[str, Aggregator] | None,
 ) -> tuple[bool, set[str]]:
     """
     Warn once for known bad keys (e.g. dry-run, root-only).
+
+    agg indexes are: severity, tag, msg, context (list[str])
+
     Returns (valid, found_keys).
     """
-    # did we already warn for this tag? if so just return
-    if getattr(_warn_keys_once, "_warned_tags", None) is None:
-        _warn_keys_once._warned_tags = set()  # type: ignore[attr-defined]
-
-    warned_tags: set[str] = _warn_keys_once._warned_tags  # type: ignore[attr-defined]
-
     valid = True
-    found = bad_keys & cfg.keys()
-    if found:
-        if tag not in warned_tags:
-            _log_strict(
-                strict_config,
-                f"{msg.format(keys=', '.join(sorted(found)), ctx=context)}",
-            )
-            warned_tags.add(tag)
-        if strict_config:
-            valid = False
+
+    # Normalize keys to lowercase for case-insensitive matching
+    bad_keys_lower = {k.lower(): k for k in bad_keys}
+    cfg_keys_lower = {k.lower(): k for k in cfg.keys()}
+    found_lower = bad_keys_lower & cfg_keys_lower.keys()
+
+    if not found_lower:
+        return True, set()
+
+    # Recover original-case keys for display
+    found = {cfg_keys_lower[k] for k in found_lower}
+
+    if agg is not None:
+        # record context for later aggregation
+        severity = AGG_STRICT_WARN if strict_config else AGG_WARN
+        bucket = cast_hint(dict[str, _AggEntry], agg.setdefault(severity, {}))
+
+        default_entry: _AggEntry = {"msg": msg, "contexts": []}
+        entry = bucket.setdefault(tag, default_entry)
+        entry["contexts"].append(context)
+    else:
+        # immediate fallback
+        _collect_msg(
+            strict_config,
+            f"{msg.format(keys=', '.join(sorted(found)), ctx=context)}",
+            summary,
+        )
+
+    if strict_config:
+        valid = False
+
     return valid, found
+
+
+def _flush_warn_aggregates(
+    summary: ValidationSummary,
+    agg: dict[str, Aggregator],
+) -> None:
+    def _clean_context(ctx: str) -> str:
+        """Normalize context strings by removing leading 'in' or 'on'."""
+        ctx = ctx.strip()
+        for prefix in ("in ", "on "):
+            if ctx.lower().startswith(prefix):
+                return ctx[len(prefix) :].strip()
+        return ctx
+
+    def _flush_one(bucket: dict[str, dict[str, Any]], strict: bool) -> None:
+        for tag, entry in bucket.items():
+            msg_tmpl = entry["msg"]
+            contexts = [_clean_context(c) for c in entry["contexts"]]
+            joined_ctx = ", ".join(contexts)
+            rendered = msg_tmpl.format(keys=tag, ctx=f"in {joined_ctx}")
+            _collect_msg(strict, rendered, summary)
+        bucket.clear()
+
+    strict_bucket = agg.get(AGG_STRICT_WARN, {})
+    warn_bucket = agg.get(AGG_WARN, {})
+
+    if strict_bucket:
+        summary.valid = False
+        _flush_one(strict_bucket, True)
+    if warn_bucket:
+        _flush_one(warn_bucket, False)
 
 
 # ---------------------------------------------------------------------------
@@ -64,7 +168,9 @@ def _warn_keys_once(
 # ---------------------------------------------------------------------------
 
 
-def _infer_type_label(expected_type: Any) -> str:
+def _infer_type_label(
+    expected_type: Any,
+) -> str:
     """Return a readable label for logging (e.g. 'list[str]', 'BuildConfigInput')."""
     try:
         origin = get_origin(expected_type)
@@ -84,6 +190,8 @@ def _validate_scalar_value(
     key: str,
     val: Any,
     expected_type: Any,
+    *,
+    summary: ValidationSummary,  # modified in function, not returned
 ) -> bool:
     """Validate a single non-container value against its expected type."""
     try:
@@ -98,8 +206,11 @@ def _validate_scalar_value(
             return True
 
     exp_label = _infer_type_label(expected_type)
-    _log_strict(
-        strict, f"{context}: key '{key}' expected {exp_label}, got {type(val).__name__}"
+    _collect_msg(
+        strict,
+        f"{context}: key `{key}` expected {exp_label}, got {type(val).__name__}",
+        summary,
+        is_error=True,
     )
     return False
 
@@ -110,13 +221,18 @@ def _validate_list_value(
     key: str,
     val: Any,
     subtype: Any,
+    *,
+    summary: ValidationSummary,  # modified in function, not returned
+    prewarn: set[str],
 ) -> bool:
     """Validate a homogeneous list value, delegating to scalar/TypedDict validators."""
     if not isinstance(val, list):
         exp_label = f"list[{_infer_type_label(subtype)}]"
-        _log_strict(
+        _collect_msg(
             strict,
-            f"{context}: key '{key}' expected {exp_label}, got {type(val).__name__}",
+            f"{context}: key `{key}` expected {exp_label}, got {type(val).__name__}",
+            summary,
+            is_error=True,
         )
         return False
 
@@ -136,19 +252,32 @@ def _validate_list_value(
             and hasattr(subtype, "__total__")
         ):
             if not isinstance(item, dict):
-                _log_strict(
+                _collect_msg(
                     strict,
-                    f"{context}: key '{key}[{i}]' expected dict for "
-                    f"TypedDict {subtype.__name__}, got {type(item).__name__}",
+                    f"{context}: key `{key}` #{i + 1} expected an "
+                    " object with named keys for "
+                    f"{subtype.__name__}, got {type(item).__name__}",
+                    summary,
+                    is_error=True,
                 )
                 valid = False
                 continue
             valid &= _validate_typed_dict(
-                strict, f"{context}.{key}[{i}]", item, subtype
+                strict,
+                f"{context}.{key}[{i}]",
+                item,
+                subtype,
+                summary=summary,
+                prewarn=prewarn,
             )
         else:
             valid &= _validate_scalar_value(
-                strict, context, f"{key}[{i}]", item, subtype
+                strict,
+                context,
+                f"{key}[{i}]",
+                item,
+                subtype,
+                summary=summary,
             )
     return valid
 
@@ -158,6 +287,10 @@ def _validate_typed_dict(
     context: str,
     val: Any,
     typedict_cls: type[Any],
+    *,
+    summary: ValidationSummary,  # modified in function, not returned
+    prewarn: set[str],
+    ignore_keys: set[str] = set(),
 ) -> bool:
     """Validate a dict against a TypedDict schema recursively.
 
@@ -166,10 +299,12 @@ def _validate_typed_dict(
     - Warn about unknown keys under strict=True
     """
     if not isinstance(val, dict):
-        _log_strict(
+        _collect_msg(
             strict,
-            f"{context}: expected dict for TypedDict {typedict_cls.__name__}, "
-            f"got {type(val).__name__}",
+            f"{context}: expected an object with named keys for"
+            f" {typedict_cls.__name__}, got {type(val).__name__}",
+            summary,
+            is_error=True,
         )
         return False
 
@@ -177,7 +312,7 @@ def _validate_typed_dict(
     valid = True
 
     for field, expected_type in schema.items():
-        if field not in val:
+        if field not in val or field in prewarn or field in ignore_keys:
             # Optional or missing field → not a failure
             continue
 
@@ -188,37 +323,75 @@ def _validate_typed_dict(
 
         if origin is list:
             subtype = args[0] if args else Any
-            valid &= _validate_list_value(strict, context, field, inner_val, subtype)
+            valid &= _validate_list_value(
+                strict,
+                context,
+                field,
+                inner_val,
+                subtype,
+                summary=summary,
+                prewarn=prewarn,
+            )
         elif (
             isinstance(expected_type, type)
             and hasattr(expected_type, "__annotations__")
             and hasattr(expected_type, "__total__")
         ):
+            # we don't pass ignore_keys down because
+            # we don't recursively ignore these keys
+            # and they have no depth syntax. Instead you
+            # need to ignore the current level, then take ownership
+            # and only validate what you want manually. calling validation
+            # on anything that you aren't ignoring downstream.
+            # rare case that is a lot of work, but keeps the rest
+            # simple for now.
+            if "in top-level configuration." in context:
+                location = field
+            else:
+                location = f"{context}.{field}"
             valid &= _validate_typed_dict(
-                strict, f"{context}.{field}", inner_val, expected_type
+                strict,
+                location,
+                inner_val,
+                expected_type,
+                summary=summary,
+                prewarn=prewarn,
             )
         else:
             val_scalar = _validate_scalar_value(
-                strict, context, field, inner_val, expected_type
+                strict, context, field, inner_val, expected_type, summary=summary
             )
             if not val_scalar:
-                _log_strict(
+                _collect_msg(
                     strict,
-                    f"{context}: key '{field}' expected {exp_label}, "
+                    f"{context}: key `{field}` expected {exp_label}, "
                     f"got {type(inner_val).__name__}",
+                    summary,
+                    is_error=True,
                 )
                 valid = False
 
     # --- Unknown keys ---
     val_dict = cast(dict[str, Any], val)
-    unknown: list[str] = [k for k in val_dict if k not in schema]
+    unknown: list[str] = [k for k in val_dict if k not in schema and k not in prewarn]
     if unknown:
-        plural = "s" if len(unknown) > 1 else ""
-        _log_strict(
-            strict,
-            f"{len(unknown)} unknown key{plural} {context} for "
-            f"TypedDict {typedict_cls.__name__}: {', '.join(unknown)}",
-        )
+        joined = ", ".join(f"`{u}`" for u in unknown)
+
+        location = context
+        if "in top-level configuration." in location:
+            location = "in " + location.split("in top-level configuration.")[-1]
+
+        msg = f"Unknown key{plural(unknown)} {joined} {location}."
+
+        hints: list[str] = []
+        for k in unknown:
+            close = get_close_matches(k, schema.keys(), n=1, cutoff=DEFAULT_HINT_CUTOFF)
+            if close:
+                hints.append(f"'{k}' → '{close[0]}'")
+        if hints:
+            msg += "\nHint: did you mean " + ", ".join(hints) + "?"
+
+        _collect_msg(strict, msg.strip(), summary)
         if strict:
             valid = False
 
@@ -230,108 +403,132 @@ def _check_schema_conformance(
     cfg: dict[str, Any],
     schema: dict[str, Any],
     context: str,
+    *,
+    summary: ValidationSummary,  # modified in function, not returned
     prewarn: set[str] = set(),
+    ignore_keys: set[str] = set(),
 ) -> bool:
-    """Coordinate type checking using specialized validators."""
-    valid = True
+    """Thin wrapper around _validate_typed_dict for root-level schema checks."""
 
-    valid = True
+    # Pretend schema is a TypedDict for uniformity
+    class _AnonTypedDict(TypedDict):
+        pass
 
-    for k, expected_type in schema.items():
-        if k in prewarn or k not in cfg:
-            continue
+    # Attach the schema dynamically to mimic schema_from_typeddict output
+    _AnonTypedDict.__annotations__ = schema
 
-        val = cfg[k]
-        origin = get_origin(expected_type)
-        args = get_args(expected_type)
-
-        if origin is list:
-            subtype = args[0] if args else Any
-            valid &= _validate_list_value(strict_config, context, k, val, subtype)
-        elif (
-            isinstance(expected_type, type)
-            and hasattr(expected_type, "__annotations__")
-            and hasattr(expected_type, "__total__")
-        ):
-            # Treat as TypedDict-like
-            valid &= _validate_typed_dict(
-                strict_config, f"{context}.{k}", val, expected_type
-            )
-        else:
-            valid &= _validate_scalar_value(
-                strict_config, context, k, val, expected_type
-            )
-
-    # --- unknown keys ---
-    unknown: list[str] = []
-    hints: list[str] = []
-    for k in cfg:
-        if k in schema or k in prewarn:
-            continue
-        unknown.append(k)
-        close = get_close_matches(k, schema.keys(), n=1, cutoff=DEFAULT_HINT_CUTOFF)
-        if close:
-            hints.append("'" + k + "' → '" + close[0] + "'")
-    if unknown:
-        plural = "s" if len(unknown) > 1 else ""
-        msg = f"{len(unknown)} unknown key{plural} {context}: {', '.join(unknown)}"
-        if hints:
-            msg += "\nHint: did you mean " + ", ".join(hints) + "?"
-        _log_strict(strict_config, msg)
-        if strict_config:
-            valid = False
-
-    return valid
+    return _validate_typed_dict(
+        strict_config,
+        context,
+        cfg,
+        _AnonTypedDict,
+        summary=summary,
+        prewarn=prewarn,
+        ignore_keys=ignore_keys,
+    )
 
 
-# --- main validator ------------------------------------------------
+# ---------------------------------------------------------------------------
+# main validator
+# ---------------------------------------------------------------------------
 
 
-def validate_config(parsed_cfg: dict[str, Any], *, strict: bool | None = None) -> bool:
+def validate_config(
+    parsed_cfg: dict[str, Any], *, strict: bool | None = None
+) -> ValidationSummary:
     """Validate normalized config. Returns True if valid.
 
-    strict=True  →  type errors and warnings both cause failure
-    strict=False →  type errors still cause failure, but warnings are logged only
+    strict=True  →  warnings become fatal, but still listed separately
+    strict=False →  warnings remain non-fatal
 
     The `strict_config` key in the root config (and optionally in each build)
     controls strictness. CLI flags are not considered.
-    """
-    valid = True
 
-    root_strict: bool = strict if strict is not None else DEFAULT_STRICT_CONFIG
+    Returns a ValidationSummary object.
+    """
+    summary = ValidationSummary(
+        valid=True,
+        errors=[],
+        strict_warnings=[],
+        warnings=[],
+        strict=DEFAULT_STRICT_CONFIG,
+    )
+    agg: dict[str, Aggregator] = {}
+
+    def set_valid_and_return(flush: bool = True) -> ValidationSummary:
+        if flush:
+            _flush_warn_aggregates(summary, agg)
+        summary.valid = not summary.errors and not summary.strict_warnings
+        return summary
+
+    root_strict: bool = summary.strict
     # --- Determine strictness from root config ---
     strict_from_root: Any = parsed_cfg.get("strict_config")
     if strict is None and isinstance(strict_from_root, bool):
         root_strict = strict_from_root
+    if root_strict:
+        summary.strict = True
     strict_config: bool = root_strict
 
     # --- Validate root-level keys ---
     ROOT_SCHEMA = schema_from_typeddict(RootConfigInput)
     prewarn_root: set[str] = set()
     ok, found = _warn_keys_once(
-        strict_config, "dry-run", DRYRUN_KEYS, parsed_cfg, "at top-level", DRYRUN_MSG
+        strict_config,
+        "dry-run",
+        DRYRUN_KEYS,
+        parsed_cfg,
+        "in top-level configuration",
+        DRYRUN_MSG,
+        summary,
+        agg=agg,
     )
-    valid &= ok
     prewarn_root |= found
-    valid &= _check_schema_conformance(
-        strict_config, parsed_cfg, ROOT_SCHEMA, "at top-level", prewarn_root
+
+    ok = _check_schema_conformance(
+        strict_config,
+        parsed_cfg,
+        ROOT_SCHEMA,
+        "in top-level configuration",
+        summary=summary,
+        prewarn=prewarn_root,
+        ignore_keys={"builds"},
     )
+    if not ok and not (summary.errors or summary.strict_warnings):
+        _collect_msg(True, "Top-level configuration invalid.", summary, is_error=True)
 
     # --- Validate builds structure ---
     builds_raw: Any = parsed_cfg.get("builds", [])
     if not isinstance(builds_raw, list):
-        log("error", "`builds` must be a list")
-        return False
+        _collect_msg(True, "`builds` must be a list of builds.", summary, is_error=True)
+        return set_valid_and_return()
+
     if not builds_raw:
-        log("warning", "No builds defined; continuing with empty configuration")
-        return valid
+        msg = "No `builds` key defined"
+        if not (summary.errors or summary.strict_warnings):
+            msg = msg + ";  continuing with empty configuration"
+        else:
+            msg = msg + "."
+        _collect_msg(
+            False,
+            msg,
+            summary,
+        )
+        return set_valid_and_return()
 
     builds = cast_hint(list[Any], builds_raw)
     BUILD_SCHEMA = schema_from_typeddict(BuildConfigInput)
+
     for i, b in enumerate(builds):
         if not isinstance(b, dict):
-            log("error", f"Build #{i} is not a dict")
-            valid = False
+            _collect_msg(
+                True,
+                f"Build #{i + 1} must be an object"
+                " with named keys (not a list or value)",
+                summary,
+                is_error=True,
+            )
+            summary.valid = False
             continue
         b = cast_hint(dict[str, Any], b)
 
@@ -343,22 +540,40 @@ def validate_config(parsed_cfg: dict[str, Any], *, strict: bool | None = None) -
 
         prewarn_build: set[str] = set()
         ok, found = _warn_keys_once(
-            strict_config, "dry-run", DRYRUN_KEYS, b, f"in build #{i}", DRYRUN_MSG
+            strict_config,
+            "dry-run",
+            DRYRUN_KEYS,
+            b,
+            f"in build #{i + 1}",
+            DRYRUN_MSG,
+            summary,
+            agg=agg,
         )
-        valid &= ok
         prewarn_build |= found
+
         ok, found = _warn_keys_once(
             strict_config,
             "root-only",
             ROOT_ONLY_KEYS,
             b,
-            f"in build #{i}",
+            f"in build #{i + 1}",
             ROOT_ONLY_MSG,
+            summary,
+            agg=agg,
         )
-        valid &= ok
         prewarn_build |= found
-        valid &= _check_schema_conformance(
-            strict_config, b, BUILD_SCHEMA, f"in build #{i}", prewarn_build
-        )
 
-    return valid
+        ok = _check_schema_conformance(
+            strict_config,
+            b,
+            BUILD_SCHEMA,
+            f"in build #{i + 1}",
+            summary=summary,
+            prewarn=prewarn_build,
+        )
+        if not ok and not (summary.errors or summary.strict_warnings):
+            _collect_msg(True, f"Build #{i + 1} schema invalid", summary, is_error=True)
+            summary.valid = False
+
+    # --- finalize result ---
+    return set_valid_and_return()
