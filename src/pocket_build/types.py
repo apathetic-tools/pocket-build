@@ -10,8 +10,8 @@ OriginType = Literal["cli", "config", "plugin", "default", "code", "gitignore", 
 
 
 class PathResolved(TypedDict):
-    path: Path | str  # absolute or relative to `base`, or a pattern
-    base: Path  # canonical origin directory for resolution
+    path: Path | str  # absolute or relative to `root`, or a pattern
+    root: Path  # canonical origin directory for resolution
     pattern: NotRequired[str]  # the original pattern matching this path
 
     # meta only
@@ -24,8 +24,8 @@ class IncludeResolved(PathResolved):
 
 class MetaBuildConfigResolved(TypedDict):
     # sources of parameters
-    cli_base: Path
-    config_base: Path
+    cli_root: Path
+    config_root: Path
 
 
 class BuildConfig(TypedDict, total=False):

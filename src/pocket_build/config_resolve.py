@@ -44,17 +44,17 @@ def _load_gitignore_patterns(path: Path) -> list[str]:
     return patterns
 
 
-def _normalize_base_and_path(
-    raw: Path | str, context_base: Path | str
+def _normalize_path_with_root(
+    raw: Path | str, context_root: Path | str
 ) -> tuple[Path, Path | str]:
     """
     Normalize a user-provided path (from CLI or config).
 
-    - If absolute → treat that path as its own base.
-      * `/abs/path/**` → base=/abs/path, rel="**"
-      * `/abs/path/`   → base=/abs/path, rel="**"  (treat as contents)
-      * `/abs/path`    → base=/abs/path, rel="."   (treat as literal)
-    - If relative → base = context_base, path = raw (preserve string form)
+    - If absolute → treat that path as its own root.
+      * `/abs/path/**` → root=/abs/path, rel="**"
+      * `/abs/path/`   → root=/abs/path, rel="**"  (treat as contents)
+      * `/abs/path`    → root=/abs/path, rel="."   (treat as literal)
+    - If relative → root = context_root, path = raw (preserve string form)
     """
     raw_path = Path(raw)
     rel: Path | str
@@ -64,21 +64,21 @@ def _normalize_base_and_path(
         # Split out glob or trailing slash intent
         raw_str = str(raw)
         if raw_str.endswith("/**"):
-            base = Path(raw_str[:-3]).resolve()
+            root = Path(raw_str[:-3]).resolve()
             rel = "**"
         elif raw_str.endswith("/"):
-            base = Path(raw_str[:-1]).resolve()
+            root = Path(raw_str[:-1]).resolve()
             rel = "**"  # treat directory as contents
         else:
-            base = raw_path.resolve()
+            root = raw_path.resolve()
             rel = "."
     else:
-        base = Path(context_base).resolve()
+        root = Path(context_root).resolve()
         # preserve literal string if user provided one
         rel = raw if isinstance(raw, str) else Path(raw)
 
-    log("trace", f"Normalized: raw={raw!r} → base={base}, rel={rel}")
-    return base, rel
+    log("trace", f"Normalized: raw={raw!r} → root={root}, rel={rel}")
+    return root, rel
 
 
 # --------------------------------------------------------------------------- #
@@ -101,10 +101,10 @@ def resolve_build_config(
     # Make a mutable copy
     resolved_cfg: dict[str, Any] = dict(build_cfg)
 
-    # Base provenance for all resolutions
+    # root provenance for all resolutions
     meta: MetaBuildConfigResolved = {
-        "cli_base": cwd,
-        "config_base": config_dir,
+        "cli_root": cwd,
+        "config_root": config_dir,
     }
 
     # ------------------------------
@@ -115,40 +115,40 @@ def resolve_build_config(
     if getattr(args, "include", None):
         # Full override → relative to cwd
         for raw in args.include:
-            base, rel = _normalize_base_and_path(raw, cwd)
-            includes.append(make_includeresolved(rel, base, "cli"))
+            root, rel = _normalize_path_with_root(raw, cwd)
+            includes.append(make_includeresolved(rel, root, "cli"))
 
     elif "include" in resolved_cfg:
         # From config → relative to config_dir
         for raw in resolved_cfg["include"]:
-            base, rel = _normalize_base_and_path(raw, config_dir)
-            includes.append(make_includeresolved(rel, base, "config"))
+            root, rel = _normalize_path_with_root(raw, config_dir)
+            includes.append(make_includeresolved(rel, root, "config"))
 
     # Add-on includes (extend, not override)
     if getattr(args, "add_include", None):
         for raw in args.add_include:
-            base, rel = _normalize_base_and_path(raw, cwd)
-            includes.append(make_includeresolved(rel, base, "cli"))
+            root, rel = _normalize_path_with_root(raw, cwd)
+            includes.append(make_includeresolved(rel, root, "cli"))
 
-    # unique path+base
+    # unique path+root
     seen_inc: set[tuple[Path | str, Path]] = set()
     unique_inc: list[IncludeResolved] = []
     for i in includes:
-        key = (i["path"], i["base"])
+        key = (i["path"], i["root"])
         if key not in seen_inc:
             seen_inc.add(key)
             unique_inc.append(i)
 
-            # Check base existence
-            if not i["base"].exists():
+            # Check root existence
+            if not i["root"].exists():
                 log(
                     "warning",
-                    f"Include base does not exist: {i['base']} (origin: {i['origin']})",
+                    f"Include root does not exist: {i['root']} (origin: {i['origin']})",
                 )
 
             # Check path existence
             if not has_glob_chars(str(i["path"])):
-                full_path = i["base"] / i["path"]  # absolute paths override base
+                full_path = i["root"] / i["path"]  # absolute paths override root
                 if not full_path.exists():
                     log(
                         "warning",
@@ -172,7 +172,7 @@ def resolve_build_config(
         # Full override → relative to cwd
         # Keep CLI-provided exclude patterns as-is (do not resolve),
         # since glob patterns like "*.tmp" should match relative paths
-        # beneath the include base, not absolute paths.
+        # beneath the include root, not absolute paths.
         _add_excludes(args.exclude, cwd, "cli")
     elif "exclude" in resolved_cfg:
         # From config → relative to config_dir
@@ -207,11 +207,11 @@ def resolve_build_config(
 
     resolved_cfg["respect_gitignore"] = respect_gitignore
 
-    # unique path+base
+    # unique path+root
     seen_exc: set[tuple[Path | str, Path]] = set()
     unique_exc: list[PathResolved] = []
     for ex in excludes:
-        key = (ex["path"], ex["base"])
+        key = (ex["path"], ex["root"])
         if key not in seen_exc:
             seen_exc.add(key)
             unique_exc.append(ex)
@@ -223,15 +223,15 @@ def resolve_build_config(
     # ------------------------------
     if getattr(args, "out", None):
         # Full override → relative to cwd
-        base, rel = _normalize_base_and_path(args.out, cwd)
-        out_wrapped = make_pathresolved(rel, base, "cli")
+        root, rel = _normalize_path_with_root(args.out, cwd)
+        out_wrapped = make_pathresolved(rel, root, "cli")
     elif "out" in resolved_cfg:
         # From config → relative to config_dir
-        base, rel = _normalize_base_and_path(resolved_cfg["out"], config_dir)
-        out_wrapped = make_pathresolved(rel, base, "config")
+        root, rel = _normalize_path_with_root(resolved_cfg["out"], config_dir)
+        out_wrapped = make_pathresolved(rel, root, "config")
     else:
-        base, rel = _normalize_base_and_path(DEFAULT_OUT_DIR, cwd)
-        out_wrapped = make_pathresolved(rel, base, "default")
+        root, rel = _normalize_path_with_root(DEFAULT_OUT_DIR, cwd)
+        out_wrapped = make_pathresolved(rel, root, "default")
 
     resolved_cfg["out"] = out_wrapped
 

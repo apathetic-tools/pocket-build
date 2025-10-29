@@ -151,13 +151,13 @@ def test_resolve_build_config_from_config_paths(
     exc = resolved["exclude"][0]
     out = resolved["out"]
 
-    assert inc["base"] == tmp_path
-    assert exc["base"] == tmp_path
-    assert out["base"] == tmp_path
+    assert inc["root"] == tmp_path
+    assert exc["root"] == tmp_path
+    assert out["root"] == tmp_path
     assert resolved["log_level"] == "info"
     assert resolved["respect_gitignore"] is True
-    assert resolved["__meta__"]["config_base"] == tmp_path
-    assert resolved["__meta__"]["cli_base"] == tmp_path
+    assert resolved["__meta__"]["config_root"] == tmp_path
+    assert resolved["__meta__"]["cli_root"] == tmp_path
 
 
 def test_resolve_build_config_cli_overrides_include_and_out(
@@ -256,7 +256,7 @@ def test_resolve_build_config_respects_dest_override(
     # --- validate ---
     out = resolved["out"]
     assert out["origin"] == "config"
-    assert out["base"] == tmp_path
+    assert out["root"] == tmp_path
     assert out["path"] == "dist"
 
 
@@ -322,7 +322,7 @@ def test_resolve_build_config_with_absolute_include(tmp_path: Path) -> None:
 
     # --- validate ---
     inc = resolved["include"][0]
-    assert inc["base"] == abs_src.resolve()
+    assert inc["root"] == abs_src.resolve()
     assert inc["path"] == "."
 
 
@@ -353,13 +353,13 @@ def test_resolve_build_config_preserves_trailing_slash(tmp_path: Path) -> None:
     assert inc_path.endswith("/"), f"trailing slash lost: {inc_path!r}"
 
 
-def test_resolve_build_config_warns_for_missing_include_base(
+def test_resolve_build_config_warns_for_missing_include_root(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """Warn if include base directory does not exist and pattern is not a glob."""
+    """Warn if include root directory does not exist and pattern is not a glob."""
     # --- setup ---
-    missing_base = tmp_path / "nonexistent_base"
-    raw = make_build_input(include=[f"{missing_base}/src"])
+    missing_root = tmp_path / "nonexistent_root"
+    raw = make_build_input(include=[f"{missing_root}/src"])
     args = _args()
     captured: list[tuple[str, str]] = []
 
@@ -374,8 +374,8 @@ def test_resolve_build_config_warns_for_missing_include_base(
 
     # --- validate ---
     warnings = [msg for level, msg in captured if level == "warning"]
-    assert any("Include base does not exist" in msg for msg in warnings), (
-        f"Expected warning about missing include base, got: {warnings}"
+    assert any("Include root does not exist" in msg for msg in warnings), (
+        f"Expected warning about missing include root, got: {warnings}"
     )
 
 
@@ -408,9 +408,9 @@ def test_resolve_build_config_warns_for_missing_absolute_include(
 def test_resolve_build_config_warns_for_missing_relative_include(
     tmp_path: Path, monkeypatch: MonkeyPatch
 ) -> None:
-    """Warn if relative include path does not exist under an existing base."""
+    """Warn if relative include path does not exist under an existing root."""
     # --- setup ---
-    existing_base = tmp_path
+    existing_root = tmp_path
     raw = make_build_input(include=["missing_rel_dir"])
     args = _args()
     captured: list[tuple[str, str]] = []
@@ -422,7 +422,7 @@ def test_resolve_build_config_warns_for_missing_relative_include(
     # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
-    mod_resolve.resolve_build_config(raw, args, existing_base, tmp_path)
+    mod_resolve.resolve_build_config(raw, args, existing_root, tmp_path)
 
     # --- validate ---
     warnings = [msg for level, msg in captured if level == "warning"]

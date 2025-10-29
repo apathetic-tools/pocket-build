@@ -327,7 +327,7 @@ def test_relative_include_with_parent_reference(
 def test_mixed_relative_and_absolute_includes(
     monkeypatch: MonkeyPatch, tmp_path: Path
 ) -> None:
-    """Mixing relative and absolute include paths should work with distinct bases."""
+    """Mixing relative and absolute include paths should work with distinct roots."""
     # --- setup ---
     rel_src = tmp_path / "rel_src"
     abs_src = tmp_path / "abs_src"

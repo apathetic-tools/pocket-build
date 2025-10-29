@@ -4,8 +4,8 @@
 Checklist:
 - explicit_dest — explicit 'dest' field override.
 - glob_pattern — strips non-glob prefix correctly (rsync-like flattening).
-- non_glob_pattern — copies relative to base when no globs present.
-- base_not_ancestor — falls back safely when base is not ancestor.
+- non_glob_pattern — copies relative to root when no globs present.
+- root_not_ancestor — falls back safely when root is not ancestor.
 - directory_literal — includes directory itself under out_dir.
 - star_star_glob — '**' behaves like 'src/**' (copies contents only).
 - top_level_glob — '*.ext' copies files directly into out_dir.
@@ -24,12 +24,12 @@ def test_compute_dest_with_explicit_dest(tmp_path: Path) -> None:
     """Explicit 'dest' field overrides computed path."""
     # --- setup ---
     src = tmp_path / "a/b.txt"
-    base = tmp_path
+    root = tmp_path
     out_dir = tmp_path / "out"
     dest_name = "custom"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, base, out_dir, "a/*.txt", dest_name)
+    result = mod_build._compute_dest(src, root, out_dir, "a/*.txt", dest_name)
 
     # --- verify ---
     assert result == out_dir / "custom"
@@ -39,12 +39,12 @@ def test_compute_dest_with_glob_pattern(tmp_path: Path) -> None:
     """Glob pattern strips non-glob prefix correctly (rsync-like flattening)."""
     # --- setup ---
     src = tmp_path / "a/sub/b.txt"
-    base = tmp_path
+    root = tmp_path
     out_dir = tmp_path / "out"
     pattern = "a/*"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, base, out_dir, pattern, None)
+    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
 
     # --- verify ---
     # The prefix 'a/' (the glob root) is stripped — file goes under 'out/sub/b.txt'
@@ -52,33 +52,33 @@ def test_compute_dest_with_glob_pattern(tmp_path: Path) -> None:
 
 
 def test_compute_dest_without_glob(tmp_path: Path) -> None:
-    """Non-glob pattern copies relative to base."""
+    """Non-glob pattern copies relative to root."""
     # --- setup ---
     src = tmp_path / "docs/readme.md"
-    base = tmp_path
+    root = tmp_path
     out_dir = tmp_path / "build"
     pattern = "docs/readme.md"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, base, out_dir, pattern, None)
+    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
 
     # --- verify ---
     assert result == out_dir / "docs/readme.md"
 
 
-def test_compute_dest_base_not_ancestor(tmp_path: Path) -> None:
-    """Falls back safely when base is not an ancestor of src."""
+def test_compute_dest_root_not_ancestor(tmp_path: Path) -> None:
+    """Falls back safely when root is not an ancestor of src."""
     # --- setup ---
     src = Path("/etc/hosts")
-    base = tmp_path
+    root = tmp_path
     out_dir = tmp_path / "out"
     pattern = "*.txt"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, base, out_dir, pattern, None)
+    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
 
     # --- verify ---
-    # When base and src don't align, fallback uses just the filename
+    # When root and src don't align, fallback uses just the filename
     assert result == out_dir / "hosts"
 
 
@@ -86,12 +86,12 @@ def test_compute_dest_directory_literal(tmp_path: Path) -> None:
     """Including 'src' (no glob) should copy directory itself under out_dir."""
     # --- setup ---
     src = tmp_path / "src"
-    base = tmp_path
+    root = tmp_path
     out_dir = tmp_path / "dist"
     pattern = "src"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, base, out_dir, pattern, None)
+    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
 
     # --- verify ---
     # Directory itself preserved → out/src
@@ -102,12 +102,12 @@ def test_compute_dest_star_star_glob(tmp_path: Path) -> None:
     """Including 'src/**' should copy contents only (flattened into out_dir)."""
     # --- setup ---
     src = tmp_path / "src" / "deep" / "x.txt"
-    base = tmp_path
+    root = tmp_path
     out_dir = tmp_path / "dist"
     pattern = "src/**"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, base, out_dir, pattern, None)
+    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
 
     # --- verify ---
     # The 'src/' prefix is stripped
@@ -118,12 +118,12 @@ def test_compute_dest_top_level_glob(tmp_path: Path) -> None:
     """Including '*.txt' should place top-level files directly in out_dir."""
     # --- setup ---
     src = tmp_path / "a.txt"
-    base = tmp_path
+    root = tmp_path
     out_dir = tmp_path / "out"
     pattern = "*.txt"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, base, out_dir, pattern, None)
+    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
 
     # --- verify ---
     # Pattern is at top level — file goes directly in out_dir
@@ -135,12 +135,12 @@ def test_compute_dest_with_trailing_slash(tmp_path: Path) -> None:
     src = tmp_path / "src" / "a.txt"
     src.parent.mkdir()
     src.write_text("x")
-    base = tmp_path
+    root = tmp_path
     out_dir = tmp_path / "out"
     pattern = "src/"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, base, out_dir, pattern, None)
+    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
 
     # --- verify ---
     assert result == out_dir / "a.txt"

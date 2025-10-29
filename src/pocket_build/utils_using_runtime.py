@@ -161,7 +161,7 @@ def is_excluded(path_entry: PathResolved, exclude_patterns: list[PathResolved]) 
     """High-level helper for internal use.
     Accepts PathResolved entries and delegates to the smart matcher."""
     path = path_entry["path"]
-    root = path_entry["base"]
+    root = path_entry["root"]
     # Patterns are always normalized to PathResolved["path"] under config_resolve
     patterns = [str(e["path"]) for e in exclude_patterns]
     return is_excluded_raw(path, patterns, root)
@@ -183,7 +183,7 @@ def is_excluded_raw(
     if not Path(root).exists():
         log("debug", f"Exclusion root does not exist: {root}")
 
-    # If the base itself is a file, treat that as a direct exclusion target.
+    # If the root itself is a file, treat that as a direct exclusion target.
     if root.is_file():
         # If the given path resolves exactly to that file, exclude it.
         full_path = path if path.is_absolute() else (root.parent / path)
@@ -193,7 +193,7 @@ def is_excluded_raw(
     if not exclude_patterns:
         return False
 
-    # Otherwise, treat as directory base.
+    # Otherwise, treat as directory root.
     full_path = path if path.is_absolute() else (root / path)
 
     try:

@@ -20,7 +20,7 @@ def _collect_included_files(resolved_builds: list[BuildConfigResolved]) -> list[
     files: set[Path] = set()
     for b in resolved_builds:
         for inc in b.get("include", []):
-            pattern = str(inc["base"] / inc["path"])
+            pattern = str(inc["root"] / inc["path"])
             for match in glob.glob(pattern, recursive=True):
                 p = Path(match)
                 if p.is_file():
@@ -61,7 +61,7 @@ def watch_for_changes(
 
     # Collect all output directories to ignore
     out_dirs: list[Path] = [
-        (b["out"]["base"] / b["out"]["path"]).resolve() for b in resolved_builds
+        (b["out"]["root"] / b["out"]["path"]).resolve() for b in resolved_builds
     ]
 
     rebuild_func()  # initial build
@@ -214,7 +214,7 @@ def run_selftest() -> bool:
             "respect_gitignore": False,
             "log_level": "info",
             "dry_run": False,
-            "__meta__": {"cli_base": tmp_dir, "config_base": tmp_dir},
+            "__meta__": {"cli_root": tmp_dir, "config_root": tmp_dir},
         }
 
         log("debug", f"[SELFTEST] using temp dir: {tmp_dir}")

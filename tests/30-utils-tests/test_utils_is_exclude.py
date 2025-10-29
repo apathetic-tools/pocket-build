@@ -7,7 +7,7 @@ Checklist:
 - relative_path — confirms relative path resolution against root.
 - outside_root — verifies paths outside root never match.
 - absolute_pattern — ensures absolute patterns under the same root are matched.
-- file_base_special_case — handles case where base itself is a file, not a directory.
+- file_root_special_case — handles case where root itself is a file, not a directory.
 - mixed_patterns — validates mixed matching and non-matching patterns.
 - wrapper_delegates — checks that the wrapper forwards args correctly.
 - gitignore_double_star_diff — '**' not recursive unlike gitignore in ≤Py3.10.
@@ -111,9 +111,9 @@ def test_is_excluded_raw_absolute_pattern(tmp_path: Path) -> None:
     assert not mod_utils_runtime.is_excluded_raw(file, [str(root / "x/*.txt")], root)
 
 
-def test_is_excluded_raw_file_base_special_case(tmp_path: Path) -> None:
+def test_is_excluded_raw_file_root_special_case(tmp_path: Path) -> None:
     """
-    If the base itself is a file, match it directly.
+    If the root itself is a file, match it directly.
 
     Example:
       path:     data.csv
@@ -124,21 +124,21 @@ def test_is_excluded_raw_file_base_special_case(tmp_path: Path) -> None:
                    when path resolves to that file.
     """
     # --- setup ---
-    base_file = tmp_path / "data.csv"
-    base_file.touch()
+    root_file = tmp_path / "data.csv"
+    root_file.touch()
 
     # path argument can be either relative or absolute
     rel_same = Path("data.csv")
-    abs_same = base_file
+    abs_same = root_file
 
     # --- execute + verify ---
-    assert mod_utils_runtime.is_excluded_raw(rel_same, [], base_file)
-    assert mod_utils_runtime.is_excluded_raw(abs_same, [], base_file)
+    assert mod_utils_runtime.is_excluded_raw(rel_same, [], root_file)
+    assert mod_utils_runtime.is_excluded_raw(abs_same, [], root_file)
 
     # unrelated file should not match
     other = tmp_path / "other.csv"
     other.touch()
-    assert not mod_utils_runtime.is_excluded_raw(other, [], base_file)
+    assert not mod_utils_runtime.is_excluded_raw(other, [], root_file)
 
 
 def test_is_excluded_raw_mixed_patterns(tmp_path: Path) -> None:

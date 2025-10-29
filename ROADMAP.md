@@ -35,7 +35,6 @@ review
 API
   - [ ] put utils into a submodule (as long as our sticher can handle it)
   - [ ] can utils/config be made into a single submodule? how does that play with the bundler?
-  - [ ] clean up "base" to "root" and "_normalize_base_and_path()" to "_normalize_path_with_root()"
   - [ ] converge on single term for package/module vs singlefile vs pyz
   - [ ] do we want a way to dump the schema for documentation purposes?
 
@@ -53,7 +52,7 @@ config_validate
   - [ ] Return the summary object to your CLI for machine-readable reporting (--json).?
 
 config_resolve
-  - [ ] maybe abstract _normalize_base_and_path in config_resolve for _include, _exclude, and _out for if statement clarity
+  - [ ] maybe abstract _normalize_path_with_root in config_resolve for _include, _exclude, and _out for if statement clarity
 
 load_and_validate_config
   - [ ] you must specify a build, even if that is no build. we warn otherwise

@@ -115,7 +115,7 @@ def test_normalize_path_string_behavior(
 
 def test_make_includeresolved_preserves_trailing_slash() -> None:
     # --- execute --
-    entry = mod_utils_types.make_includeresolved("src/", base=".", origin="test")
+    entry = mod_utils_types.make_includeresolved("src/", root=".", origin="test")
 
     # --- verify ---
     assert isinstance(entry["path"], str)

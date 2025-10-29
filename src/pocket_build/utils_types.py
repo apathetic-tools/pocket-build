@@ -40,14 +40,14 @@ def schema_from_typeddict(td: Type[Any]) -> dict[str, Any]:
     return get_type_hints(td, include_extras=True)
 
 
-def _base_resolved(
-    path: Path | str, base: Path | str, pattern: str | None, origin: OriginType
+def _root_resolved(
+    path: Path | str, root: Path | str, pattern: str | None, origin: OriginType
 ) -> dict[str, object]:
     # Preserve raw string if available (to keep trailing slashes)
     raw_path = path if isinstance(path, str) else str(path)
     result: dict[str, object] = {
         "path": raw_path,
-        "base": Path(base).resolve(),
+        "root": Path(root).resolve(),
         "origin": origin,
     }
     if pattern is not None:
@@ -57,26 +57,26 @@ def _base_resolved(
 
 def make_pathresolved(
     path: Path | str,
-    base: Path | str = ".",
+    root: Path | str = ".",
     origin: OriginType = "code",
     *,
     pattern: str | None = None,
 ) -> PathResolved:
     """Quick helper to build a PathResolved entry."""
     # mutate class type
-    return cast(PathResolved, _base_resolved(path, base, pattern, origin))
+    return cast(PathResolved, _root_resolved(path, root, pattern, origin))
 
 
 def make_includeresolved(
     path: Path | str,
-    base: Path | str = ".",
+    root: Path | str = ".",
     origin: OriginType = "code",
     *,
     pattern: str | None = None,
     dest: Path | str | None = None,
 ) -> IncludeResolved:
     """Create an IncludeResolved entry with optional dest override."""
-    entry = _base_resolved(path, base, pattern, origin)
+    entry = _root_resolved(path, root, pattern, origin)
     if dest is not None:
         entry["dest"] = Path(dest)
     # mutate class type

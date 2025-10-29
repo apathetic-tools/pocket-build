@@ -11,28 +11,28 @@ import pocket_build.types as mod_types
 # ---------------------------------------------------------------------------
 
 
-def make_meta(base: Path) -> mod_types.MetaBuildConfigResolved:
+def make_meta(root: Path) -> mod_types.MetaBuildConfigResolved:
     """Minimal fake meta object for resolved configs."""
-    return {"cli_base": base, "config_base": base}
+    return {"cli_root": root, "config_root": root}
 
 
-def make_resolved(path: Path | str, base: Path | str) -> mod_types.PathResolved:
+def make_resolved(path: Path | str, root: Path | str) -> mod_types.PathResolved:
     """Return a fake PathResolved-style dict."""
     raw_path = path if isinstance(path, str) else str(path)
     return cast(
-        mod_types.PathResolved, {"path": raw_path, "base": Path(base), "origin": "test"}
+        mod_types.PathResolved, {"path": raw_path, "root": Path(root), "origin": "test"}
     )
 
 
 def make_include_resolved(
-    path: Path | str, base: Path | str, dest: Path | str | None = None
+    path: Path | str, root: Path | str, dest: Path | str | None = None
 ) -> mod_types.IncludeResolved:
     """Return a fake IncludeResolved-style dict."""
     # Preserve raw string form to retain trailing slashes
     raw_path = path if isinstance(path, str) else str(path)
     d: dict[str, Path | str] = {
         "path": raw_path,
-        "base": Path(base),
+        "root": Path(root),
         "origin": "test",
     }
     if dest:

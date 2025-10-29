@@ -283,7 +283,7 @@ def main(argv: list[str] | None = None) -> int:
             log("info", f"🔧 Using config: {config_path.name}")
         else:
             log("info", "🔧 Running in CLI-only mode (no config file).")
-        log("info", f"📁 Config base: {config_dir}")
+        log("info", f"📁 Config root: {config_dir}")
         log("info", f"📂 Invoked from: {cwd}")
         log("info", f"🔧 Running {len(resolved_builds)} build(s)\n")
 

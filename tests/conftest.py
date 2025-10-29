@@ -106,7 +106,7 @@ def pytest_collection_modifyitems(
 
         if runtime_marker and runtime_marker == mode:
             file_path = str(item.fspath)
-            # Make path relative to project rootdir
+            # Make path relative to project root dir
             if file_path.startswith(root):
                 file_path = os.path.relpath(file_path, root)
                 for tp in testpaths:

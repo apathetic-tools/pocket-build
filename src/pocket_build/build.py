@@ -21,7 +21,7 @@ from .utils_using_runtime import (
 
 def _compute_dest(
     src: Path,
-    base: Path,
+    root: Path,
     out_dir: Path,
     src_pattern: str,
     dest_name: Path | str | None,
@@ -31,12 +31,12 @@ def _compute_dest(
     Rules:
       - If dest_name is set → place inside out_dir/dest_name
       - Else if pattern has globs → strip non-glob prefix before computing relative path
-      - Else → use src path relative to base
-      - If base is not an ancestor of src → fall back to filename only
+      - Else → use src path relative to root
+      - If root is not an ancestor of src → fall back to filename only
     """
     log(
         "trace",
-        f"[DEST] src={src}, base={base}, out_dir={out_dir},"
+        f"[DEST] src={src}, root={root}, out_dir={out_dir},"
         f" pattern={src_pattern!r}, dest_name={dest_name}",
     )
 
@@ -50,7 +50,7 @@ def _compute_dest(
         src_pattern = src_pattern.rstrip("/")
         # pretend it's a glob-like pattern for relative computation
         try:
-            rel = src.relative_to(base / src_pattern)
+            rel = src.relative_to(root / src_pattern)
             result = out_dir / rel
             log("trace", f"[DEST] trailing-slash include → rel={rel}, result={result}")
             return result
@@ -62,7 +62,7 @@ def _compute_dest(
         if has_glob_chars(src_pattern):
             # For glob patterns, strip non-glob prefix
             prefix = _non_glob_prefix(src_pattern)
-            rel = src.relative_to(base / prefix)
+            rel = src.relative_to(root / prefix)
             result = out_dir / rel
             log(
                 "trace",
@@ -71,13 +71,13 @@ def _compute_dest(
             return result
         else:
             # For literal includes (like "src" or "file.txt"), preserve full structure
-            rel = src.relative_to(base)
+            rel = src.relative_to(root)
             result = out_dir / rel
             log("trace", f"[DEST] literal include → rel={rel}, result={result}")
             return result
     except ValueError:
-        # Fallback when src isn't under base
-        log("trace", f"[DEST] fallback (src not under base) → using name={src.name}")
+        # Fallback when src isn't under root
+        log("trace", f"[DEST] fallback (src not under root) → using name={src.name}")
         return out_dir / src.name
 
 
@@ -126,7 +126,7 @@ def copy_directory(
     """Recursively copy directory contents, skipping excluded files/dirs.
 
     Both src and dest can be Path or str. Exclusion matching is done
-    relative to 'src_root', which should normally be the original include base.
+    relative to 'src_root', which should normally be the original include root.
 
     Exclude patterns ending with '/' are treated as directory-wide excludes.
     """
@@ -174,18 +174,18 @@ def copy_item(
     exclude_patterns: list[PathResolved],
     dry_run: bool,
 ) -> None:
-    """Copy one file or directory entry, using built-in base info."""
+    """Copy one file or directory entry, using built-in root info."""
 
     src = Path(src_entry["path"])
-    base_src = Path(src_entry["base"]).resolve()
-    src = (base_src / src).resolve() if not src.is_absolute() else src.resolve()
+    root_src = Path(src_entry["root"]).resolve()
+    src = (root_src / src).resolve() if not src.is_absolute() else src.resolve()
     dest = Path(dest_entry["path"])
-    base_dest = (dest_entry["base"]).resolve()
-    dest = (base_dest / dest).resolve() if not dest.is_absolute() else dest.resolve()
+    root_dest = (dest_entry["root"]).resolve()
+    dest = (root_dest / dest).resolve() if not dest.is_absolute() else dest.resolve()
     origin = src_entry.get("origin", "?")
 
     # Combine output directory with the precomputed dest (if relative)
-    dest = dest if dest.is_absolute() else (base_dest / dest)
+    dest = dest if dest.is_absolute() else (root_dest / dest)
 
     exclude_patterns_raw = [str(e["path"]) for e in exclude_patterns]
     pattern_str = str(src_entry.get("pattern", src_entry["path"]))
@@ -196,9 +196,9 @@ def copy_item(
         f"(pattern={pattern_str!r}, excludes={len(exclude_patterns_raw)})",
     )
 
-    # Exclusion check relative to its base
-    if is_excluded_raw(src, exclude_patterns_raw, base_src):
-        log("debug", f"🚫  Skipped (excluded): {src.relative_to(base_src)}")
+    # Exclusion check relative to its root
+    if is_excluded_raw(src, exclude_patterns_raw, root_src):
+        log("debug", f"🚫  Skipped (excluded): {src.relative_to(root_src)}")
         return
 
     # Detect shallow single-star pattern
@@ -211,7 +211,7 @@ def copy_item(
     if src.is_dir() and is_shallow_star:
         log(
             "trace",
-            f"📁 (shallow from pattern={pattern_str!r}) {src.relative_to(base_src)}",
+            f"📁 (shallow from pattern={pattern_str!r}) {src.relative_to(root_src)}",
         )
         if not dry_run:
             dest.mkdir(parents=True, exist_ok=True)
@@ -219,9 +219,9 @@ def copy_item(
 
     # Normal behavior
     if src.is_dir():
-        copy_directory(src, dest, exclude_patterns_raw, base_src, dry_run)
+        copy_directory(src, dest, exclude_patterns_raw, root_src, dry_run)
     else:
-        copy_file(src, dest, base_src, dry_run)
+        copy_file(src, dest, root_src, dry_run)
 
 
 def run_build(
@@ -232,7 +232,7 @@ def run_build(
     includes: list[IncludeResolved] = build_cfg["include"]
     excludes: list[PathResolved] = build_cfg["exclude"]
     out_entry = build_cfg["out"]
-    out_dir = (out_entry["base"] / out_entry["path"]).resolve()
+    out_dir = (out_entry["root"] / out_entry["path"]).resolve()
 
     log("trace", f"[RUN_BUILD] out_dir={out_dir}, includes={len(includes)} patterns")
 
@@ -250,12 +250,12 @@ def run_build(
     # --- Process includes ---
     for inc in includes:
         src_pattern = str(inc["path"])
-        base = Path(inc["base"]).resolve()
+        root = Path(inc["root"]).resolve()
 
         log(
             "trace",
             f"[INCLUDE] start pattern={src_pattern!r},"
-            f" base={base}, origin={inc['origin']}",
+            f" root={root}, origin={inc['origin']}",
         )
 
         if not src_pattern.strip():
@@ -270,7 +270,7 @@ def run_build(
                 f"[MATCH] Treating as trailing-slash directory include"
                 f" → {src_pattern!r}",
             )
-            root_dir = base / src_pattern.rstrip("/")
+            root_dir = root / src_pattern.rstrip("/")
             if root_dir.exists():
                 matches = [p for p in root_dir.rglob("*") if p.is_file()]
                 log(
@@ -282,7 +282,7 @@ def run_build(
         elif src_pattern.endswith("/**"):
             # Direct recursive pattern
             log("trace", f"[MATCH] Treating as recursive include → {src_pattern!r}")
-            root_dir = base / src_pattern.rstrip("/**")
+            root_dir = root / src_pattern.rstrip("/**")
             if root_dir.exists():
                 matches = [p for p in root_dir.rglob("*") if p.is_file()]
                 log(
@@ -293,11 +293,11 @@ def run_build(
                 log("trace", f"[MATCH] root_dir does not exist: {root_dir}")
         elif has_glob_chars(src_pattern):
             log("trace", f"[MATCH] Using glob() for pattern {src_pattern!r}")
-            matches = list(base.glob(src_pattern))
+            matches = list(root.glob(src_pattern))
             log("trace", f"[MATCH] glob found {len(matches)} match(es)")
         else:
-            log("trace", f"[MATCH] Treating as literal include {base / src_pattern}")
-            matches = [base / src_pattern]
+            log("trace", f"[MATCH] Treating as literal include {root / src_pattern}")
+            matches = [root / src_pattern]
 
         for i, m in enumerate(matches):
             log("trace", f"[MATCH]   {i + 1:02d}. {m}")
@@ -315,12 +315,12 @@ def run_build(
             log("trace", f"[COPY] Preparing to copy {src}")
 
             # Compute the destination path before handing off
-            dest_rel = _compute_dest(src, base, out_dir, src_pattern, inc.get("dest"))
+            dest_rel = _compute_dest(src, root, out_dir, src_pattern, inc.get("dest"))
             log("trace", f"[COPY] dest_rel={dest_rel}")
 
             src_resolved = make_pathresolved(
                 src,  # replace pattern with matched path
-                inc["base"],
+                inc["root"],
                 inc["origin"],
                 pattern=src_pattern,
             )

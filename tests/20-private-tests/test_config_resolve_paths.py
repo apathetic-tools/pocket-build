@@ -1,6 +1,6 @@
 # tests/private/test_config_resolve_paths.py
 
-"""Direct tests for _normalize_base_and_path, ensuring consistent path semantics."""
+"""Direct tests for _normalize_path_with_root, ensuring consistent path semantics."""
 
 # pyright: reportPrivateUsage=false
 
@@ -11,14 +11,14 @@ import pocket_build.config_resolve as mod_resolve
 
 def test_relative_path_preserves_string(tmp_path: Path) -> None:
     # --- setup ---
-    base = tmp_path
+    root = tmp_path
     rel = "src/"
 
     # --- execute ---
-    b, p = mod_resolve._normalize_base_and_path(rel, base)
+    b, p = mod_resolve._normalize_path_with_root(rel, root)
 
     # --- verify ---
-    assert b == base.resolve()
+    assert b == root.resolve()
     # stays a string, not a Path
     assert isinstance(p, str)
     assert p == "src/"
@@ -29,7 +29,7 @@ def test_relative_path_as_path_object(tmp_path: Path) -> None:
     rel = Path("src")
 
     # --- execute ---
-    b, p = mod_resolve._normalize_base_and_path(rel, tmp_path)
+    b, p = mod_resolve._normalize_path_with_root(rel, tmp_path)
 
     # --- verify ---
     assert b == tmp_path.resolve()
@@ -43,7 +43,7 @@ def test_absolute_literal_dir(tmp_path: Path) -> None:
     abs_dir.mkdir()
 
     # --- execute ---
-    b, p = mod_resolve._normalize_base_and_path(str(abs_dir), tmp_path)
+    b, p = mod_resolve._normalize_path_with_root(str(abs_dir), tmp_path)
 
     # --- verify ---
     assert b == abs_dir.resolve()
@@ -57,7 +57,7 @@ def test_absolute_trailing_slash_means_contents(tmp_path: Path) -> None:
     raw = str(abs_dir) + "/"
 
     # --- execute ---
-    b, p = mod_resolve._normalize_base_and_path(raw, tmp_path)
+    b, p = mod_resolve._normalize_path_with_root(raw, tmp_path)
 
     # --- verify ---
     assert b == abs_dir.resolve()
@@ -71,20 +71,20 @@ def test_absolute_glob_preserves_pattern(tmp_path: Path) -> None:
     raw = str(abs_dir) + "/**"
 
     # --- execute ---
-    b, p = mod_resolve._normalize_base_and_path(raw, tmp_path)
+    b, p = mod_resolve._normalize_path_with_root(raw, tmp_path)
 
     # --- verify ---
     assert b == abs_dir.resolve()
     assert p == "**"
 
 
-def test_returns_resolved_base_for_relative_context(tmp_path: Path) -> None:
+def test_returns_resolved_root_for_relative_context(tmp_path: Path) -> None:
     # --- setup ---
     cwd = tmp_path / "proj"
     cwd.mkdir()
 
     # --- execute ---
-    b, p = mod_resolve._normalize_base_and_path("foo/**", cwd)
+    b, p = mod_resolve._normalize_path_with_root("foo/**", cwd)
 
     # --- verify ---
     assert b == cwd.resolve()
@@ -98,7 +98,7 @@ def test_handles_absolute_file(tmp_path: Path) -> None:
     f.write_text("x")
 
     # --- execute ---
-    b, p = mod_resolve._normalize_base_and_path(str(f), tmp_path)
+    b, p = mod_resolve._normalize_path_with_root(str(f), tmp_path)
 
     # --- verify ---
     assert b == f.resolve()
