@@ -3,6 +3,12 @@
 Central constants used across the project.
 """
 
+RUNTIME_MODES = {
+    "standalone",  # single stitched file
+    "installed",  # poetry-installed / pip-installed / importable
+    "zipapp",  # .pyz bundle
+}
+
 # --- env keys ---
 DEFAULT_ENV_LOG_LEVEL: str = "LOG_LEVEL"
 DEFAULT_ENV_RESPECT_GITIGNORE: str = "RESPECT_GITINGORE"

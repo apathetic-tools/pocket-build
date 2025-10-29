@@ -315,7 +315,7 @@ def build_single_file(
         f"__version__ = {version!r}\n"
         f"__commit__ = {commit!r}\n"
         f"__build_date__ = {build_date!r}\n"
-        f"__STITCHED__ = True\n"
+        f"__STANDALONE__ = True\n"
         f"__STITCH_SOURCE__ = 'dev/make_script.py'\n"
         "\n"
         "\n" + "\n".join(parts) + "\n"

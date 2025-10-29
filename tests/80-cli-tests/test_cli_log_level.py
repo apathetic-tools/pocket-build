@@ -1,5 +1,5 @@
 # tests/test_cli_log_level.py
-"""Tests for package.cli (module and single-file versions)."""
+"""Tests for package.cli (package and standalone versions)."""
 
 import json
 from pathlib import Path

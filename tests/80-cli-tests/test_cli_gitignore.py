@@ -1,5 +1,5 @@
 # tests/test_cli_gitignore.py
-"""Tests for .gitignore handling and precedence in package.cli."""
+"""Tests for .gitignore handling and precedence in module.cli."""
 
 import json
 import shutil

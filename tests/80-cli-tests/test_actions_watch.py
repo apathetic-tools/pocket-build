@@ -1,5 +1,5 @@
 # tests/test_cli_watch.py
-"""Tests for package.cli (module and single-file versions)."""
+"""Tests for package.cli (package and standalone versions)."""
 
 # we import `_` private for testing purposes only
 # pyright: reportPrivateUsage=false
@@ -66,7 +66,7 @@ def test_watch_for_changes_triggers_rebuild(
 ) -> None:
     """Ensure that watch_for_changes() rebuilds on file modification.
 
-    This verifies the core watch loop logic in package.cli:
+    This verifies the core watch loop logic in module.cli:
     - The initial build should run once at startup.
     - A subsequent file modification should trigger exactly one rebuild.
 

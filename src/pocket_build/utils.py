@@ -97,11 +97,11 @@ def load_jsonc(path: Path) -> dict[str, Any] | list[Any] | None:
     return cast(dict[str, Any] | list[Any], data)
 
 
-def is_stitched() -> bool:
+def is_standalone() -> bool:
     """
-    Return True if running from a stitched single-file build.
+    Return True if running from a standalone single-file build.
     """
-    return bool(globals().get("__STITCHED__", False))
+    return bool(globals().get("__STANDALONE__", False))
 
 
 def remove_path_in_error_message(inner_msg: str, path: Path) -> str:
@@ -212,3 +212,15 @@ def capture_output() -> Iterator[CapturedOutput]:
         raise
     finally:
         sys.stdout, sys.stderr = old_out, old_err
+
+
+def detect_runtime_mode() -> str:
+    if getattr(sys, "frozen", False):
+        return "frozen"
+    if "__main__" in sys.modules and getattr(
+        sys.modules["__main__"], __file__, ""
+    ).endswith(".pyz"):
+        return "zipapp"
+    if "__STANDALONE__" in globals():
+        return "standalone"
+    return "installed"

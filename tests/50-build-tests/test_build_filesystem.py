@@ -1,5 +1,5 @@
 # tests/test_build_filesystem.py
-"""Tests for package.build (module and single-file versions)."""
+"""Tests for package.build (package and standalone versions)."""
 
 from pathlib import Path
 

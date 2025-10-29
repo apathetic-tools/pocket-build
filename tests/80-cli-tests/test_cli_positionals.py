@@ -1,6 +1,6 @@
 # tests/test_cli_positionals.py
 
-"""Tests for positional argument and flag interaction in package.cli."""
+"""Tests for positional argument and flag interaction in module.cli."""
 
 from pathlib import Path
 

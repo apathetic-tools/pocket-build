@@ -4,7 +4,7 @@ Shared test setup for project.
 
 Each pytest run now targets a single runtime mode:
 - Normal mode (default): uses src/pocket_build
-- Single-file mode: uses bin/script.py when RUNTIME_MODE=singlefile
+- Standalone mode: uses bin/script.py when RUNTIME_MODE=singlefile
 
 Switch mode with: RUNTIME_MODE=singlefile pytest
 """
@@ -27,7 +27,7 @@ runtime_swap()
 
 
 def _mode() -> str:
-    return os.getenv("RUNTIME_MODE", "module")
+    return os.getenv("RUNTIME_MODE", "installed")
 
 
 def pytest_report_header(config: Config) -> str:
@@ -36,9 +36,9 @@ def pytest_report_header(config: Config) -> str:
 
 
 # ------------------------------------------------------------
-# ⚙️ Auto-build helper for bundled script
+# ⚙️ Auto-build helper for standalone script
 # ------------------------------------------------------------
-def ensure_bundled_script_up_to_date(root: Path) -> Path:
+def ensure_standalone_script_up_to_date(root: Path) -> Path:
     """Rebuild `bin/script.py` if missing or outdated."""
     bin_path = root / "bin" / f"{mod_meta.PROGRAM_SCRIPT}.py"
     src_dir = root / "src" / f"{mod_meta.PROGRAM_PACKAGE}"
@@ -54,11 +54,11 @@ def ensure_bundled_script_up_to_date(root: Path) -> Path:
                 break
 
     if needs_rebuild:
-        print("⚙️  Rebuilding single-file bundle (make_script.py)...")
+        print("⚙️  Rebuilding standalone bundle (make_script.py)...")
         subprocess.run([sys.executable, str(builder)], check=True)
         # force mtime update in case contents identical
         bin_path.touch()
-        assert bin_path.exists(), "❌ Failed to generate bundled script."
+        assert bin_path.exists(), "❌ Failed to generate standalone script."
 
     return bin_path
 
@@ -124,7 +124,7 @@ def pytest_collection_modifyitems(
 def pytest_unconfigure(config: pytest.Config) -> None:
     """Print summary of included runtime-specific tests at the end."""
     included_map: dict[str, int] = getattr(config, "_included_map", {})
-    mode = getattr(config, "_runtime_mode", "module")
+    mode = getattr(config, "_runtime_mode", "installed")
 
     if not included_map:
         return

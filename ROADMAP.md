@@ -35,8 +35,7 @@ review
 API
   - [ ] put utils into a submodule (as long as our sticher can handle it)
   - [ ] can utils/config be made into a single submodule? how does that play with the bundler?
-  - [ ] converge on single term for package/module vs singlefile vs pyz
-  - [ ] do we want a way to dump the schema for documentation purposes?
+    - [ ] do we want a way to dump the schema for documentation purposes?
 
 utils
   - [ ] log(): I didn't know about Python.logging or logging.Logger.

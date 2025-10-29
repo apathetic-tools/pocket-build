@@ -1,5 +1,5 @@
 # tests/test_config.py
-"""Tests for package.config (module and single-file versions)."""
+"""Tests for package.config (package and standalone versions)."""
 
 from typing import Any, TextIO
 

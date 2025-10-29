@@ -212,8 +212,10 @@ def main(argv: list[str] | None = None) -> int:
         # --- Version flag ---
         if getattr(args, "version", None):
             meta = get_metadata()
-            stitched = " [stitched]" if globals().get("__STITCHED__", False) else ""
-            print(f"{PROGRAM_DISPLAY} {meta.version} ({meta.commit}){stitched}")
+            standalone = (
+                " [standalone]" if globals().get("__STANDALONE__", False) else ""
+            )
+            print(f"{PROGRAM_DISPLAY} {meta.version} ({meta.commit}){standalone}")
             return 0
 
         # --- Python version check ---

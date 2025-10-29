@@ -1,5 +1,5 @@
 # tests/test_cli.py
-"""Tests for package.cli (module and single-file versions)."""
+"""Tests for package.cli (package and standalone versions)."""
 
 import json
 import os
@@ -91,13 +91,13 @@ def test_version_flag(
     assert re.search(r"\d+\.\d+\.\d+", out)
 
     if os.getenv("RUNTIME_MODE") in {"singlefile"}:
-        # Bundled version — commit may be known or local
+        # Standalone version — commit may be known or local
         if os.getenv("CI") or os.getenv("GIT_TAG") or os.getenv("GITHUB_REF"):
             assert re.search(r"\([0-9a-f]{4,}\)", out)
         else:
             assert "(unknown (local build))" in out
     else:
-        # Module (source) version — should always have a live git commit hash
+        # installed (source) version — should always have a live git commit hash
         assert re.search(r"\([0-9a-f]{4,}\)", out)
 
 

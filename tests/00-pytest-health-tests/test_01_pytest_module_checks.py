@@ -1,9 +1,9 @@
 # tests/test_01_pytest_module_checks.py
 """
-Ensures pytest is running against the intended runtime (module vs singlefile)
+Ensures pytest is running against the intended runtime (installed vs singlefile)
 and that Python’s import cache (`sys.modules`) points to the correct sources.
 
-If RUNTIME_MODE=singlefile, all modules must resolve to the stitched file.
+If RUNTIME_MODE=singlefile, all modules must resolve to the standalone file.
 Otherwise, they must resolve to the src tree.
 """
 
@@ -36,7 +36,7 @@ def list_important_modules() -> list[str]:
     """Return all importable submodules under the package, if available."""
     important: list[str] = []
     if not hasattr(app_package, "__path__"):
-        TRACE("pkgutil.walk_packages skipped — single-file runtime (no __path__)")
+        TRACE("pkgutil.walk_packages skipped — standalone runtime (no __path__)")
         important.append(app_package.__name__)
     else:
         for _, name, _ in pkgutil.walk_packages(
@@ -49,7 +49,7 @@ def list_important_modules() -> list[str]:
 
 def dump_snapshot(*, include_full: bool = False) -> None:
     """Prints a summary of key modules and (optionally) a full sys.modules dump."""
-    mode: str = os.getenv("RUNTIME_MODE", "module")
+    mode: str = os.getenv("RUNTIME_MODE", "installed")
 
     TRACE("========== SNAPSHOT ===========")
     TRACE(f"RUNTIME_MODE={mode}")
@@ -95,18 +95,20 @@ def test_pytest_runtime_cache_integrity() -> None:
 
     if os.getenv("TRACE"):
         dump_snapshot()
-    stitched = mod_utils.is_stitched()
+    standalone = mod_utils.is_standalone()
 
     if mode == "singlefile":
         # --- verify singlefile ---
         # what does the module itself think?
-        assert stitched
+        assert standalone
 
         # path peeks
         assert utils_file.startswith(str(BIN_ROOT)), f"{utils_file} not in bin/"
 
         # exists
-        assert expected_script.exists(), f"Expected bundled script at {expected_script}"
+        assert expected_script.exists(), (
+            f"Expected standalone script at {expected_script}"
+        )
 
         # troubleshooting info
         TRACE(
@@ -121,7 +123,7 @@ def test_pytest_runtime_cache_integrity() -> None:
     else:
         # --- verify module ---
         # what does the module itself think?
-        assert not stitched
+        assert not standalone
 
         # path peeks
         assert utils_file.startswith(str(SRC_ROOT)), f"{utils_file} not in src/"

@@ -1,5 +1,5 @@
 # tests/test_load_jsonc.py
-"""Tests for package.utils (module and single-file versions)."""
+"""Tests for package.utils (package and standalone versions)."""
 
 from pathlib import Path
 

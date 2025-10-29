@@ -1,5 +1,5 @@
 # tests/test_utils_color.py
-"""Tests for color utility helpers in package.utils."""
+"""Tests for color utility helpers in module.utils."""
 
 # not doing tests for resolved_use_color()
 

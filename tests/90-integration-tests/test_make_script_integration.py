@@ -2,7 +2,7 @@
 """
 Integration tests for `dev/make_script.py`.
 
-These verify that the bundled single-file script (`bin/script.py`)
+These verify that the  standalone script (`bin/script.py`)
 embeds the correct commit information depending on environment variables.
 """
 

@@ -103,7 +103,7 @@ def watch_for_changes(
 
 
 def _get_metadata_from_header(script_path: Path) -> tuple[str, str]:
-    """Extract version and commit from bundled script.
+    """Extract version and commit from standalone script.
 
     Prefers in-file constants (__version__, __commit__) if present;
     falls back to commented header tags.
@@ -141,20 +141,20 @@ def _get_metadata_from_header(script_path: Path) -> tuple[str, str]:
 def get_metadata() -> Metadata:
     """
     Return (version, commit) tuple for this tool.
-    - Bundled script → parse from header
-    - Source package → read pyproject.toml + git
+    - Standalone script → parse from header
+    - Source installed → read pyproject.toml + git
     """
     script_path = Path(__file__)
 
     log("trace", "get_metadata ran from:", Path(__file__).resolve())
 
-    # --- Heuristic: bundled script lives outside `src/` ---
-    if globals().get("__STITCHED__", False):
+    # --- Heuristic: standalone script lives outside `src/` ---
+    if globals().get("__STANDALONE__", False):
         version, commit = _get_metadata_from_header(script_path)
-        log("trace", f"got stiched version {version} with commit {commit}")
+        log("trace", f"got standalone version {version} with commit {commit}")
         return Metadata(version, commit)
 
-    # --- Modular / source package case ---
+    # --- Modular / source installed case ---
 
     # Source package case
     version = "unknown"
@@ -184,7 +184,7 @@ def get_metadata() -> Metadata:
     except Exception:
         pass
 
-    log("trace", f"got module version {version} with commit {commit}")
+    log("trace", f"got package version {version} with commit {commit}")
     return Metadata(version, commit)
 
 
