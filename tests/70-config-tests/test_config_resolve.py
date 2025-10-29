@@ -46,6 +46,90 @@ def _args(**kwargs: object) -> argparse.Namespace:
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
+# resolve_config()
+# ---------------------------------------------------------------------------
+
+
+def test_resolve_config_aggregates_builds_and_defaults(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Ensure resolve_config merges builds and assigns default values."""
+    # --- setup ---
+    root: mod_types.RootConfig = {
+        "builds": [
+            make_build_input(include=["src/**"], out="dist"),
+            make_build_input(include=["lib/**"], out="libout"),
+        ],
+        "log_level": "warning",
+    }
+    args = _args()
+
+    # --- patch and execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
+    resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
+
+    # --- validate ---
+    builds = resolved["builds"]
+    assert len(builds) == 2
+    assert all("include" in b for b in builds)
+    assert resolved["log_level"] in ("warning", "info")  # env/cli may override
+    assert isinstance(resolved["watch_interval"], float)
+    assert resolved["strict_config"] is False
+
+
+def test_resolve_config_env_overrides(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+    """Environment variables for watch interval and log level should override."""
+    # --- setup ---
+    root: mod_types.RootConfig = {"builds": [{"include": ["src/**"], "out": "dist"}]}
+    args = _args()
+
+    # --- patch and execute ---
+    monkeypatch.setenv(mod_const.DEFAULT_ENV_WATCH_INTERVAL, "9.9")
+    monkeypatch.setenv(mod_const.DEFAULT_ENV_LOG_LEVEL, "debug")
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
+    resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
+
+    # --- validate ---
+    assert abs(resolved["watch_interval"] - 9.9) < 0.001
+    assert resolved["log_level"] == "debug"
+
+
+def test_resolve_config_invalid_env_watch_falls_back(
+    monkeypatch: MonkeyPatch, tmp_path: Path
+) -> None:
+    """Invalid watch interval env var should log warning and use default."""
+    # --- setup ---
+    root: mod_types.RootConfig = {"builds": [{"include": ["src/**"], "out": "dist"}]}
+    args = _args()
+
+    # --- patch and execute ---
+    monkeypatch.setenv(mod_const.DEFAULT_ENV_WATCH_INTERVAL, "badvalue")
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
+    resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
+
+    # --- validate ---
+    assert isinstance(resolved["watch_interval"], float)
+    assert resolved["watch_interval"] == mod_constants.DEFAULT_WATCH_INTERVAL
+
+
+def test_resolve_config_propagates_cli_log_level(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """CLI --log-level should propagate into resolved root and runtime."""
+    # --- setup ---
+    args = _args(log_level="trace")
+    root: mod_types.RootConfig = {"builds": [{"include": ["src/**"], "out": "dist"}]}
+
+    # --- patch and execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
+    resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
+
+    # --- validate ---
+    assert resolved["log_level"] == "trace"
+    assert mod_runtime.current_runtime["log_level"] == "trace"
+
+
+# ---------------------------------------------------------------------------
 # resolve_build_config()
 # ---------------------------------------------------------------------------
 
@@ -193,90 +277,6 @@ def test_resolve_build_config_respect_gitignore_false(
     # --- validate ---
     assert all(e["origin"] != "gitignore" for e in resolved["exclude"])
     assert resolved["respect_gitignore"] is False
-
-
-# ---------------------------------------------------------------------------
-# resolve_config()
-# ---------------------------------------------------------------------------
-
-
-def test_resolve_config_aggregates_builds_and_defaults(
-    tmp_path: Path, monkeypatch: MonkeyPatch
-) -> None:
-    """Ensure resolve_config merges builds and assigns default values."""
-    # --- setup ---
-    root: mod_types.RootConfig = {
-        "builds": [
-            make_build_input(include=["src/**"], out="dist"),
-            make_build_input(include=["lib/**"], out="libout"),
-        ],
-        "log_level": "warning",
-    }
-    args = _args()
-
-    # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
-
-    # --- validate ---
-    builds = resolved["builds"]
-    assert len(builds) == 2
-    assert all("include" in b for b in builds)
-    assert resolved["log_level"] in ("warning", "info")  # env/cli may override
-    assert isinstance(resolved["watch_interval"], float)
-    assert resolved["strict_config"] is False
-
-
-def test_resolve_config_env_overrides(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
-    """Environment variables for watch interval and log level should override."""
-    # --- setup ---
-    root: mod_types.RootConfig = {"builds": [{"include": ["src/**"], "out": "dist"}]}
-    args = _args()
-
-    # --- patch and execute ---
-    monkeypatch.setenv(mod_const.DEFAULT_ENV_WATCH_INTERVAL, "9.9")
-    monkeypatch.setenv(mod_const.DEFAULT_ENV_LOG_LEVEL, "debug")
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
-
-    # --- validate ---
-    assert abs(resolved["watch_interval"] - 9.9) < 0.001
-    assert resolved["log_level"] == "debug"
-
-
-def test_resolve_config_invalid_env_watch_falls_back(
-    monkeypatch: MonkeyPatch, tmp_path: Path
-) -> None:
-    """Invalid watch interval env var should log warning and use default."""
-    # --- setup ---
-    root: mod_types.RootConfig = {"builds": [{"include": ["src/**"], "out": "dist"}]}
-    args = _args()
-
-    # --- patch and execute ---
-    monkeypatch.setenv(mod_const.DEFAULT_ENV_WATCH_INTERVAL, "badvalue")
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
-
-    # --- validate ---
-    assert isinstance(resolved["watch_interval"], float)
-    assert resolved["watch_interval"] == mod_constants.DEFAULT_WATCH_INTERVAL
-
-
-def test_resolve_config_propagates_cli_log_level(
-    tmp_path: Path, monkeypatch: MonkeyPatch
-) -> None:
-    """CLI --log-level should propagate into resolved root and runtime."""
-    # --- setup ---
-    args = _args(log_level="trace")
-    root: mod_types.RootConfig = {"builds": [{"include": ["src/**"], "out": "dist"}]}
-
-    # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
-
-    # --- validate ---
-    assert resolved["log_level"] == "trace"
-    assert mod_runtime.current_runtime["log_level"] == "trace"
 
 
 def test_resolve_build_config_add_exclude_extends(
