@@ -27,7 +27,6 @@ Exploring bundling options for generating the single-file release:
   - TypedDict with unknown keys – ensures the “Hint: did you mean” logic runs.
   - Strict mode escalation – verify that a warning becomes an error when strict=True.
   - Aggregator flushing – ensure flush_schema_aggregators() moves warnings into the right buckets and clears them.
-- some tests use pytest.raise and others use try
 
 ## 🧑‍💻 Development
 

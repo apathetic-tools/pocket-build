@@ -35,11 +35,15 @@ def capture_log_output(
     msg: str | None = None,
     **kwargs: Any,
 ) -> tuple[str, str]:
-    """Set the runtime log level, call log() once, and capture stdout/stderr output."""
+    """Temporarily capture stdout/stderr during a log() call.
+
+    Returns (stdout_text, stderr_text) as plain strings.
+    Automatically restores sys.stdout/sys.stderr afterwards.
+    """
     # --- configure runtime ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", runtime_level)
 
-    # record old buffers (respecting any existing redirection)
+    # Preserve original streams for proper restoration
     old_out, old_err = sys.stdout, sys.stderr
 
     # --- capture output temporarily ---
@@ -52,7 +56,7 @@ def capture_log_output(
         final_msg: str = msg if msg is not None else f"msg:{msg_level}"
         mod_utils_runtime.log(msg_level, final_msg, **kwargs)
     finally:
-        # --- restore output capture mechanism ---
+        # Always restore, even if log() crashes
         monkeypatch.setattr(sys, "stdout", old_out)
         monkeypatch.setattr(sys, "stderr", old_err)
 
@@ -303,7 +307,7 @@ def test_log_missing_log_level(monkeypatch: MonkeyPatch) -> None:
     try:
         mod_utils_runtime.log("error", "no level key")
     finally:
-        runtime_dict = cast(dict[str, object], mod_runtime.current_runtime)
+        runtime_dict = cast(dict[str, object], mod_runtime.current_runtime)  # pylance
         runtime_dict.update(backup)
 
     # --- verify ---

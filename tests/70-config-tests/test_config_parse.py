@@ -3,7 +3,7 @@
 
 from typing import Any, TextIO
 
-from pytest import MonkeyPatch
+from pytest import MonkeyPatch, raises
 
 import pocket_build.config as mod_config
 import pocket_build.utils_using_runtime as mod_utils_runtime
@@ -181,14 +181,12 @@ def test_parse_config_accepts_explicit_builds_list_no_warning(
 def test_parse_config_rejects_invalid_root_type() -> None:
     """Non-dict or non-list root should raise a TypeError."""
     # --- execute and verify ---
-    try:
+    with raises(TypeError) as excinfo:
         mod_config.parse_config("not_a_dict_or_list")  # type: ignore[arg-type]
-    except TypeError as e:
-        msg = str(e)
-        assert "Invalid top-level value" in msg
-        assert "expected object" in msg
-    else:
-        assert False, "Expected TypeError not raised"
+
+    msg = str(excinfo.value)
+    assert "Invalid top-level value" in msg
+    assert "expected object" in msg
 
 
 def test_parse_config_build_list_does_not_warn_when_builds_also_present(
@@ -331,15 +329,10 @@ def test_parse_config_prefers_builds_when_both_are_dicts(
 
 def test_parse_config_rejects_mixed_type_list() -> None:
     """Mixed-type list should raise TypeError (must be all strings or all objects)."""
-
     # --- setup ---
     # This list contains both a string and a dict — invalid mix.
     bad_config: list[object] = ["src/**", {"out": "dist"}]
 
     # --- execute & verify ---
-    try:
+    with raises(TypeError, match="Invalid mixed-type list"):
         mod_config.parse_config(bad_config)
-    except TypeError as e:
-        assert "Invalid mixed-type list" in str(e)
-    else:
-        raise AssertionError("Expected TypeError for mixed-type list config.")

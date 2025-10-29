@@ -3,6 +3,8 @@
 from argparse import Namespace
 from pathlib import Path
 
+from pytest import raises
+
 import pocket_build.config as mod_config
 
 
@@ -12,9 +14,5 @@ def test_find_config_raises_for_directory(tmp_path: Path) -> None:
     args = Namespace(config=str(tmp_path))
 
     # --- execute and verify ---
-    try:
+    with raises(ValueError, match="directory"):
         mod_config.find_config(args, tmp_path)
-    except ValueError as e:
-        assert "directory" in str(e)
-    else:
-        raise AssertionError("Expected ValueError for directory config path.")
