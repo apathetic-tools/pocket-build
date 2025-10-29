@@ -19,7 +19,7 @@ Exploring bundling options for generating the single-file release:
 - [ ] zip file: zipapp / shiv / pyinstaller --onefile
 
 ## 🧪 Tests
-- tests for each function (find_config/load_config missing tons)
+- verify every function has test coverage
 - check for redundant tests
 - for config validation, cover these cases
   - List of wrong item type – list[int] expected, got list of strings.
