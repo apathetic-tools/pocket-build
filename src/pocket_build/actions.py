@@ -9,12 +9,12 @@ from typing import Callable
 from .build import run_build
 from .constants import DEFAULT_WATCH_INTERVAL
 from .meta import PROGRAM_DISPLAY, PROGRAM_SCRIPT, Metadata
-from .types import BuildConfig
+from .types import BuildConfigResolved
 from .utils_types import make_includeresolved, make_pathresolved
 from .utils_using_runtime import log
 
 
-def _collect_included_files(resolved_builds: list[BuildConfig]) -> list[Path]:
+def _collect_included_files(resolved_builds: list[BuildConfigResolved]) -> list[Path]:
     """Flatten all include globs into a unique list of files."""
     log("trace", "_collect_included_files", __name__, id(_collect_included_files))
     files: set[Path] = set()
@@ -31,7 +31,7 @@ def _collect_included_files(resolved_builds: list[BuildConfig]) -> list[Path]:
 
 def watch_for_changes(
     rebuild_func: Callable[[], None],
-    resolved_builds: list[BuildConfig],
+    resolved_builds: list[BuildConfigResolved],
     interval: float = DEFAULT_WATCH_INTERVAL,
 ) -> None:
     """Poll file modification times and rebuild when changes are detected.
@@ -206,8 +206,8 @@ def run_selftest() -> bool:
         file = src / "hello.txt"
         file.write_text(f"hello {PROGRAM_DISPLAY}!", encoding="utf-8")
 
-        # --- Construct minimal BuildConfig using helpers ---
-        build_cfg: BuildConfig = {
+        # --- Construct minimal BuildConfigResolved using helpers ---
+        build_cfg: BuildConfigResolved = {
             "include": [make_includeresolved(str(src / "**"), tmp_dir, "code")],
             "exclude": [],
             "out": make_pathresolved(out, tmp_dir, "code"),

@@ -6,7 +6,7 @@ import shutil
 from pathlib import Path
 
 from .runtime import current_runtime
-from .types import BuildConfig, IncludeResolved, PathResolved
+from .types import BuildConfigResolved, IncludeResolved, PathResolved
 from .utils_types import make_pathresolved
 from .utils_using_runtime import (
     has_glob_chars,
@@ -225,7 +225,7 @@ def copy_item(
 
 
 def run_build(
-    build_cfg: BuildConfig,
+    build_cfg: BuildConfigResolved,
 ) -> None:
     """Execute a single build task using a fully resolved config."""
     dry_run = build_cfg.get("dry_run", False)
@@ -334,7 +334,7 @@ def run_build(
     log("info", f"✅ Build completed → {out_dir}\n")
 
 
-def run_all_builds(resolved_builds: list[BuildConfig], dry_run: bool) -> None:
+def run_all_builds(resolved_builds: list[BuildConfigResolved], dry_run: bool) -> None:
     log("trace", f"[run_all_builds] Resolved build: {resolved_builds}")
 
     for i, build_cfg in enumerate(resolved_builds, 1):

@@ -22,13 +22,13 @@ class IncludeResolved(PathResolved):
     dest: NotRequired[Path]  # optional override for target name
 
 
-class MetaBuildConfig(TypedDict):
+class MetaBuildConfigResolved(TypedDict):
     # sources of parameters
     cli_base: Path
     config_base: Path
 
 
-class BuildConfigInput(TypedDict, total=False):
+class BuildConfig(TypedDict, total=False):
     include: list[str]
     exclude: list[str]
 
@@ -42,8 +42,8 @@ class BuildConfigInput(TypedDict, total=False):
     watch_interval: float
 
 
-class RootConfigInput(TypedDict, total=False):
-    builds: list[BuildConfigInput]
+class RootConfig(TypedDict, total=False):
+    builds: list[BuildConfig]
 
     # Defaults that cascade into each build
     log_level: str
@@ -55,7 +55,7 @@ class RootConfigInput(TypedDict, total=False):
     watch_interval: float
 
 
-class BuildConfig(TypedDict):
+class BuildConfigResolved(TypedDict):
     include: list[IncludeResolved]
     exclude: list[PathResolved]
 
@@ -68,11 +68,11 @@ class BuildConfig(TypedDict):
     dry_run: bool
 
     # global provenance (optional, for audit/debug)
-    __meta__: MetaBuildConfig
+    __meta__: MetaBuildConfigResolved
 
 
-class RootConfig(TypedDict):
-    builds: list[BuildConfig]
+class RootConfigResolved(TypedDict):
+    builds: list[BuildConfigResolved]
 
     # runtime behavior
     log_level: str

@@ -109,7 +109,7 @@ def flush_schema_aggregators(
 def _infer_type_label(
     expected_type: Any,
 ) -> str:
-    """Return a readable label for logging (e.g. 'list[str]', 'BuildConfigInput')."""
+    """Return a readable label for logging (e.g. 'list[str]', 'BuildConfig')."""
     try:
         origin = get_origin(expected_type)
         args = get_args(expected_type)

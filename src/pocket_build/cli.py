@@ -21,7 +21,7 @@ from .meta import (
 )
 from .runtime import current_runtime
 from .types import (
-    RootConfigInput,
+    RootConfig,
 )
 from .utils import should_use_color
 from .utils_types import cast_hint
@@ -227,7 +227,7 @@ def main(argv: list[str] | None = None) -> int:
 
         # --- Load configuration ---
         config_path: Path | None = None
-        root_cfg: RootConfigInput | None = None
+        root_cfg: RootConfig | None = None
         config_result = load_and_validate_config(args)
         if config_result is not None:
             config_path, root_cfg = config_result
@@ -256,7 +256,7 @@ def main(argv: list[str] | None = None) -> int:
         if root_cfg is None:
             log("info", "No config file found — using CLI-only mode.")
             # Create minimal pseudo-config when running without a file for args merging
-            root_cfg = cast_hint(RootConfigInput, {"builds": [{}]})
+            root_cfg = cast_hint(RootConfig, {"builds": [{}]})
 
         # --- Resolve config with args and feaults ---
         resolved_root = resolve_config(root_cfg, args, config_dir, cwd)

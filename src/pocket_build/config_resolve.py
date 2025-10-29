@@ -17,13 +17,13 @@ from .constants import (
 from .runtime import current_runtime
 from .types import (
     BuildConfig,
-    BuildConfigInput,
+    BuildConfigResolved,
     IncludeResolved,
-    MetaBuildConfig,
+    MetaBuildConfigResolved,
     OriginType,
     PathResolved,
     RootConfig,
-    RootConfigInput,
+    RootConfigResolved,
 )
 from .utils_types import cast_hint, make_includeresolved, make_pathresolved
 from .utils_using_runtime import log
@@ -87,13 +87,13 @@ def _normalize_base_and_path(
 
 
 def resolve_build_config(
-    build_cfg: BuildConfigInput,
+    build_cfg: BuildConfig,
     args: argparse.Namespace,
     config_dir: Path,
     cwd: Path,
-    root_cfg: RootConfigInput | None = None,
-) -> BuildConfig:
-    """Resolve a single BuildConfigInput into a BuildConfig.
+    root_cfg: RootConfig | None = None,
+) -> BuildConfigResolved:
+    """Resolve a single BuildConfig into a BuildConfigResolved.
 
     Applies CLI overrides, normalizes paths, merges gitignore behavior,
     and attaches provenance metadata.
@@ -102,7 +102,7 @@ def resolve_build_config(
     resolved_cfg: dict[str, Any] = dict(build_cfg)
 
     # Base provenance for all resolutions
-    meta: MetaBuildConfig = {
+    meta: MetaBuildConfigResolved = {
         "cli_base": cwd,
         "config_base": config_dir,
     }
@@ -229,7 +229,7 @@ def resolve_build_config(
     # Attach provenance
     # ------------------------------
     resolved_cfg["__meta__"] = meta
-    return cast_hint(BuildConfig, resolved_cfg)
+    return cast_hint(BuildConfigResolved, resolved_cfg)
 
 
 # --------------------------------------------------------------------------- #
@@ -238,13 +238,13 @@ def resolve_build_config(
 
 
 def resolve_config(
-    root_input: RootConfigInput,
+    root_input: RootConfig,
     args: argparse.Namespace,
     config_dir: Path,
     cwd: Path,
-) -> RootConfig:
-    """Fully resolve a loaded RootConfigInput into a ready-to-run RootConfig."""
-    root_cfg = cast_hint(RootConfigInput, dict(root_input))
+) -> RootConfigResolved:
+    """Fully resolve a loaded RootConfig into a ready-to-run RootConfigResolved."""
+    root_cfg = cast_hint(RootConfig, dict(root_input))
 
     # ------------------------------
     # Watch interval
@@ -285,7 +285,7 @@ def resolve_config(
         resolve_build_config(b, args, config_dir, cwd, root_cfg) for b in builds_input
     ]
 
-    resolved_root: RootConfig = {
+    resolved_root: RootConfigResolved = {
         "builds": resolved_builds,
         "strict_config": root_cfg.get("strict_config", False),
         "watch_interval": watch_interval,

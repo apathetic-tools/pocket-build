@@ -279,7 +279,7 @@ def test_watch_uses_config_interval_when_flag_passed(
     # --- stubs ---
     def fake_watch(
         _rebuild_func: Callable[[], None],
-        _resolved_builds: list[mod_types.BuildConfig],
+        _resolved_builds: list[mod_types.BuildConfigResolved],
         interval: float,
         *_args: Any,
         **_kwargs: Any,
@@ -312,7 +312,7 @@ def test_watch_falls_back_to_default_interval_when_no_config(
     # --- stubs ---
     def fake_watch(
         _rebuild_func: Callable[[], None],
-        _resolved_builds: list[mod_types.BuildConfig],
+        _resolved_builds: list[mod_types.BuildConfigResolved],
         interval: float,
         *_args: Any,
         **_kwargs: Any,

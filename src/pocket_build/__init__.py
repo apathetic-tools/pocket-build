@@ -59,13 +59,13 @@ from .meta import (
 from .runtime import current_runtime
 from .types import (
     BuildConfig,
-    BuildConfigInput,
+    BuildConfigResolved,
     IncludeResolved,
-    MetaBuildConfig,
+    MetaBuildConfigResolved,
     OriginType,
     PathResolved,
     RootConfig,
-    RootConfigInput,
+    RootConfigResolved,
     Runtime,
 )
 from .utils import (
@@ -147,13 +147,13 @@ __all__ = [
     "should_use_color",
     #
     # --- Types ---
+    "BuildConfigResolved",
     "BuildConfig",
-    "BuildConfigInput",
     "IncludeResolved",
-    "MetaBuildConfig",
+    "MetaBuildConfigResolved",
     "OriginType",
     "PathResolved",
+    "RootConfigResolved",
     "RootConfig",
-    "RootConfigInput",
     "Runtime",
 ]

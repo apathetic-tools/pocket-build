@@ -111,7 +111,7 @@ def test_empty_build_list() -> None:
 
 
 def test_handles_list_of_typed_dicts() -> None:
-    """A list of build dicts should not be rejected as non-BuildConfigInput."""
+    """A list of build dicts should not be rejected as non-BuildConfig."""
     # --- setup ---
     cfg: dict[str, Any] = {
         "builds": [

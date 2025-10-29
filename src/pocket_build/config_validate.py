@@ -4,7 +4,7 @@
 from typing import Any
 
 from .constants import DEFAULT_STRICT_CONFIG
-from .types import BuildConfigInput, RootConfigInput
+from .types import BuildConfig, RootConfig
 from .utils_schema import (
     SchemaErrorAggregator,
     ValidationSummary,
@@ -70,7 +70,7 @@ def validate_config(
     strict_config: bool = root_strict
 
     # --- Validate root-level keys ---
-    ROOT_SCHEMA = schema_from_typeddict(RootConfigInput)
+    ROOT_SCHEMA = schema_from_typeddict(RootConfig)
     prewarn_root: set[str] = set()
     ok, found = warn_keys_once(
         strict_config,
@@ -116,7 +116,7 @@ def validate_config(
         return set_valid_and_return()
 
     builds = cast_hint(list[Any], builds_raw)
-    BUILD_SCHEMA = schema_from_typeddict(BuildConfigInput)
+    BUILD_SCHEMA = schema_from_typeddict(BuildConfig)
 
     for i, b in enumerate(builds):
         if not isinstance(b, dict):

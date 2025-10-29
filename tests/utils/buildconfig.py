@@ -1,5 +1,5 @@
 # tests/utils/buildconfig.py
-"""Shared test helpers for constructing fake BuildConfig and related types."""
+"""Shared test helpers for constructing fake BuildConfigResolved and related types."""
 
 from pathlib import Path
 from typing import cast
@@ -11,7 +11,7 @@ import pocket_build.types as mod_types
 # ---------------------------------------------------------------------------
 
 
-def make_meta(base: Path) -> mod_types.MetaBuildConfig:
+def make_meta(base: Path) -> mod_types.MetaBuildConfigResolved:
     """Minimal fake meta object for resolved configs."""
     return {"cli_base": base, "config_base": base}
 
@@ -49,8 +49,8 @@ def make_build_cfg(
     log_level: str = "info",
     dry_run: bool = False,
     out: mod_types.PathResolved | None = None,
-) -> mod_types.BuildConfig:
-    """Return a fake, fully-populated BuildConfig."""
+) -> mod_types.BuildConfigResolved:
+    """Return a fake, fully-populated BuildConfigResolved."""
     return {
         "include": include,
         "exclude": exclude or [],
@@ -67,7 +67,7 @@ def make_build_input(
     exclude: list[str] | None = None,
     out: str | None = None,
     **extra: object,
-) -> mod_types.BuildConfigInput:
+) -> mod_types.BuildConfig:
     """Convenient shorthand for constructing raw (pre-resolve) build inputs."""
     cfg: dict[str, object] = {}
     if include is not None:
@@ -77,4 +77,4 @@ def make_build_input(
     if out is not None:
         cfg["out"] = out
     cfg.update(extra)
-    return cast(mod_types.BuildConfigInput, cfg)
+    return cast(mod_types.BuildConfig, cfg)

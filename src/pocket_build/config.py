@@ -18,8 +18,8 @@ from .meta import (
 )
 from .runtime import current_runtime
 from .types import (
-    BuildConfigInput,
-    RootConfigInput,
+    BuildConfig,
+    RootConfig,
 )
 from .utils import load_jsonc, plural, remove_path_in_error_message
 from .utils_schema import ValidationSummary
@@ -189,7 +189,7 @@ def parse_config(
     raw_config: dict[str, Any] | list[Any] | None,
 ) -> dict[str, Any] | None:
     """
-    Normalize user config into canonical RootConfigInput shape (no filesystem work).
+    Normalize user config into canonical RootConfig shape (no filesystem work).
 
     Accepted forms:
       - #1 [] / {}                   → single build with `include` = []
@@ -283,8 +283,8 @@ def parse_config(
     hoisted: dict[str, Any] = {}
 
     # Keys on both Root and Build are what we want to hoist up
-    root_keys = set(schema_from_typeddict(RootConfigInput))
-    build_keys = set(schema_from_typeddict(BuildConfigInput))
+    root_keys = set(schema_from_typeddict(RootConfig))
+    build_keys = set(schema_from_typeddict(BuildConfig))
     hoist_keys = root_keys & build_keys
 
     # Move shared keys to the root
@@ -359,7 +359,7 @@ def _validation_summary(
 
 def load_and_validate_config(
     args: argparse.Namespace,
-) -> tuple[Path, RootConfigInput] | None:
+) -> tuple[Path, RootConfig] | None:
     """
     Find, load, parse, and validate the user's configuration.
 
@@ -417,6 +417,6 @@ def load_and_validate_config(
             f"Configuration file {config_path.name} contains validation errors."
         )
 
-    # --- Upgrade to RootConfigInput type ---
-    root_cfg: RootConfigInput = cast_hint(RootConfigInput, parsed_cfg)
+    # --- Upgrade to RootConfig type ---
+    root_cfg: RootConfig = cast_hint(RootConfig, parsed_cfg)
     return config_path, root_cfg
