@@ -97,17 +97,18 @@ def safe_isinstance(value: Any, expected_type: Any) -> bool:
     if expected_type is Any:
         return True
 
-    # --- Handle Literals explicitly ---
     origin = get_origin(expected_type)
+    args = get_args(expected_type)
+
+    # --- Handle Literals explicitly ---
     if origin is Literal:
         # Literal["x", "y"] → True if value equals any of the allowed literals
-        return value in get_args(expected_type)
+        return value in args
 
     # --- Handle Unions (includes Optional) ---
-    origin = get_origin(expected_type)
     if origin is Union:
         # e.g. Union[str, int]
-        return any(safe_isinstance(value, t) for t in get_args(expected_type))
+        return any(safe_isinstance(value, t) for t in args)
 
     # --- Handle special case: TypedDicts ---
     try:
@@ -129,7 +130,6 @@ def safe_isinstance(value: Any, expected_type: Any) -> bool:
             return False
 
         # Recursively check elements for known homogeneous containers
-        args = get_args(expected_type)
         if not args:
             return True
 
@@ -150,7 +150,7 @@ def safe_isinstance(value: Any, expected_type: Any) -> bool:
 
         # Tuple[str, int] etc.
         if origin is tuple and isinstance(value, tuple):
-            subtypes = get_args(expected_type)
+            subtypes = args
             tup = cast_hint(tuple[Any, ...], value)
             if len(subtypes) == len(tup):
                 return all(safe_isinstance(v, t) for v, t in zip(tup, subtypes))

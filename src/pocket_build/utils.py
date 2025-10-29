@@ -26,6 +26,12 @@ def should_use_color() -> bool:
 
 def load_jsonc(path: Path) -> dict[str, Any] | list[Any] | None:
     """Load JSONC (JSON with comments and trailing commas)."""
+    if not path.exists():
+        raise FileNotFoundError(f"JSONC file not found: {path}")
+
+    if not path.is_file():
+        raise ValueError(f"Expected a file: {path}")
+
     text = path.read_text(encoding="utf-8")
 
     # Remove // and # comments (but not URLs like "http://")

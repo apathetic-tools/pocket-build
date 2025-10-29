@@ -91,6 +91,10 @@ def find_config(
         if not config.exists():
             # Explicit path → hard failure
             raise FileNotFoundError(f"Specified config file not found: {config}")
+        if config.is_dir():
+            raise ValueError(
+                f"Specified config path is a directory, not a file: {config}"
+            )
         return config
 
     # --- 2. Default candidate files ---
@@ -168,8 +172,15 @@ def load_config(config_path: Path) -> dict[str, Any] | list[Any] | None:
 
         for key in ("config", "builds", "includes"):
             if key in config_globals:
+                result = config_globals[key]
+                if not isinstance(result, (dict, list, type(None))):
+                    raise TypeError(
+                        f"{key} in {config_path.name} must be a dict, list, or None"
+                        f", not {type(result).__name__}"
+                    )
+
                 # Explicitly narrow the loaded config to its expected union type.
-                return cast(dict[str, Any] | list[Any] | None, config_globals[key])
+                return cast(dict[str, Any] | list[Any] | None, result)
 
         raise ValueError(
             f"{config_path.name} did not define `config` or `builds` or `includes`"
@@ -236,11 +247,20 @@ def parse_config(
                 b.pop("watch_interval", None)
         return root
 
+    # --- better error message for mixed lists ---
+    if isinstance(raw_config, list):
+        raise TypeError(
+            "Invalid mixed-type list: "
+            "all elements must be strings or all must be objects."
+        )
+
     # --- From here on, must be a dict ---
-    if not isinstance(raw_config, dict):
+    # Defensive check: should be unreachable after list cases above,
+    # but kept to guard against future changes or malformed input.
+    if not isinstance(raw_config, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
         raise TypeError(
             f"Invalid top-level value: {type(raw_config).__name__} "
-            "(expected dict, list of dicts, or list of strings)"
+            "(expected object, list of objects, or list of strings)"
         )
 
     builds_val = raw_config.get("builds")
@@ -373,6 +393,11 @@ def load_and_validate_config(
 
     # --- initialize logging wihtout config ---
     current_runtime["log_level"] = determine_log_level(args)
+
+    # warn if cwd doesn't exist, edge case. We might still be able to run
+    cwd = Path.cwd().resolve()
+    if not cwd.exists():
+        log("warning", f"Working directory does not exist: {cwd}")
 
     # --- Find config file ---
     cwd = Path.cwd().resolve()

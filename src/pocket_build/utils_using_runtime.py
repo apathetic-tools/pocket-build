@@ -91,6 +91,12 @@ def log(
       if a message color is set, prefix color is skipped.
     - Safe for use in captured output; respects BYPASS_CAPTURE"""
     current_level = current_runtime["log_level"]
+
+    # if the level is not a valid level, we quietly do nothing.
+    # idealy we would raise an exception, but then main would catch
+    # it and try to log() resulting in a loop.
+    # we could print() instead and exit program, but that's a bit extreme?
+
     if not _should_log(level, current_level):
         return
 
@@ -156,11 +162,19 @@ def is_excluded_raw(
     root = Path(root).resolve()
     path = Path(path)
 
+    # the callee really should deal with this, otherwise we might spam
+    if not Path(root).exists():
+        log("debug", f"Exclusion root does not exist: {root}")
+
     # If the base itself is a file, treat that as a direct exclusion target.
     if root.is_file():
         # If the given path resolves exactly to that file, exclude it.
         full_path = path if path.is_absolute() else (root.parent / path)
         return full_path.resolve() == root.resolve()
+
+    # If no exclude patterns, nothing else to exclude
+    if not exclude_patterns:
+        return False
 
     # Otherwise, treat as directory base.
     full_path = path if path.is_absolute() else (root / path)
@@ -234,7 +248,10 @@ def normalize_path_string(raw: str) -> str:
     path = path.replace("\\", "/")
 
     # Collapse redundant slashes (keep protocol //)
-    path = re.sub(r"(?<!:)//+", "/", path)
+    collapsed_slashes = re.sub(r"(?<!:)//+", "/", path)
+    if collapsed_slashes != path:
+        log("trace", f"Collapsed redundant slashes: {path!r} → {collapsed_slashes!r}")
+        path = collapsed_slashes
 
     return path
 

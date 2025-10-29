@@ -19,19 +19,25 @@ Exploring bundling options for generating the single-file release:
 - [ ] zip file: zipapp / shiv / pyinstaller --onefile
 
 ## 🧪 Tests
-
+- tests for each function (find_config/load_config missing tons)
+- check for redundant tests
+- for config validation, cover these cases
+  - List of wrong item type – list[int] expected, got list of strings.
+    → Should trigger _validate_scalar_value and produce an error.
+  - TypedDict with unknown keys – ensures the “Hint: did you mean” logic runs.
+  - Strict mode escalation – verify that a warning becomes an error when strict=True.
+  - Aggregator flushing – ensure flush_schema_aggregators() moves warnings into the right buckets and clears them.
+- some tests use pytest.raise and others use try
 
 ## 🧑‍💻 Development
 
 
 deployment
   - [ ] Deploy action when I tag a release should create a release and attach it to the tagged release.
-  - logo? images? icon? readme banner?
 
 review
   - [ ] main is just high level orchestration and making sure the right command is run
-  - [ ] functions that bail out early like log() might want to validate arguments first to make sure code is okay when they won't bail out.
-
+  
 API
   - [ ] a helper for API folks that adds stdout, stderr, and stdout+stderr to return values and exceptions
   - [ ] put utils into a submodule (as long as our sticher can handle it)
@@ -44,6 +50,7 @@ utils
   - [ ] log(): I didn't know about Python.logging or logging.Logger.
   - [ ] log(): should it respect the env outside of runtime? atm CLI trumps env but it could set it too.
   - [ ] log(): why does LOG_LEVEL=silent not work in tests?
+  - [ ] do things that call is_excluded need to check if root exists?
 
 config_validate
   - [ ] key in wrong place: "Ignored watch_interval in build #0: applies only at root level (move it above your builds: block)." could use `ROOT_ONLY_HINTS = {"watch_interval": "move it above your builds list"}`
@@ -57,10 +64,12 @@ config_resolve
 
 load_and_validate_config
   - [ ] you must specify a build, even if that is no build. we warn otherwise
+  - [ ] _validate_typed_dict likely needs to check if required fields are present
 
 documentation
   - [ ] where do we document the structure of the project? what do we document inside it vs here?
   - [ ] where do we do longer usage documentation? README can get a bit big
+  - [ ] logo? images? icon? readme banner?
 
 program flow
   - [ ] how do include path dest parameters get transfered in? from the CLI? from the config? do they work?

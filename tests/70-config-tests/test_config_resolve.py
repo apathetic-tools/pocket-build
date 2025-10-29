@@ -13,9 +13,8 @@ import pocket_build.constants as mod_const  # for changing constants using monke
 import pocket_build.constants as mod_constants
 import pocket_build.runtime as mod_runtime
 import pocket_build.types as mod_types
-from tests.utils import (
-    make_build_input,
-)
+import pocket_build.utils_using_runtime as mod_utils_runtime
+from tests.utils import make_build_input, patch_everywhere
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -352,3 +351,81 @@ def test_resolve_build_config_preserves_trailing_slash(tmp_path: Path) -> None:
     # --- validate ---
     assert isinstance(inc_path, str)
     assert inc_path.endswith("/"), f"trailing slash lost: {inc_path!r}"
+
+
+def test_resolve_build_config_warns_for_missing_include_base(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Warn if include base directory does not exist and pattern is not a glob."""
+    # --- setup ---
+    missing_base = tmp_path / "nonexistent_base"
+    raw = make_build_input(include=[f"{missing_base}/src"])
+    args = _args()
+    captured: list[tuple[str, str]] = []
+
+    # --- stubs ---
+    def fake_log(level: str, *values: object, **_: object) -> None:
+        captured.append((level, " ".join(map(str, values))))
+
+    # --- patch and execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
+    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
+    mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+
+    # --- validate ---
+    warnings = [msg for level, msg in captured if level == "warning"]
+    assert any("Include base does not exist" in msg for msg in warnings), (
+        f"Expected warning about missing include base, got: {warnings}"
+    )
+
+
+def test_resolve_build_config_warns_for_missing_absolute_include(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Warn if absolute include path does not exist and pattern is not a glob."""
+    # --- setup ---
+    abs_missing = tmp_path / "abs_missing_dir"
+    raw = make_build_input(include=[str(abs_missing)])
+    args = _args()
+    captured: list[tuple[str, str]] = []
+
+    # --- stubs ---
+    def fake_log(level: str, *values: object, **_: object) -> None:
+        captured.append((level, " ".join(map(str, values))))
+
+    # --- patch and execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
+    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
+    mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+
+    # --- validate ---
+    warnings = [msg for level, msg in captured if level == "warning"]
+    assert any("Include path does not exist" in msg for msg in warnings), (
+        f"Expected warning about missing absolute include path, got: {warnings}"
+    )
+
+
+def test_resolve_build_config_warns_for_missing_relative_include(
+    tmp_path: Path, monkeypatch: MonkeyPatch
+) -> None:
+    """Warn if relative include path does not exist under an existing base."""
+    # --- setup ---
+    existing_base = tmp_path
+    raw = make_build_input(include=["missing_rel_dir"])
+    args = _args()
+    captured: list[tuple[str, str]] = []
+
+    # --- stubs ---
+    def fake_log(level: str, *values: object, **_: object) -> None:
+        captured.append((level, " ".join(map(str, values))))
+
+    # --- patch and execute ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
+    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
+    mod_resolve.resolve_build_config(raw, args, existing_base, tmp_path)
+
+    # --- validate ---
+    warnings = [msg for level, msg in captured if level == "warning"]
+    assert any("Include path does not exist" in msg for msg in warnings), (
+        f"Expected warning about missing relative include path, got: {warnings}"
+    )

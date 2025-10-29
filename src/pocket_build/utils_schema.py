@@ -246,6 +246,12 @@ def _validate_typed_dict(
         )
         return False
 
+    if not hasattr(typedict_cls, "__annotations__"):
+        raise AssertionError(
+            "Internal schema invariant violated: "
+            f"{typedict_cls!r} has no __annotations__."
+        )
+
     schema = schema_from_typeddict(typedict_cls)
     valid = True
 

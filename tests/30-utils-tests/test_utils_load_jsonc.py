@@ -164,3 +164,24 @@ def test_load_jsonc_multiline_block_comment(tmp_path: Path) -> None:
 
     # --- verify ---
     assert result == {"a": 1, "b": 2}
+
+
+def test_load_jsonc_missing_file_raises(tmp_path: Path) -> None:
+    """Missing JSONC file should raise FileNotFoundError."""
+    # --- setup ---
+    cfg = tmp_path / "does_not_exist.jsonc"
+
+    # --- execute and verify ---
+    with pytest.raises(FileNotFoundError):
+        mod_utils_core.load_jsonc(cfg)
+
+
+def test_load_jsonc_directory_path_raises(tmp_path: Path) -> None:
+    """Passing a directory instead of a file should raise ValueError."""
+    # --- setup ---
+    cfg_dir = tmp_path / "config_dir"
+    cfg_dir.mkdir()
+
+    # --- execute and verify ---
+    with pytest.raises(ValueError, match="Expected a file"):
+        mod_utils_core.load_jsonc(cfg_dir)

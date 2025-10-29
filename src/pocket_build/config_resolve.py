@@ -26,7 +26,7 @@ from .types import (
     RootConfigResolved,
 )
 from .utils_types import cast_hint, make_includeresolved, make_pathresolved
-from .utils_using_runtime import log
+from .utils_using_runtime import has_glob_chars, log
 
 # --------------------------------------------------------------------------- #
 # helpers
@@ -138,6 +138,23 @@ def resolve_build_config(
         if key not in seen_inc:
             seen_inc.add(key)
             unique_inc.append(i)
+
+            # Check base existence
+            if not i["base"].exists():
+                log(
+                    "warning",
+                    f"Include base does not exist: {i['base']} (origin: {i['origin']})",
+                )
+
+            # Check path existence
+            if not has_glob_chars(str(i["path"])):
+                full_path = i["base"] / i["path"]  # absolute paths override base
+                if not full_path.exists():
+                    log(
+                        "warning",
+                        f"Include path does not exist: {full_path}"
+                        f" (origin: {i['origin']})",
+                    )
     includes = unique_inc
     resolved_cfg["include"] = includes
 

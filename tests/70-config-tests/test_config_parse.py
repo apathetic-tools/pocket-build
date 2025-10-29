@@ -186,7 +186,7 @@ def test_parse_config_rejects_invalid_root_type() -> None:
     except TypeError as e:
         msg = str(e)
         assert "Invalid top-level value" in msg
-        assert "expected dict" in msg
+        assert "expected object" in msg
     else:
         assert False, "Expected TypeError not raised"
 
@@ -327,3 +327,19 @@ def test_parse_config_prefers_builds_when_both_are_dicts(
     assert "build" in result and result["build"] == {"include": ["lib"]}
     # warning was emitted for coercing 'builds' dict → list
     assert any("Config key 'builds' was a dict" in msg for _, msg in logged)
+
+
+def test_parse_config_rejects_mixed_type_list() -> None:
+    """Mixed-type list should raise TypeError (must be all strings or all objects)."""
+
+    # --- setup ---
+    # This list contains both a string and a dict — invalid mix.
+    bad_config: list[object] = ["src/**", {"out": "dist"}]
+
+    # --- execute & verify ---
+    try:
+        mod_config.parse_config(bad_config)
+    except TypeError as e:
+        assert "Invalid mixed-type list" in str(e)
+    else:
+        raise AssertionError("Expected TypeError for mixed-type list config.")
