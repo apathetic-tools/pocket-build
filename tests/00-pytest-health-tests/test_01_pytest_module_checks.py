@@ -16,9 +16,9 @@ from pathlib import Path
 
 import pytest
 
-import pocket_build as app_package  # must be top-level
-import pocket_build.utils as mod_utils  # must be top-level
-from pocket_build.meta import PROGRAM_PACKAGE, PROGRAM_SCRIPT  # must be top-level
+import pocket_build as app_package
+import pocket_build.meta as mod_meta
+import pocket_build.utils as mod_utils
 from tests.utils import make_trace
 
 # ---------------------------------------------------------------------------
@@ -87,11 +87,11 @@ def test_pytest_runtime_cache_integrity() -> None:
     # --- setup ---
     mode = os.getenv("RUNTIME_MODE", "unknown")
     utils_file = str(inspect.getsourcefile(mod_utils))
-    expected_script = BIN_ROOT / f"{PROGRAM_SCRIPT}.py"
+    expected_script = BIN_ROOT / f"{mod_meta.PROGRAM_SCRIPT}.py"
 
     # --- execute ---
     TRACE(f"RUNTIME_MODE={mode}")
-    TRACE(f"{PROGRAM_PACKAGE}.utils  → {utils_file}")
+    TRACE(f"{mod_meta.PROGRAM_PACKAGE}.utils  → {utils_file}")
 
     if os.getenv("TRACE"):
         dump_snapshot()
@@ -109,10 +109,13 @@ def test_pytest_runtime_cache_integrity() -> None:
         assert expected_script.exists(), f"Expected bundled script at {expected_script}"
 
         # troubleshooting info
-        TRACE(f"sys.modules['{PROGRAM_PACKAGE}'] = {sys.modules.get(PROGRAM_PACKAGE)}")
         TRACE(
-            f"sys.modules['{PROGRAM_PACKAGE}.utils']"
-            f" = {sys.modules.get(f'{PROGRAM_PACKAGE}.utils')}"
+            f"sys.modules['{mod_meta.PROGRAM_PACKAGE}']"
+            f" = {sys.modules.get(mod_meta.PROGRAM_PACKAGE)}"
+        )
+        TRACE(
+            f"sys.modules['{mod_meta.PROGRAM_PACKAGE}.utils']"
+            f" = {sys.modules.get(f'{mod_meta.PROGRAM_PACKAGE}.utils')}"
         )
 
     else:
@@ -151,10 +154,10 @@ def test_debug_dump_all_module_origins() -> None:
     dump_snapshot(include_full=True)
 
     # show total module count for quick glance
-    count = sum(1 for name in sys.modules if name.startswith(PROGRAM_PACKAGE))
-    TRACE(f"Loaded {count} {PROGRAM_PACKAGE} modules total")
+    count = sum(1 for name in sys.modules if name.startswith(mod_meta.PROGRAM_PACKAGE))
+    TRACE(f"Loaded {count} {mod_meta.PROGRAM_PACKAGE} modules total")
 
     # force visible failure for debugging runs
     raise AssertionError(
-        f"Intentional fail — {count} {PROGRAM_PACKAGE} modules listed above."
+        f"Intentional fail — {count} {mod_meta.PROGRAM_PACKAGE} modules listed above."
     )

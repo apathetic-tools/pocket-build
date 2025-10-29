@@ -17,7 +17,7 @@ from pathlib import Path
 import pytest
 from pytest import Config, Item as PytestItem
 
-from pocket_build.meta import PROGRAM_PACKAGE, PROGRAM_SCRIPT
+import pocket_build.meta as mod_meta
 from tests.utils import make_trace, runtime_swap
 
 TRACE = make_trace("⚡️")
@@ -40,8 +40,8 @@ def pytest_report_header(config: Config) -> str:
 # ------------------------------------------------------------
 def ensure_bundled_script_up_to_date(root: Path) -> Path:
     """Rebuild `bin/script.py` if missing or outdated."""
-    bin_path = root / "bin" / f"{PROGRAM_SCRIPT}.py"
-    src_dir = root / "src" / f"{PROGRAM_PACKAGE}"
+    bin_path = root / "bin" / f"{mod_meta.PROGRAM_SCRIPT}.py"
+    src_dir = root / "src" / f"{mod_meta.PROGRAM_PACKAGE}"
     builder = root / "dev" / "make_script.py"
 
     # If the output file doesn't exist or is older than any source file → rebuild.

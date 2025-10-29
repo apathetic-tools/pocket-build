@@ -10,8 +10,8 @@ import pytest
 from pytest import CaptureFixture
 
 import pocket_build.utils as mod_utils
+import pocket_build.utils_types as mod_utils_types
 import pocket_build.utils_using_runtime as mod_utils_runtime
-from pocket_build.utils_types import make_includeresolved
 
 # ---------------------------------------------------------------------------
 # get_glob_root()
@@ -113,7 +113,7 @@ def test_normalize_path_string_behavior(
 
 def test_make_includeresolved_preserves_trailing_slash() -> None:
     # --- execute --
-    entry = make_includeresolved("src/", base=".", origin="test")
+    entry = mod_utils_types.make_includeresolved("src/", base=".", origin="test")
 
     # --- verify ---
     assert isinstance(entry["path"], str)

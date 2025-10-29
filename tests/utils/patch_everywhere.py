@@ -6,7 +6,7 @@ from typing import Any, Callable
 
 from pytest import MonkeyPatch
 
-from pocket_build.meta import PROGRAM_PACKAGE
+import pocket_build.meta as mod_meta
 
 from .trace import TRACE
 
@@ -42,7 +42,7 @@ def patch_everywhere(
 
         # skip irrelevant stdlib or third-party modules for performance
         name = getattr(m, "__name__", "")
-        if not name.startswith(PROGRAM_PACKAGE):
+        if not name.startswith(mod_meta.PROGRAM_PACKAGE):
             continue
 
         for k, v in list(m.__dict__.items()):

@@ -17,7 +17,7 @@ from types import ModuleType
 
 from pytest import UsageError
 
-from pocket_build.meta import PROGRAM_PACKAGE, PROGRAM_SCRIPT
+import pocket_build.meta as mod_meta
 
 from .trace import make_trace
 
@@ -40,7 +40,7 @@ def runtime_swap() -> bool:
         return False  # Normal module mode; nothing to do.
 
     # bin_path = ensure_bundled_script_up_to_date(root)
-    bin_path = PROJ_ROOT / "bin" / f"{PROGRAM_SCRIPT}.py"
+    bin_path = PROJ_ROOT / "bin" / f"{mod_meta.PROGRAM_SCRIPT}.py"
 
     if not bin_path.exists():
         msg = (
@@ -55,13 +55,13 @@ def runtime_swap() -> bool:
             del sys.modules[name]
 
     # Load stitched script as the pocket_build package.
-    spec = importlib.util.spec_from_file_location(PROGRAM_PACKAGE, bin_path)
+    spec = importlib.util.spec_from_file_location(mod_meta.PROGRAM_PACKAGE, bin_path)
     if not spec or not spec.loader:
         raise UsageError(f"Could not create import spec for {bin_path}")
 
     try:
         mod: ModuleType = importlib.util.module_from_spec(spec)
-        sys.modules[PROGRAM_PACKAGE] = mod
+        sys.modules[mod_meta.PROGRAM_PACKAGE] = mod
         spec.loader.exec_module(mod)
         TRACE(f"Loaded stitched module from {bin_path}")
     except Exception as e:

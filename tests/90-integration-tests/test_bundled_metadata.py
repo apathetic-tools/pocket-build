@@ -22,7 +22,7 @@ except ModuleNotFoundError:
     import tomli as tomllib  # type: ignore[no-redef]
 
 import pocket_build.actions as mod_actions
-from pocket_build.meta import PROGRAM_SCRIPT
+import pocket_build.meta as mod_meta
 
 # --- only for singlefile runs ---
 __runtime_mode__ = "singlefile"
@@ -43,7 +43,7 @@ PROJ_ROOT = Path(__file__).resolve().parent.parent.parent
 def test_bundled_script_metadata_and_execution() -> None:
     """Ensure the generated script.py script is complete and functional."""
     # --- setup ---
-    script = PROJ_ROOT / "bin" / f"{PROGRAM_SCRIPT}.py"
+    script = PROJ_ROOT / "bin" / f"{mod_meta.PROGRAM_SCRIPT}.py"
     pyproject = PROJ_ROOT / "pyproject.toml"
 
     # --- execute and verify ---
@@ -96,7 +96,7 @@ def test_bundled_script_metadata_and_execution() -> None:
         dummy = tmp / "dummy.txt"
         dummy.write_text("hi", encoding="utf-8")
 
-        config = tmp / f".{PROGRAM_SCRIPT}.json"
+        config = tmp / f".{mod_meta.PROGRAM_SCRIPT}.json"
         config.write_text(
             '{"builds":[{"include":["dummy.txt"],"out":"dist"}]}',
             encoding="utf-8",
@@ -120,7 +120,7 @@ def test_bundled_script_metadata_and_execution() -> None:
 def test_bundled_script_has_python_constants_and_parses_them() -> None:
     """Ensure __version__ and __commit__ constants exist and match header."""
     # --- setup ---
-    script = PROJ_ROOT / "bin" / f"{PROGRAM_SCRIPT}.py"
+    script = PROJ_ROOT / "bin" / f"{mod_meta.PROGRAM_SCRIPT}.py"
 
     # --- execute ---
     text = script.read_text(encoding="utf-8")

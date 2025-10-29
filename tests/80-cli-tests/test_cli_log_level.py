@@ -8,8 +8,8 @@ import pytest
 from pytest import MonkeyPatch
 
 import pocket_build.cli as mod_cli
+import pocket_build.meta as mod_meta
 import pocket_build.runtime as mod_runtime
-from pocket_build.meta import PROGRAM_ENV, PROGRAM_SCRIPT
 
 
 def test_quiet_flag(
@@ -19,7 +19,7 @@ def test_quiet_flag(
 ) -> None:
     """Should suppress most output but still succeed."""
     # --- setup ---
-    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
 
     # --- patch and execute ---
@@ -46,7 +46,7 @@ def test_verbose_flag(
     src_dir.mkdir()
     (src_dir / "foo.txt").write_text("hello")
 
-    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(
         json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]})
     )
@@ -76,7 +76,7 @@ def test_verbose_and_quiet_mutually_exclusive(
 ) -> None:
     """Should fail when both --verbose and --quiet are provided."""
     # --- setup ---
-    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
 
     # --- patch, execute and verify ---
@@ -103,7 +103,7 @@ def test_log_level_flag_sets_runtime(
 ) -> None:
     """--log-level should override config and environment."""
     # --- setup ---
-    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     # --- patch and execute ---
@@ -125,21 +125,21 @@ def test_log_level_from_env_var(
 ) -> None:
     """LOG_LEVEL and {PROGRAM_ENV}_LOG_LEVEL should be respected when flag not given."""
     # --- setup ---
-    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     # --- patch, execute and verify ---
     monkeypatch.chdir(tmp_path)
 
     # 1️⃣ Specific env var wins
-    monkeypatch.setenv(f"{PROGRAM_ENV}_LOG_LEVEL", "warning")
+    monkeypatch.setenv(f"{mod_meta.PROGRAM_ENV}_LOG_LEVEL", "warning")
     code = mod_cli.main([])
 
     assert code == 0
     assert mod_runtime.current_runtime["log_level"] == "warning"
 
     # 2️⃣ Generic LOG_LEVEL fallback works
-    monkeypatch.delenv(f"{PROGRAM_ENV}_LOG_LEVEL")
+    monkeypatch.delenv(f"{mod_meta.PROGRAM_ENV}_LOG_LEVEL")
     monkeypatch.setenv("LOG_LEVEL", "error")
     code = mod_cli.main([])
 
@@ -157,7 +157,7 @@ def test_per_build_log_level_override(
     """A build's own log_level should temporarily override the runtime level."""
     # --- setup ---
     # Root config sets info, but the build overrides to debug
-    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(
         json.dumps(
             {

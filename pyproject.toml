@@ -80,11 +80,13 @@ fix = true
 
 [tool.ruff.lint]
 select = ["E", "F", "W"]
-ignore = ["I"] # isort will do "I"
+# I: isort handles import sorting
+ignore = ["I"]
 
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
+
 
 # --- isort: formatter import sorting (and merging, which ruff doesn't do) ---
 [tool.isort]

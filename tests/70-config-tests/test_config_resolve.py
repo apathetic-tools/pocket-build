@@ -10,9 +10,9 @@ from pytest import MonkeyPatch
 
 import pocket_build.config_resolve as mod_resolve
 import pocket_build.constants as mod_const  # for changing constants using monkeypatch
+import pocket_build.constants as mod_constants
 import pocket_build.runtime as mod_runtime
-from pocket_build.constants import DEFAULT_WATCH_INTERVAL
-from pocket_build.types import BuildConfigInput, RootConfigInput
+import pocket_build.types as mod_types
 from tests.utils import (
     make_build_input,
 )
@@ -206,7 +206,7 @@ def test_resolve_config_aggregates_builds_and_defaults(
 ) -> None:
     """Ensure resolve_config merges builds and assigns default values."""
     # --- setup ---
-    root: RootConfigInput = {
+    root: mod_types.RootConfigInput = {
         "builds": [
             make_build_input(include=["src/**"], out="dist"),
             make_build_input(include=["lib/**"], out="libout"),
@@ -231,7 +231,9 @@ def test_resolve_config_aggregates_builds_and_defaults(
 def test_resolve_config_env_overrides(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     """Environment variables for watch interval and log level should override."""
     # --- setup ---
-    root: RootConfigInput = {"builds": [{"include": ["src/**"], "out": "dist"}]}
+    root: mod_types.RootConfigInput = {
+        "builds": [{"include": ["src/**"], "out": "dist"}]
+    }
     args = _args()
 
     # --- patch and execute ---
@@ -250,7 +252,9 @@ def test_resolve_config_invalid_env_watch_falls_back(
 ) -> None:
     """Invalid watch interval env var should log warning and use default."""
     # --- setup ---
-    root: RootConfigInput = {"builds": [{"include": ["src/**"], "out": "dist"}]}
+    root: mod_types.RootConfigInput = {
+        "builds": [{"include": ["src/**"], "out": "dist"}]
+    }
     args = _args()
 
     # --- patch and execute ---
@@ -260,7 +264,7 @@ def test_resolve_config_invalid_env_watch_falls_back(
 
     # --- validate ---
     assert isinstance(resolved["watch_interval"], float)
-    assert resolved["watch_interval"] == DEFAULT_WATCH_INTERVAL
+    assert resolved["watch_interval"] == mod_constants.DEFAULT_WATCH_INTERVAL
 
 
 def test_resolve_config_propagates_cli_log_level(
@@ -269,7 +273,9 @@ def test_resolve_config_propagates_cli_log_level(
     """CLI --log-level should propagate into resolved root and runtime."""
     # --- setup ---
     args = _args(log_level="trace")
-    root: RootConfigInput = {"builds": [{"include": ["src/**"], "out": "dist"}]}
+    root: mod_types.RootConfigInput = {
+        "builds": [{"include": ["src/**"], "out": "dist"}]
+    }
 
     # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
@@ -329,7 +335,7 @@ def test_resolve_build_config_with_absolute_include(tmp_path: Path) -> None:
 
 def test_resolve_build_config_inherits_root_gitignore_setting(tmp_path: Path) -> None:
     # --- setup ---
-    root_cfg: RootConfigInput = {"respect_gitignore": False}
+    root_cfg: mod_types.RootConfigInput = {"respect_gitignore": False}
     raw = make_build_input(include=["src/**"])
     args = _args()
 
@@ -342,7 +348,7 @@ def test_resolve_build_config_inherits_root_gitignore_setting(tmp_path: Path) ->
 
 def test_resolve_build_config_preserves_trailing_slash(tmp_path: Path) -> None:
     # --- setup ---
-    raw: BuildConfigInput = {"include": ["src/"], "out": "dist"}
+    raw: mod_types.BuildConfigInput = {"include": ["src/"], "out": "dist"}
     args = Namespace()  # empty placeholder
 
     # --- execute ---

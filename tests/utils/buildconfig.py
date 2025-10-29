@@ -4,33 +4,29 @@
 from pathlib import Path
 from typing import cast
 
-from pocket_build.types import (
-    BuildConfig,
-    BuildConfigInput,
-    IncludeResolved,
-    MetaBuildConfig,
-    PathResolved,
-)
+import pocket_build.types as mod_types
 
 # ---------------------------------------------------------------------------
 # Factories for resolved and unresolved configs
 # ---------------------------------------------------------------------------
 
 
-def make_meta(base: Path) -> MetaBuildConfig:
+def make_meta(base: Path) -> mod_types.MetaBuildConfig:
     """Minimal fake meta object for resolved configs."""
     return {"cli_base": base, "config_base": base}
 
 
-def make_resolved(path: Path | str, base: Path | str) -> PathResolved:
+def make_resolved(path: Path | str, base: Path | str) -> mod_types.PathResolved:
     """Return a fake PathResolved-style dict."""
     raw_path = path if isinstance(path, str) else str(path)
-    return cast(PathResolved, {"path": raw_path, "base": Path(base), "origin": "test"})
+    return cast(
+        mod_types.PathResolved, {"path": raw_path, "base": Path(base), "origin": "test"}
+    )
 
 
 def make_include_resolved(
     path: Path | str, base: Path | str, dest: Path | str | None = None
-) -> IncludeResolved:
+) -> mod_types.IncludeResolved:
     """Return a fake IncludeResolved-style dict."""
     # Preserve raw string form to retain trailing slashes
     raw_path = path if isinstance(path, str) else str(path)
@@ -41,19 +37,19 @@ def make_include_resolved(
     }
     if dest:
         d["dest"] = Path(dest)
-    return cast(IncludeResolved, d)
+    return cast(mod_types.IncludeResolved, d)
 
 
 def make_build_cfg(
     tmp_path: Path,
-    include: list[IncludeResolved],
-    exclude: list[PathResolved] | None = None,
+    include: list[mod_types.IncludeResolved],
+    exclude: list[mod_types.PathResolved] | None = None,
     *,
     respect_gitignore: bool = True,
     log_level: str = "info",
     dry_run: bool = False,
-    out: PathResolved | None = None,
-) -> BuildConfig:
+    out: mod_types.PathResolved | None = None,
+) -> mod_types.BuildConfig:
     """Return a fake, fully-populated BuildConfig."""
     return {
         "include": include,
@@ -71,7 +67,7 @@ def make_build_input(
     exclude: list[str] | None = None,
     out: str | None = None,
     **extra: object,
-) -> BuildConfigInput:
+) -> mod_types.BuildConfigInput:
     """Convenient shorthand for constructing raw (pre-resolve) build inputs."""
     cfg: dict[str, object] = {}
     if include is not None:
@@ -81,4 +77,4 @@ def make_build_input(
     if out is not None:
         cfg["out"] = out
     cfg.update(extra)
-    return cast(BuildConfigInput, cfg)
+    return cast(mod_types.BuildConfigInput, cfg)

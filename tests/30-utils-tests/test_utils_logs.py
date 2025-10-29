@@ -10,9 +10,9 @@ from typing import Any
 import pytest
 from pytest import MonkeyPatch
 
+import pocket_build.meta as mod_meta
 import pocket_build.runtime as mod_runtime
 import pocket_build.utils_using_runtime as mod_utils_runtime
-from pocket_build.meta import PROGRAM_ENV
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -71,18 +71,18 @@ def test_is_bypass_capture_env_vars(
     when *_BYPASS_CAPTURE or BYPASS_CAPTURE is set."""
     # --- patch, execute, and verify ---
     # Clear all possibly conflicting env vars first
-    monkeypatch.delenv(f"{PROGRAM_ENV}_BYPASS_CAPTURE", raising=False)
+    monkeypatch.delenv(f"{mod_meta.PROGRAM_ENV}_BYPASS_CAPTURE", raising=False)
     monkeypatch.delenv("BYPASS_CAPTURE", raising=False)
 
     # Default → both unset → expect False
     assert mod_utils_runtime.is_bypass_capture() is False
 
     # Specific env var (PROGRAM_ENV_BYPASS_CAPTURE) wins
-    monkeypatch.setenv(f"{PROGRAM_ENV}_BYPASS_CAPTURE", "1")
+    monkeypatch.setenv(f"{mod_meta.PROGRAM_ENV}_BYPASS_CAPTURE", "1")
     assert mod_utils_runtime.is_bypass_capture() is True
 
     # Unset the specific one again
-    monkeypatch.delenv(f"{PROGRAM_ENV}_BYPASS_CAPTURE", raising=False)
+    monkeypatch.delenv(f"{mod_meta.PROGRAM_ENV}_BYPASS_CAPTURE", raising=False)
 
     # Generic BYPASS_CAPTURE also triggers
     monkeypatch.setenv("BYPASS_CAPTURE", "1")
@@ -93,7 +93,7 @@ def test_is_bypass_capture_env_vars(
     assert mod_utils_runtime.is_bypass_capture() is False
 
     # Case: both set → still True
-    monkeypatch.setenv(f"{PROGRAM_ENV}_BYPASS_CAPTURE", "1")
+    monkeypatch.setenv(f"{mod_meta.PROGRAM_ENV}_BYPASS_CAPTURE", "1")
     monkeypatch.setenv("BYPASS_CAPTURE", "1")
     assert mod_utils_runtime.is_bypass_capture() is True
 
@@ -170,7 +170,7 @@ def test_log_bypass_capture_env(
     monkeypatch.setattr(sys, "__stderr__", fake_stderr)
 
     # Mock the environment variable so utils re-evaluates
-    monkeypatch.setenv(f"{PROGRAM_ENV}_BYPASS_CAPTURE", "1")
+    monkeypatch.setenv(f"{mod_meta.PROGRAM_ENV}_BYPASS_CAPTURE", "1")
     monkeypatch.setenv("BYPASS_CAPTURE", "1")
 
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")

@@ -10,7 +10,7 @@ import pytest
 from pytest import MonkeyPatch
 
 import pocket_build.cli as mod_cli
-from pocket_build.meta import PROGRAM_DISPLAY, PROGRAM_SCRIPT
+import pocket_build.meta as mod_meta
 from tests.utils import TRACE
 
 # ---------------------------------------------------------------------------
@@ -42,7 +42,7 @@ def test_main_with_config(
 ) -> None:
     """Should detect config, run one build, and exit cleanly."""
     # --- setup ---
-    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
 
     # --- patch and execute ---
@@ -70,7 +70,7 @@ def test_help_flag(
 
     out = capsys.readouterr().out
     assert "usage:" in out.lower()
-    assert PROGRAM_SCRIPT in out
+    assert mod_meta.PROGRAM_SCRIPT in out
     assert "--out" in out
 
 
@@ -85,7 +85,7 @@ def test_version_flag(
     # --- verify ---
     TRACE(out)
     assert code == 0
-    assert PROGRAM_DISPLAY in out
+    assert mod_meta.PROGRAM_DISPLAY in out
     assert re.search(r"\d+\.\d+\.\d+", out)
 
     if os.getenv("RUNTIME_MODE") in {"singlefile"}:
@@ -105,7 +105,7 @@ def test_dry_run_creates_no_files(tmp_path: Path) -> None:
     src_dir.mkdir()
     (src_dir / "foo.txt").write_text("data")
 
-    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": ["src/**"], "out": "dist"}]}')
 
     # --- execute ---
@@ -118,7 +118,7 @@ def test_dry_run_creates_no_files(tmp_path: Path) -> None:
 
 def test_main_with_custom_config(tmp_path: Path) -> None:
     # --- setup ---
-    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": ["src"], "out": "dist"}]}')
 
     # --- execute ---
@@ -130,7 +130,7 @@ def test_main_with_custom_config(tmp_path: Path) -> None:
 
 def test_main_invalid_config(tmp_path: Path) -> None:
     # --- setup ---
-    bad = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    bad = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     bad.write_text("{not valid json}")
 
     # --- execute ---

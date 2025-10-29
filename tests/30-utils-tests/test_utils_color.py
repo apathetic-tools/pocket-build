@@ -13,7 +13,6 @@ from pytest import MonkeyPatch
 import pocket_build.runtime as mod_runtime
 import pocket_build.utils as mod_utils_core
 import pocket_build.utils_using_runtime as mod_utils_runtime
-from pocket_build.utils_using_runtime import GREEN, RESET
 
 # ---------------------------------------------------------------------------
 # Helpers
@@ -77,10 +76,12 @@ def test_colorize_explicit_true_false() -> None:
 
     # --- execute and verify ---
     assert (
-        mod_utils_runtime.colorize(test_string, GREEN, use_color=True)
-    ) == f"{GREEN}{test_string}{RESET}"
+        mod_utils_runtime.colorize(test_string, mod_utils_runtime.GREEN, use_color=True)
+    ) == f"{mod_utils_runtime.GREEN}{test_string}{mod_utils_runtime.RESET}"
     assert (
-        mod_utils_runtime.colorize(test_string, GREEN, use_color=False)
+        mod_utils_runtime.colorize(
+            test_string, mod_utils_runtime.GREEN, use_color=False
+        )
     ) == test_string
 
 
@@ -96,7 +97,7 @@ def test_colorize_respects_reset(
 
     # Force color disabled at runtime
     monkeypatch.setitem(mod_runtime.current_runtime, "use_color", False)
-    result = mod_utils_runtime.colorize(test_string, GREEN)
+    result = mod_utils_runtime.colorize(test_string, mod_utils_runtime.GREEN)
 
     # --- verify ---
     assert result == test_string
@@ -111,12 +112,12 @@ def test_colorize_respects_runtime_flag(monkeypatch: MonkeyPatch) -> None:
     # --- patch, execute and verify ---
     # Force runtime to enable color
     monkeypatch.setitem(mod_runtime.current_runtime, "use_color", True)
-    result = mod_utils_runtime.colorize(text, GREEN)
-    assert result == f"{GREEN}{text}{RESET}"
+    result = mod_utils_runtime.colorize(text, mod_utils_runtime.GREEN)
+    assert result == f"{mod_utils_runtime.GREEN}{text}{mod_utils_runtime.RESET}"
 
     # Force runtime to disable color
     monkeypatch.setitem(mod_runtime.current_runtime, "use_color", False)
-    result = mod_utils_runtime.colorize(text, GREEN)
+    result = mod_utils_runtime.colorize(text, mod_utils_runtime.GREEN)
     assert result == text
 
 

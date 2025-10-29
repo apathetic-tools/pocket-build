@@ -15,10 +15,9 @@ from pytest import MonkeyPatch
 
 import pocket_build.actions as mod_actions
 import pocket_build.cli as mod_cli
-from pocket_build.cli import _setup_parser
-from pocket_build.constants import DEFAULT_WATCH_INTERVAL
-from pocket_build.meta import PROGRAM_SCRIPT
-from pocket_build.types import BuildConfig
+import pocket_build.constants as mod_constants
+import pocket_build.meta as mod_meta
+import pocket_build.types as mod_types
 from tests.utils import (
     force_mtime_advance,
     make_build_cfg,
@@ -137,7 +136,7 @@ def test_watch_flag_invokes_watch_mode(
     That means we must patch the *namespace of main()*, not the module itself.
     """
     # --- setup ---
-    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     called: dict[str, bool] = {}
@@ -251,7 +250,7 @@ def test_watch_ignores_out_dir(tmp_path: Path, monkeypatch: MonkeyPatch) -> None
 
 def test_watch_interval_flag_parsing() -> None:
     # --- setup ---
-    parser = _setup_parser()
+    parser = mod_cli._setup_parser()
 
     # --- execute and verify ---
     args = parser.parse_args(["--watch"])
@@ -270,7 +269,7 @@ def test_watch_uses_config_interval_when_flag_passed(
 ) -> None:
     """Ensure that --watch (no value) uses watch_interval from config when defined."""
     # --- setup ---
-    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(
         '{"watch_interval": 0.42, "builds": [{"include": [], "out": "dist"}]}'
     )
@@ -280,7 +279,7 @@ def test_watch_uses_config_interval_when_flag_passed(
     # --- stubs ---
     def fake_watch(
         _rebuild_func: Callable[[], None],
-        _resolved_builds: list[BuildConfig],
+        _resolved_builds: list[mod_types.BuildConfig],
         interval: float,
         *_args: Any,
         **_kwargs: Any,
@@ -305,7 +304,7 @@ def test_watch_falls_back_to_default_interval_when_no_config(
 ) -> None:
     """Ensure --watch uses DEFAULT_WATCH_INTERVAL when no config interval is defined."""
     # --- setup ---
-    config = tmp_path / f".{PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     called: dict[str, float] = {}
@@ -313,7 +312,7 @@ def test_watch_falls_back_to_default_interval_when_no_config(
     # --- stubs ---
     def fake_watch(
         _rebuild_func: Callable[[], None],
-        _resolved_builds: list[BuildConfig],
+        _resolved_builds: list[mod_types.BuildConfig],
         interval: float,
         *_args: Any,
         **_kwargs: Any,
@@ -328,6 +327,6 @@ def test_watch_falls_back_to_default_interval_when_no_config(
     # --- verify ---
     assert code == 0
     assert "interval" in called, "watch_for_changes() was never invoked"
-    assert called["interval"] == approx(DEFAULT_WATCH_INTERVAL), (
+    assert called["interval"] == approx(mod_constants.DEFAULT_WATCH_INTERVAL), (
         f"Expected interval=0.42, got {called}"
     )

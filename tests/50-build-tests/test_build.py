@@ -7,7 +7,7 @@ from pytest import MonkeyPatch
 
 import pocket_build.build as mod_build
 import pocket_build.runtime as mod_runtime
-from pocket_build.types import PathResolved
+import pocket_build.types as mod_types
 from tests.utils import make_build_cfg, make_include_resolved
 
 # ---------------------------------------------------------------------------
@@ -73,14 +73,14 @@ def test_run_build_includes_directory_contents_single_star(
     cfg = make_build_cfg(tmp_path, [make_include_resolved("src/*", tmp_path)])
 
     # capture PathResolved entries passed to copy_item
-    called: list[PathResolved] = []
+    called: list[mod_types.PathResolved] = []
     real_copy_item = mod_build.copy_item
 
     # --- stubs ---
     def fake_copy_item(
-        src_entry: PathResolved,
-        dest_entry: PathResolved,
-        exclude_patterns: list[PathResolved],
+        src_entry: mod_types.PathResolved,
+        dest_entry: mod_types.PathResolved,
+        exclude_patterns: list[mod_types.PathResolved],
         dry_run: bool,
     ) -> None:
         called.append(src_entry)
@@ -345,14 +345,14 @@ def test_run_build_preserves_pattern_and_shallow_behavior(
     cfg = make_build_cfg(tmp_path, [make_include_resolved(pattern, tmp_path)])
 
     # capture copy_item calls
-    called: list[PathResolved] = []
+    called: list[mod_types.PathResolved] = []
     real_copy_item = mod_build.copy_item
 
     # --- stubs ---
     def fake_copy_item(
-        src_entry: PathResolved,
-        dest_entry: PathResolved,
-        exclude_patterns: list[PathResolved],
+        src_entry: mod_types.PathResolved,
+        dest_entry: mod_types.PathResolved,
+        exclude_patterns: list[mod_types.PathResolved],
         dry_run: bool,
     ) -> None:
         called.append(src_entry)

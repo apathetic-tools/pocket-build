@@ -16,8 +16,8 @@ Checklist:
 import sys
 from pathlib import Path
 
+import pocket_build.utils_types as mod_utils_types
 import pocket_build.utils_using_runtime as mod_utils_runtime
-from pocket_build.utils_types import make_pathresolved
 
 
 def test_is_excluded_raw_matches_patterns(tmp_path: Path) -> None:
@@ -179,8 +179,8 @@ def test_is_excluded_wrapper_delegates(tmp_path: Path) -> None:
     root = tmp_path
     f = root / "foo.txt"
     f.touch()
-    entry = make_pathresolved("foo.txt", root, "cli")
-    excludes = [make_pathresolved("*.txt", root, "config")]
+    entry = mod_utils_types.make_pathresolved("foo.txt", root, "cli")
+    excludes = [mod_utils_types.make_pathresolved("*.txt", root, "config")]
 
     # --- execute + verify ---
     assert mod_utils_runtime.is_excluded(entry, excludes)

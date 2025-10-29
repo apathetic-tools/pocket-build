@@ -20,20 +20,19 @@ Exploring bundling options for generating the single-file release:
 
 ## 🧪 Tests
 
-- linter that warns for `from pocket_build.<blah>` imports instead of `import pocket_build.<blah>`
-- linter that checks from `from future` import in every .py file that has non-comment content
 
 ## 🧑‍💻 Development
 
 
-- deployment
+deployment
   - [ ] Deploy action when I tag a release should create a release and attach it to the tagged release.
+  - logo? images? icon? readme banner?
 
-- review
+review
   - [ ] main is just high level orchestration and making sure the right command is run
   - [ ] functions that bail out early like log() might want to validate arguments first to make sure code is okay when they won't bail out.
 
-- API
+API
   - [ ] a helper for API folks that adds stdout, stderr, and stdout+stderr to return values and exceptions
   - [ ] put utils into a submodule (as long as our sticher can handle it)
   - [ ] can utils/config be made into a single submodule? how does that play with the bundler?
@@ -41,35 +40,35 @@ Exploring bundling options for generating the single-file release:
   - [ ] converge on single term for package/module vs singlefile vs pyz
   - [ ] do we want a way to dump the schema for documentation purposes?
 
-- utils
+utils
   - [ ] log(): I didn't know about Python.logging or logging.Logger.
   - [ ] log(): should it respect the env outside of runtime? atm CLI trumps env but it could set it too.
   - [ ] log(): why does LOG_LEVEL=silent not work in tests?
 
-- config_validate
+config_validate
   - [ ] key in wrong place: "Ignored watch_interval in build #0: applies only at root level (move it above your builds: block)." could use `ROOT_ONLY_HINTS = {"watch_interval": "move it above your builds list"}`
   - [ ] type examples for _infer_type_label(), TYPE_EXAMPLES, "key 'include' expected list[str], got int" could add "expected list[str] (e.g. ["src/", "lib/"]), got int"
   - [ ] if a build has no includes, warn
     - [ ] do we want a message if strict mode is off but we issued warnings reminding them about strict mode?
   - [ ] Return the summary object to your CLI for machine-readable reporting (--json).?
 
-- config_resolve
+config_resolve
   - [ ] maybe abstract _normalize_base_and_path in config_resolve for _include, _exclude, and _out for if statement clarity
 
-- load_and_validate_config
+load_and_validate_config
   - [ ] you must specify a build, even if that is no build. we warn otherwise
 
-- documentation
+documentation
   - [ ] where do we document the structure of the project? what do we document inside it vs here?
   - [ ] where do we do longer usage documentation? README can get a bit big
 
-- program flow
+program flow
   - [ ] how do include path dest parameters get transfered in? from the CLI? from the config? do they work?
   - [ ] how does the "include dest" affect exclude paths?
   - [ ] review the run_build flow and private functions to make sure they are not full of while-debugging logic.
   - [ ] review/add/remove all debug/trace messages with an eye for issue reports
 
-- CLI
+CLI
   - [ ] add [trace] Runtime: Python 3.12.3 (CPython)
       platform.python_version(), platform.python_implementation(), sys.version
   - [ ] add runtime cache to store last python version run (or maybe in their config if available?)
