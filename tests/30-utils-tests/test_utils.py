@@ -4,10 +4,12 @@
 # not doing tests for has_glob_chars()
 
 import math
+import sys
+from io import StringIO
 from pathlib import Path
 
 import pytest
-from pytest import CaptureFixture
+from pytest import CaptureFixture, raises
 
 import pocket_build.utils as mod_utils
 import pocket_build.utils_types as mod_utils_types
@@ -252,3 +254,98 @@ def test_plural_custom_len_error_fallback() -> None:
 
     # --- verify ---
     assert result == "s", "Expected fallback to plural form on len() failure"
+
+
+# ---------------------------------------------------------------------------
+# capture_output()
+# ---------------------------------------------------------------------------
+
+
+def test_capture_output_captures_stdout_and_stderr() -> None:
+    """stdout and stderr should be captured separately and merged together."""
+    # --- setup ---
+    assert sys.stdout is not None and sys.stderr is not None
+    old_out, old_err = sys.stdout, sys.stderr
+
+    # --- execute ---
+    with mod_utils.capture_output() as cap:
+        print("hello stdout")
+        print("oops stderr", file=sys.stderr)
+
+    # --- verify ---
+    out_text = cap.stdout.getvalue()
+    err_text = cap.stderr.getvalue()
+    merged_text = cap.merged.getvalue()
+
+    assert "hello stdout" in out_text
+    assert "oops stderr" in err_text
+    # merged should contain both in order
+    assert "hello stdout" in merged_text and "oops stderr" in merged_text
+
+    # Streams must have been restored
+    assert sys.stdout is old_out
+    assert sys.stderr is old_err
+
+
+def test_capture_output_restores_streams_after_exception() -> None:
+    """Even on exception, sys.stdout/stderr should be restored."""
+    # --- setup ---
+    old_out, old_err = sys.stdout, sys.stderr
+
+    # --- execute ---
+    with raises(RuntimeError):
+        with mod_utils.capture_output():
+            print("before boom")
+            raise RuntimeError("boom")
+
+    # --- verify ---
+    assert sys.stdout is old_out
+    assert sys.stderr is old_err
+    # The exception should have captured output attached
+    try:
+        with mod_utils.capture_output():
+            raise ValueError("expected fail")
+    except ValueError as e:
+        assert hasattr(e, "captured_output")
+        captured = getattr(e, "captured_output")
+        assert isinstance(captured.stdout, StringIO)
+        assert isinstance(captured.stderr, StringIO)
+        assert isinstance(captured.merged, StringIO)
+
+
+def test_capture_output_interleaved_writes_preserve_order() -> None:
+    """Merged stream should record messages in chronological order."""
+    # --- execute ---
+    with mod_utils.capture_output() as cap:
+        print("A1", end="")  # stdout
+        print("B1", end="", file=sys.stderr)
+        print("A2", end="")  # stdout
+        print("B2", end="", file=sys.stderr)
+
+    # --- verify ---
+    merged = cap.merged.getvalue()
+    # It should appear exactly in the order written
+    order = (
+        merged.index("A1")
+        < merged.index("B1")
+        < merged.index("A2")
+        < merged.index("B2")
+    )
+    assert order
+
+
+def test_capture_output_supports_str_method_and_as_dict() -> None:
+    """CapturedOutput should stringify and export all buffers cleanly."""
+    # --- execute ---
+    with mod_utils.capture_output() as cap:
+        print("hello")
+        print("err", file=sys.stderr)
+
+    # --- verify ---
+    s = str(cap)
+    d = cap.as_dict()
+
+    assert isinstance(s, str)
+    assert "hello" in s and "err" in s
+    assert all(k in d for k in ("stdout", "stderr", "merged"))
+    assert d["stdout"].strip().startswith("hello")

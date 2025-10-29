@@ -21,12 +21,7 @@ Exploring bundling options for generating the single-file release:
 ## 🧪 Tests
 - verify every function has test coverage
 - check for redundant tests
-- for config validation, cover these cases
-  - List of wrong item type – list[int] expected, got list of strings.
-    → Should trigger _validate_scalar_value and produce an error.
-  - TypedDict with unknown keys – ensures the “Hint: did you mean” logic runs.
-  - Strict mode escalation – verify that a warning becomes an error when strict=True.
-  - Aggregator flushing – ensure flush_schema_aggregators() moves warnings into the right buckets and clears them.
+
 
 ## 🧑‍💻 Development
 
@@ -38,7 +33,6 @@ review
   - [ ] main is just high level orchestration and making sure the right command is run
   
 API
-  - [ ] a helper for API folks that adds stdout, stderr, and stdout+stderr to return values and exceptions
   - [ ] put utils into a submodule (as long as our sticher can handle it)
   - [ ] can utils/config be made into a single submodule? how does that play with the bundler?
   - [ ] clean up "base" to "root" and "_normalize_base_and_path()" to "_normalize_path_with_root()"

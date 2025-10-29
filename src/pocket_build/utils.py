@@ -5,12 +5,42 @@ import json
 import os
 import re
 import sys
+from contextlib import contextmanager
+from dataclasses import dataclass
+from io import StringIO
 from pathlib import Path
 from typing import (
     Any,
+    Iterator,
     TextIO,
     cast,
 )
+
+# --- types --------------------------------------------------------------------
+
+
+@dataclass
+class CapturedOutput:
+    """Captured stdout, stderr, and merged streams."""
+
+    stdout: StringIO
+    stderr: StringIO
+    merged: StringIO
+
+    def __str__(self) -> str:
+        """Human-friendly representation (merged output)."""
+        return self.merged.getvalue()
+
+    def as_dict(self) -> dict[str, str]:
+        """Return contents as plain strings for serialization."""
+        return {
+            "stdout": self.stdout.getvalue(),
+            "stderr": self.stderr.getvalue(),
+            "merged": self.merged.getvalue(),
+        }
+
+
+# --- utils --------------------------------------------------------------------
 
 
 def should_use_color() -> bool:
@@ -139,3 +169,46 @@ def safe_log(msg: str) -> None:
             stream.write(f"[INTERNAL] {msg}\n")
         except Exception:
             pass
+
+
+@contextmanager
+def capture_output() -> Iterator[CapturedOutput]:
+    """Temporarily capture stdout and stderr.
+
+    Any exception raised inside the block is re-raised with
+    the captured output attached as `exc.captured_output`.
+
+    Example:
+    from pocket_build.utils import capture_output
+    from pocket_build.cli import main
+
+    with capture_output() as (out, err):
+        exit_code = main(["--config", "my.cfg", "--dry-run"])
+
+    result = {
+        "exit_code": exit_code,
+        "stdout": out.getvalue(),
+        "stderr": err.getvalue(),
+        "merged": merged.getvalue(),
+    }
+    """
+    merged = StringIO()
+
+    class TeeStream(StringIO):
+        def write(self, s: str) -> int:
+            merged.write(s)
+            return super().write(s)
+
+    buf_out, buf_err = TeeStream(), TeeStream()
+    old_out, old_err = sys.stdout, sys.stderr
+    sys.stdout, sys.stderr = buf_out, buf_err
+
+    cap = CapturedOutput(stdout=buf_out, stderr=buf_err, merged=merged)
+    try:
+        yield cap
+    except Exception as e:
+        # Attach captured output to the raised exception for API introspection
+        setattr(e, "captured_output", cap)
+        raise
+    finally:
+        sys.stdout, sys.stderr = old_out, old_err
