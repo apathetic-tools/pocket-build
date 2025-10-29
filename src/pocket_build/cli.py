@@ -23,7 +23,7 @@ from .runtime import current_runtime
 from .types import (
     RootConfig,
 )
-from .utils import should_use_color
+from .utils import safe_log, should_use_color
 from .utils_types import cast_hint
 from .utils_using_runtime import LEVEL_ORDER, log
 
@@ -308,12 +308,18 @@ def main(argv: list[str] | None = None) -> int:
 
     except (FileNotFoundError, ValueError, TypeError, RuntimeError) as e:
         # controlled termination
-        log("error", str(e))
+        try:
+            log("error", str(e))
+        except Exception:
+            safe_log(f"[FATAL] Logging failed while reporting: {e}")
         return getattr(e, "code", 1)
 
     except Exception as e:
         # unexpected internal error
-        log("critical", f"Unexpected internal error: {e}")
+        try:
+            log("critical", f"Unexpected internal error: {e}")
+        except Exception:
+            safe_log(f"[FATAL] Logging failed while reporting: {e}")
         # optionally print traceback in debug/trace mode only
         if current_runtime.get("log_level") in {"debug", "trace"}:
             import traceback

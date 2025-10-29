@@ -11,7 +11,9 @@ from pytest import MonkeyPatch
 
 import pocket_build.cli as mod_cli
 import pocket_build.meta as mod_meta
-from tests.utils import TRACE
+import pocket_build.utils as mod_utils
+import pocket_build.utils_using_runtime as mod_utils_runtime
+from tests.utils import TRACE, patch_everywhere
 
 # ---------------------------------------------------------------------------
 # Tests
@@ -138,3 +140,78 @@ def test_main_invalid_config(tmp_path: Path) -> None:
 
     # --- verify ---
     assert code == 1
+
+
+# --- exception catching -----------------------------------------
+
+
+def test_main_handles_controlled_exception(monkeypatch: MonkeyPatch) -> None:
+    """Simulate a controlled exception (e.g. ValueError) and verify clean handling."""
+    # --- setup ---
+    called: dict[str, bool] = {}
+
+    # --- stubs ---
+    def fake_parser() -> object:
+        raise ValueError("mocked config failure")
+
+    def fake_log(*_a: object, **_k: object) -> None:
+        called.setdefault("log", True)
+
+    # --- patch and execute ---
+    patch_everywhere(monkeypatch, mod_cli, "_setup_parser", fake_parser)
+    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
+    code = mod_cli.main([])
+
+    # --- verify ---
+    assert code == 1
+    assert "log" in called  # ensure log() was called for controlled exception
+
+
+def test_main_handles_unexpected_exception(monkeypatch: MonkeyPatch) -> None:
+    """Simulate an unexpected internal error and ensure it logs as critical."""
+    # --- setup ---
+    called: dict[str, str] = {}
+
+    # --- stubs ---
+    def fake_parser() -> object:
+        raise OSError("boom!")  # not one of the controlled types
+
+    def fake_log(level: str, msg: str, **_kw: object) -> None:
+        called["level"] = level
+        called["msg"] = msg
+
+    # --- patch and execute ---
+    patch_everywhere(monkeypatch, mod_cli, "_setup_parser", fake_parser)
+    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
+    code = mod_cli.main([])
+
+    # --- verify ---
+    assert code == 1
+    assert called["level"] == "critical"
+    assert "Unexpected internal error" in called["msg"]
+
+
+def test_main_fallbacks_to_safe_log(monkeypatch: MonkeyPatch) -> None:
+    """If log() itself fails, safe_log() should be called instead of recursion."""
+    # --- setup ---
+    called: dict[str, str] = {}
+
+    # --- stubs ---
+    def fake_parser() -> object:
+        raise ValueError("simulated fail")
+
+    def bad_log(*_a: object, **_k: object) -> None:
+        raise RuntimeError("log fail")
+
+    def fake_safe_log(msg: str) -> None:
+        called["msg"] = msg
+
+    # --- patch and execute ---
+    patch_everywhere(monkeypatch, mod_cli, "_setup_parser", fake_parser)
+    patch_everywhere(monkeypatch, mod_utils_runtime, "log", bad_log)
+    patch_everywhere(monkeypatch, mod_utils, "safe_log", fake_safe_log)
+    code = mod_cli.main([])
+
+    # --- verify ---
+    assert code == 1
+    assert "Logging failed while reporting" in called["msg"]

@@ -8,6 +8,7 @@ import sys
 from pathlib import Path
 from typing import (
     Any,
+    TextIO,
     cast,
 )
 
@@ -125,3 +126,16 @@ def plural(obj: Any) -> str:
         # fallback for numbers or uncountable types
         count = obj if isinstance(obj, (int, float)) else 0
     return "s" if count != 1 else ""
+
+
+def safe_log(msg: str) -> None:
+    """Emergency logger that never fails."""
+    stream = cast(TextIO, sys.__stderr__)
+    try:
+        print(msg, file=stream)
+    except Exception:
+        # As final guardrail — never crash during crash reporting
+        try:
+            stream.write(f"[INTERNAL] {msg}\n")
+        except Exception:
+            pass

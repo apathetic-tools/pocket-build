@@ -5,7 +5,8 @@
 import io
 import re
 import sys
-from typing import Any
+from io import StringIO
+from typing import Any, cast
 
 import pytest
 from pytest import MonkeyPatch
@@ -254,3 +255,120 @@ def test_log_includes_ansi_when_color_enabled(monkeypatch: MonkeyPatch) -> None:
 
     # --- verify ---
     assert "\033[" in out
+
+
+def test_log_recursion_guard(monkeypatch: MonkeyPatch) -> None:
+    # --- setup ---
+    output = StringIO()
+    monkeypatch.setattr(sys, "__stderr__", output)
+
+    # --- stubs ---
+    # Force recursion
+    def evil_print(*a: object, **k: object) -> None:  # triggers another log
+        mod_utils_runtime.log("error", "nested boom")
+
+    # --- patch and execute ---
+    monkeypatch.setattr("builtins.print", evil_print)
+    mod_utils_runtime.log("error", "test")
+
+    # --- verify ---
+    out = output.getvalue()
+    assert "Recursive log call suppressed" in out
+
+
+def test_log_unknown_level(monkeypatch: MonkeyPatch) -> None:
+    # --- setup ---
+    buf = StringIO()
+
+    # --- patch and execute ---
+    monkeypatch.setattr(sys, "__stderr__", buf)
+    mod_utils_runtime.log("nonsense", "This should not crash")
+
+    # --- verify ---
+    assert "Unknown log level" in buf.getvalue()
+
+
+def test_log_missing_log_level(monkeypatch: MonkeyPatch) -> None:
+    """If current_runtime has no 'log_level', logger should fallback safely."""
+    # --- setup ---
+    output = StringIO()
+
+    # --- patch and execute ---
+    monkeypatch.setattr(sys, "__stderr__", output)
+
+    # Remove key temporarily
+    backup = dict(mod_runtime.current_runtime)
+    mod_runtime.current_runtime.pop("log_level", None)
+
+    try:
+        mod_utils_runtime.log("error", "no level key")
+    finally:
+        runtime_dict = cast(dict[str, object], mod_runtime.current_runtime)
+        runtime_dict.update(backup)
+
+    # --- verify ---
+    msg = output.getvalue()
+    assert "[LOGGER ERROR]" in msg
+    assert "log_level" in msg
+
+
+def test_log_handles_internal_failure(monkeypatch: MonkeyPatch) -> None:
+    """If print() raises, logger should fall back to safe_log."""
+    # --- setup ---
+    buf = StringIO()
+
+    # --- stubs ---
+    def bad_print(*a: object, **k: object) -> None:
+        raise IOError("printer is broken")
+
+    # --- patch and execute ---
+    monkeypatch.setattr(sys, "__stderr__", buf)
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
+    monkeypatch.setattr("builtins.print", bad_print)
+    mod_utils_runtime.log("info", "test")
+
+    # --- verify ---
+    assert "LOGGER FAILURE" in buf.getvalue()
+
+
+# --- safe_log ------------------------------------------------------------
+
+
+def test_safe_log_writes_to_stderr(monkeypatch: MonkeyPatch) -> None:
+    """safe_log() should write to __stderr__ without throwing."""
+    # --- setup ---
+    buf = StringIO()
+
+    # --- patch and execute ---
+    monkeypatch.setattr(sys, "__stderr__", buf)
+    mod_utils_runtime.safe_log("hello safe")
+
+    # --- verify ---
+    assert "hello safe" in buf.getvalue()
+
+
+def test_safe_log_fallback(monkeypatch: MonkeyPatch) -> None:
+    """safe_log() should survive even if sys.__stderr__ is None."""
+    # --- patch and execute ---
+    monkeypatch.setattr(sys, "__stderr__", None)
+    # Should not raise
+    mod_utils_runtime.safe_log("fallback works")
+
+
+def test_safe_log_handles_print_failure(monkeypatch: MonkeyPatch) -> None:
+    """If print() fails, safe_log() should fall back to .write()."""
+    # --- setup ---
+    buf = StringIO()
+
+    # --- stubs ---
+    def bad_print(*args: object, **kwargs: object) -> None:
+        raise IOError("printer exploded")
+
+    # --- patch and execute ---
+    monkeypatch.setattr(sys, "__stderr__", buf)
+    monkeypatch.setattr("builtins.print", bad_print)
+    mod_utils_runtime.safe_log("broken print test")
+
+    # --- verify ---
+    # Fallback write should prefix with [INTERNAL]
+    assert "[INTERNAL]" in buf.getvalue()

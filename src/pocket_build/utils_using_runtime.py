@@ -11,6 +11,7 @@ from typing import TextIO, cast
 from .meta import PROGRAM_ENV
 from .runtime import current_runtime
 from .types import PathResolved
+from .utils import safe_log
 
 # Terminal colors (ANSI)
 GREEN = "\033[92m"
@@ -90,48 +91,64 @@ def log(
     - Prefix color and message color are mutually exclusive:
       if a message color is set, prefix color is skipped.
     - Safe for use in captured output; respects BYPASS_CAPTURE"""
-    current_level = current_runtime["log_level"]
-
-    # if the level is not a valid level, we quietly do nothing.
-    # idealy we would raise an exception, but then main would catch
-    # it and try to log() resulting in a loop.
-    # we could print() instead and exit program, but that's a bit extreme?
-
-    if not _should_log(level, current_level):
+    if getattr(log, "_in_log", False):
+        try:
+            stream = cast(TextIO, sys.__stderr__)
+            stream.write("[LOGGER ERROR] ❌ Recursive log call suppressed\n")
+        except Exception:
+            pass
         return
+    setattr(log, "_in_log", True)
+    try:
+        if "log_level" in current_runtime:
+            current_level = current_runtime["log_level"]
+        else:
+            safe_log("[LOGGER ERROR] ❌ Runtime does not specify log_level")
+            current_level = "error"
 
-    # Determine correct output stream
-    if file is None and is_bypass_capture():
-        file = (
-            getattr(sys, "__stderr__", sys.stderr)
-            if _is_error_level(level)
-            else getattr(sys, "__stdout__", sys.stdout)
+        if level not in LEVEL_ORDER:
+            safe_log(f"[LOGGER ERROR] ❌ Unknown log level: {level}")
+            return
+
+        if not _should_log(level, current_level):
+            return
+
+        # Determine correct output stream
+        if file is None and is_bypass_capture():
+            file = (
+                getattr(sys, "__stderr__", sys.stderr)
+                if _is_error_level(level)
+                else getattr(sys, "__stdout__", sys.stdout)
+            )
+        elif file is None:
+            file = sys.stderr if _is_error_level(level) else sys.stdout
+
+        prefix_color = _LOG_PREFIXES_COLOR.get(level)
+        msg_color = _LOG_MSG_COLOR.get(level)
+
+        # Safely coerce prefix
+        actual_prefix = (
+            prefix if prefix is not None else (_LOG_PREFIXES.get(level) or "")
         )
-    elif file is None:
-        file = sys.stderr if _is_error_level(level) else sys.stdout
 
-    prefix_color = _LOG_PREFIXES_COLOR.get(level)
-    msg_color = _LOG_MSG_COLOR.get(level)
+        # Helper lambdas to treat None/"" as unset
+        def is_set(value: str | None) -> bool:
+            return bool(value and value.strip())
 
-    # Safely coerce prefix
-    actual_prefix = prefix if prefix is not None else (_LOG_PREFIXES.get(level) or "")
+        # If no whole-line color, apply prefix color
+        if not is_set(msg_color) and is_set(prefix_color):
+            actual_prefix = colorize(actual_prefix, cast(str, prefix_color))
 
-    # Helper lambdas to treat None/"" as unset
-    def is_set(value: str | None) -> bool:
-        return bool(value and value.strip())
+        message = sep.join([actual_prefix] + [str(v) for v in values])
 
-    # If no whole-line color, apply prefix color
-    if not is_set(msg_color) and is_set(prefix_color):
-        # narrow type
-        actual_prefix = colorize(actual_prefix, cast(str, prefix_color))
+        if is_set(msg_color):
+            message = colorize(message, cast(str, msg_color))
 
-    message = sep.join([actual_prefix] + [str(v) for v in values])
-
-    if is_set(msg_color):
-        # narrow type
-        message = colorize(message, cast(str, msg_color))
-
-    print(message, end=end, file=file, flush=flush)
+        print(message, end=end, file=file, flush=flush)
+    except Exception as e:
+        safe_log(f"[LOGGER FAILURE] {e}")
+    finally:
+        setattr(log, "_in_log", False)
 
 
 def colorize(text: str, color: str, use_color: bool | None = None) -> str:
