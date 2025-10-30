@@ -17,7 +17,6 @@ import pocket_build.config_validate as mod_validate
 
 def test_valid_minimal_root_and_build() -> None:
     """A simple one-build config with list[str] include should validate True."""
-
     # --- setup ---
     cfg: dict[str, Any] = {
         "builds": [{"include": ["src"], "out": "dist"}],
@@ -32,7 +31,6 @@ def test_valid_minimal_root_and_build() -> None:
 
 def test_valid_multiple_builds() -> None:
     """Multiple valid builds should still pass."""
-
     # --- setup ---
     cfg: dict[str, Any] = {
         "builds": [
@@ -132,7 +130,7 @@ def test_warn_keys_once_behavior() -> None:
     """Repeated dry-run keys should only trigger one warning."""
     # --- setup ---
     cfg: dict[str, Any] = {
-        "builds": [{"include": ["src"], "out": "dist", "dry_run": True}]
+        "builds": [{"include": ["src"], "out": "dist", "dry_run": True}],
     }
 
     # --- execute ---
@@ -148,7 +146,6 @@ def test_warn_keys_once_behavior() -> None:
 
 def test_invalid_type_at_root() -> None:
     """Root-level key of wrong type should fail."""
-
     # --- setup ---
     cfg: dict[str, Any] = {
         "builds": [{"include": ["src"], "out": "dist"}],
@@ -167,7 +164,7 @@ def test_root_and_build_strict_config() -> None:
     # --- setup ---
     cfg: dict[str, Any] = {
         "builds": [
-            {"include": ["src"], "out": "dist", "strict_config": True, "extra": 123}
+            {"include": ["src"], "out": "dist", "strict_config": True, "extra": 123},
         ],
         "strict_config": False,
     }
@@ -261,7 +258,7 @@ def test_aggregates_multiple_builds_same_warning() -> None:
         "builds": [
             {"include": ["src"], "out": "dist", "dry_run": True},
             {"include": ["src2"], "out": "dist2", "dry_run": True},
-        ]
+        ],
     }
 
     # --- execute ---
@@ -274,7 +271,8 @@ def test_aggregates_multiple_builds_same_warning() -> None:
     assert len(dry_msgs) == 1
     msg = dry_msgs[0].lower()
     # Message should mention both builds
-    assert "build #1" in msg and "build #2" in msg
+    assert "build #1" in msg
+    assert "build #2" in msg
     assert "dry-run" in msg or "dry_run" in msg
 
 
@@ -299,7 +297,9 @@ def test_aggregates_multiple_root_and_builds() -> None:
     assert len(dry_msgs) == 1
     msg = dry_msgs[0].lower()
     # Message should mention both builds
-    assert "top-level" in msg and "build #1" in msg and "build #2" in msg
+    assert "top-level" in msg
+    assert "build #1" in msg
+    assert "build #2" in msg
     assert "dry-run" in msg or "dry_run" in msg
 
 
@@ -320,7 +320,7 @@ def test_aggregates_strict_and_non_strict_separately() -> None:
                 "dry_run": True,
                 "strict_config": False,
             },
-        ]
+        ],
     }
 
     # --- execute ---
@@ -332,7 +332,8 @@ def test_aggregates_strict_and_non_strict_separately() -> None:
     strict_msgs = [m for m in summary.strict_warnings if "dry-run" in m.lower()]
     warn_msgs = [m for m in summary.warnings if "dry-run" in m.lower()]
     # One of each should appear
-    assert len(strict_msgs) == 1 and len(warn_msgs) == 1
+    assert len(strict_msgs) == 1
+    assert len(warn_msgs) == 1
     # Each message should only reference its matching build
     assert "build #1" in strict_msgs[0]
     assert "build #2" in warn_msgs[0]
@@ -342,7 +343,7 @@ def test_aggregator_clears_after_flush() -> None:
     """Running validation twice should not leak previous aggregation state."""
     # --- setup ---
     cfg1: dict[str, Any] = {
-        "builds": [{"include": ["src"], "out": "dist", "dry_run": True}]
+        "builds": [{"include": ["src"], "out": "dist", "dry_run": True}],
     }
     cfg2: dict[str, Any] = {"builds": [{"include": ["src"], "out": "dist"}]}
 
@@ -366,7 +367,7 @@ def test_validate_config_prewarn_suppresses_unknown_keys() -> None:
         "builds": [
             {"include": ["src"], "out": "dist", "dry_run": True},
             {"include": ["src2"], "out": "dist2"},
-        ]
+        ],
     }
 
     # --- execute ---

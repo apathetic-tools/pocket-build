@@ -2,6 +2,8 @@
 
 """Direct tests for _normalize_path_with_root, ensuring consistent path semantics."""
 
+# we import `_` private for testing purposes only
+# ruff: noqa: SLF001
 # pyright: reportPrivateUsage=false
 
 from pathlib import Path

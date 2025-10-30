@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 
 import pytest
-from pytest import MonkeyPatch
 
 import pocket_build.cli as mod_cli
 import pocket_build.meta as mod_meta
@@ -13,7 +12,7 @@ import pocket_build.meta as mod_meta
 
 def test_include_flag_overrides_config(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--include should override config include patterns."""
@@ -30,8 +29,8 @@ def test_include_flag_overrides_config(
     config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(
         json.dumps(
-            {"builds": [{"include": ["other/**"], "exclude": [], "out": "dist"}]}
-        )
+            {"builds": [{"include": ["other/**"], "exclude": [], "out": "dist"}]},
+        ),
     )
 
     # --- patch and execute ---
@@ -52,7 +51,7 @@ def test_include_flag_overrides_config(
 
 def test_exclude_flag_overrides_config(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--exclude should override config exclude patterns."""
@@ -84,7 +83,7 @@ def test_exclude_flag_overrides_config(
 
 def test_add_include_extends_config(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--add-include should extend config include patterns, not override them."""
@@ -100,7 +99,7 @@ def test_add_include_extends_config(
     # Config includes only src/**
     config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(
-        json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]})
+        json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]}),
     )
 
     # --- patch and execute ---
@@ -124,7 +123,7 @@ def test_add_include_extends_config(
 
 def test_add_exclude_extends_config(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--add-exclude should extend config exclude patterns, not override them."""
@@ -139,8 +138,8 @@ def test_add_exclude_extends_config(
     config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(
         json.dumps(
-            {"builds": [{"include": ["src/**"], "exclude": ["*.log"], "out": "dist"}]}
-        )
+            {"builds": [{"include": ["src/**"], "exclude": ["*.log"], "out": "dist"}]},
+        ),
     )
 
     # --- patch and execute ---

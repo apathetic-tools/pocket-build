@@ -1,11 +1,12 @@
 # src/pocket_build/utils_types.py
 
+# ruff: noqa: ERA001
 
 from pathlib import Path
+from types import UnionType
 from typing import (
     Any,
     Literal,
-    Type,
     TypeVar,
     Union,
     cast,
@@ -19,7 +20,7 @@ from .types import IncludeResolved, OriginType, PathResolved
 T = TypeVar("T")
 
 
-def cast_hint(typ: Type[T], value: Any) -> T:
+def cast_hint(_typ: type[T], value: Any) -> T:
     """Explicit cast that documents intent but is purely for type hinting.
 
     A drop-in replacement for `typing.cast`, meant for places where:
@@ -32,16 +33,19 @@ def cast_hint(typ: Type[T], value: Any) -> T:
 
     This function performs *no runtime checks*.
     """
-    return cast(T, value)
+    return cast("T", value)
 
 
-def schema_from_typeddict(td: Type[Any]) -> dict[str, Any]:
+def schema_from_typeddict(td: type[Any]) -> dict[str, Any]:
     """Extract field names and their annotated types from a TypedDict."""
     return get_type_hints(td, include_extras=True)
 
 
 def _root_resolved(
-    path: Path | str, root: Path | str, pattern: str | None, origin: OriginType
+    path: Path | str,
+    root: Path | str,
+    pattern: str | None,
+    origin: OriginType,
 ) -> dict[str, object]:
     # Preserve raw string if available (to keep trailing slashes)
     raw_path = path if isinstance(path, str) else str(path)
@@ -64,7 +68,7 @@ def make_pathresolved(
 ) -> PathResolved:
     """Quick helper to build a PathResolved entry."""
     # mutate class type
-    return cast(PathResolved, _root_resolved(path, root, pattern, origin))
+    return cast("PathResolved", _root_resolved(path, root, pattern, origin))
 
 
 def make_includeresolved(
@@ -80,12 +84,54 @@ def make_includeresolved(
     if dest is not None:
         entry["dest"] = Path(dest)
     # mutate class type
-    return cast(IncludeResolved, entry)
+    return cast("IncludeResolved", entry)
 
 
-def safe_isinstance(value: Any, expected_type: Any) -> bool:
-    """
-    Like isinstance(), but safe for TypedDicts and typing generics.
+def _isinstance_generics(  # noqa: PLR0911
+    value: Any,
+    origin: Any,
+    args: tuple[Any, ...],
+) -> bool:
+    # Outer container check
+    if not isinstance(value, origin):
+        return False
+
+    # Recursively check elements for known homogeneous containers
+    if not args:
+        return True
+
+    # list[str]
+    if origin is list and isinstance(value, list):
+        subtype = args[0]
+        items = cast_hint(list[Any], value)
+        return all(safe_isinstance(v, subtype) for v in items)
+
+    # dict[str, int]
+    if origin is dict and isinstance(value, dict):
+        key_t, val_t = args if len(args) == 2 else (Any, Any)  # noqa: PLR2004
+        dct = cast_hint(dict[Any, Any], value)
+        return all(
+            safe_isinstance(k, key_t) and safe_isinstance(v, val_t)
+            for k, v in dct.items()
+        )
+
+    # Tuple[str, int] etc.
+    if origin is tuple and isinstance(value, tuple):
+        subtypes = args
+        tup = cast_hint(tuple[Any, ...], value)
+        if len(subtypes) == len(tup):
+            return all(
+                safe_isinstance(v, t) for v, t in zip(tup, subtypes, strict=False)
+            )
+        if len(subtypes) == 2 and subtypes[1] is Ellipsis:  # noqa: PLR2004
+            return all(safe_isinstance(v, subtypes[0]) for v in tup)
+        return False
+
+    return True  # e.g., other typing origins like set[], Iterable[]
+
+
+def safe_isinstance(value: Any, expected_type: Any) -> bool:  # noqa: PLR0911
+    """Like isinstance(), but safe for TypedDicts and typing generics.
 
     Handles:
       - typing.Union, Optional, Any
@@ -106,7 +152,7 @@ def safe_isinstance(value: Any, expected_type: Any) -> bool:
         return value in args
 
     # --- Handle Unions (includes Optional) ---
-    if origin is Union:
+    if origin in {Union, UnionType}:
         # e.g. Union[str, int]
         return any(safe_isinstance(value, t) for t in args)
 
@@ -125,40 +171,7 @@ def safe_isinstance(value: Any, expected_type: Any) -> bool:
 
     # --- Handle generics like list[str], dict[str, int] ---
     if origin:
-        # Outer container check
-        if not isinstance(value, origin):
-            return False
-
-        # Recursively check elements for known homogeneous containers
-        if not args:
-            return True
-
-        # list[str]
-        if origin is list and isinstance(value, list):
-            subtype = args[0]
-            items = cast_hint(list[Any], value)
-            return all(safe_isinstance(v, subtype) for v in items)
-
-        # dict[str, int]
-        if origin is dict and isinstance(value, dict):
-            key_t, val_t = args if len(args) == 2 else (Any, Any)
-            dct = cast_hint(dict[Any, Any], value)
-            return all(
-                safe_isinstance(k, key_t) and safe_isinstance(v, val_t)
-                for k, v in dct.items()
-            )
-
-        # Tuple[str, int] etc.
-        if origin is tuple and isinstance(value, tuple):
-            subtypes = args
-            tup = cast_hint(tuple[Any, ...], value)
-            if len(subtypes) == len(tup):
-                return all(safe_isinstance(v, t) for v, t in zip(tup, subtypes))
-            if len(subtypes) == 2 and subtypes[1] is Ellipsis:
-                return all(safe_isinstance(v, subtypes[0]) for v in tup)
-            return False
-
-        return True  # e.g., other typing origins like set[], Iterable[]
+        return _isinstance_generics(value, origin, args)
 
     # --- Fallback for simple types ---
     try:

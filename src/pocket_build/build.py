@@ -19,9 +19,10 @@ from .utils_using_runtime import (
 # --------------------------------------------------------------------------- #
 
 
-def _compute_dest(
+def _compute_dest(  # noqa: PLR0911
     src: Path,
     root: Path,
+    *,
     out_dir: Path,
     src_pattern: str,
     dest_name: Path | str | None,
@@ -69,12 +70,11 @@ def _compute_dest(
                 f"[DEST] glob include → prefix={prefix}, rel={rel}, result={result}",
             )
             return result
-        else:
-            # For literal includes (like "src" or "file.txt"), preserve full structure
-            rel = src.relative_to(root)
-            result = out_dir / rel
-            log("trace", f"[DEST] literal include → rel={rel}, result={result}")
-            return result
+        # For literal includes (like "src" or "file.txt"), preserve full structure
+        rel = src.relative_to(root)
+        result = out_dir / rel
+        log("trace", f"[DEST] literal include → rel={rel}, result={result}")
+        return result
     except ValueError:
         # Fallback when src isn't under root
         log("trace", f"[DEST] fallback (src not under root) → using name={src.name}")
@@ -94,6 +94,7 @@ def _non_glob_prefix(pattern: str) -> Path:
 def copy_file(
     src: Path | str,
     dest: Path | str,
+    *,
     src_root: Path | str,
     dry_run: bool,
 ) -> None:
@@ -120,6 +121,7 @@ def copy_directory(
     src: Path | str,
     dest: Path | str,
     exclude_patterns: list[str],
+    *,
     src_root: Path | str,
     dry_run: bool,
 ) -> None:
@@ -160,7 +162,13 @@ def copy_directory(
             log("trace", f"📁 {item.relative_to(src_root)}")
             if not dry_run:
                 target.mkdir(parents=True, exist_ok=True)
-            copy_directory(item, target, normalized_excludes, src_root, dry_run)
+            copy_directory(
+                item,
+                target,
+                normalized_excludes,
+                src_root=src_root,
+                dry_run=dry_run,
+            )
         else:
             log("debug", f"📄 {item.relative_to(src_root)}")
             if not dry_run:
@@ -172,10 +180,10 @@ def copy_item(
     src_entry: PathResolved,
     dest_entry: PathResolved,
     exclude_patterns: list[PathResolved],
+    *,
     dry_run: bool,
 ) -> None:
     """Copy one file or directory entry, using built-in root info."""
-
     src = Path(src_entry["path"])
     root_src = Path(src_entry["root"]).resolve()
     src = (root_src / src).resolve() if not src.is_absolute() else src.resolve()
@@ -219,24 +227,24 @@ def copy_item(
 
     # Normal behavior
     if src.is_dir():
-        copy_directory(src, dest, exclude_patterns_raw, root_src, dry_run)
+        copy_directory(
+            src,
+            dest,
+            exclude_patterns_raw,
+            src_root=root_src,
+            dry_run=dry_run,
+        )
     else:
-        copy_file(src, dest, root_src, dry_run)
+        copy_file(
+            src,
+            dest,
+            src_root=root_src,
+            dry_run=dry_run,
+        )
 
 
-def run_build(
-    build_cfg: BuildConfigResolved,
-) -> None:
-    """Execute a single build task using a fully resolved config."""
-    dry_run = build_cfg.get("dry_run", False)
-    includes: list[IncludeResolved] = build_cfg["include"]
-    excludes: list[PathResolved] = build_cfg["exclude"]
-    out_entry = build_cfg["out"]
-    out_dir = (out_entry["root"] / out_entry["path"]).resolve()
-
-    log("trace", f"[RUN_BUILD] out_dir={out_dir}, includes={len(includes)} patterns")
-
-    # --- Clean and recreate output directory ---
+def _build_prepare_output_dir(out_dir: Path, *, dry_run: bool) -> None:
+    """Create or clean the output directory as needed."""
     if out_dir.exists():
         if dry_run:
             log("info", f"🧪 (dry-run) Would remove existing directory: {out_dir}")
@@ -247,7 +255,15 @@ def run_build(
     else:
         out_dir.mkdir(parents=True, exist_ok=True)
 
-    # --- Process includes ---
+
+def _build_process_includes(
+    includes: list[IncludeResolved],
+    excludes: list[PathResolved],
+    out_entry: PathResolved,
+    *,
+    out_dir: Path,
+    dry_run: bool,
+) -> None:
     for inc in includes:
         src_pattern = str(inc["path"])
         root = Path(inc["root"]).resolve()
@@ -259,82 +275,129 @@ def run_build(
         )
 
         if not src_pattern.strip():
-            log("debug", "⚠️  Skipping empty include pattern")
+            log("debug", "⚠️ Skipping empty include pattern")
             continue
 
-        # --- Expand include patterns ---
-        if src_pattern.endswith("/") and not has_glob_chars(src_pattern):
-            # Interpret "src/" as "src/**" and use rglob directly inside
-            log(
-                "trace",
-                f"[MATCH] Treating as trailing-slash directory include"
-                f" → {src_pattern!r}",
-            )
-            root_dir = root / src_pattern.rstrip("/")
-            if root_dir.exists():
-                matches = [p for p in root_dir.rglob("*") if p.is_file()]
-                log(
-                    "trace", f"[MATCH] rglob found {len(matches)} file(s) in {root_dir}"
-                )
-            else:
-                matches = []
-                log("trace", f"[MATCH] root_dir does not exist: {root_dir}")
-        elif src_pattern.endswith("/**"):
-            # Direct recursive pattern
-            log("trace", f"[MATCH] Treating as recursive include → {src_pattern!r}")
-            root_dir = root / src_pattern.rstrip("/**")
-            if root_dir.exists():
-                matches = [p for p in root_dir.rglob("*") if p.is_file()]
-                log(
-                    "trace", f"[MATCH] rglob found {len(matches)} file(s) in {root_dir}"
-                )
-            else:
-                matches = []
-                log("trace", f"[MATCH] root_dir does not exist: {root_dir}")
-        elif has_glob_chars(src_pattern):
-            log("trace", f"[MATCH] Using glob() for pattern {src_pattern!r}")
-            matches = list(root.glob(src_pattern))
-            log("trace", f"[MATCH] glob found {len(matches)} match(es)")
-        else:
-            log("trace", f"[MATCH] Treating as literal include {root / src_pattern}")
-            matches = [root / src_pattern]
-
-        for i, m in enumerate(matches):
-            log("trace", f"[MATCH]   {i + 1:02d}. {m}")
-
+        matches = _build_expand_include_pattern(src_pattern, root)
         if not matches:
-            log("debug", f"⚠️  No matches for {src_pattern}")
+            log("debug", f"⚠️ No matches for {src_pattern}")
             continue
 
-        # --- Copy each matched path ---
-        for src in matches:
-            if not src.exists():
-                log("debug", f"⚠️  Missing: {src}")
-                continue
+        _build_copy_matches(
+            matches,
+            inc,
+            excludes,
+            out_entry,
+            out_dir=out_dir,
+            dry_run=dry_run,
+        )
 
-            log("trace", f"[COPY] Preparing to copy {src}")
 
-            # Compute the destination path before handing off
-            dest_rel = _compute_dest(src, root, out_dir, src_pattern, inc.get("dest"))
-            log("trace", f"[COPY] dest_rel={dest_rel}")
+def _build_expand_include_pattern(src_pattern: str, root: Path) -> list[Path]:
+    """Return all matching files for a given include pattern."""
+    matches: list[Path] = []
 
-            src_resolved = make_pathresolved(
-                src,  # replace pattern with matched path
-                inc["root"],
-                inc["origin"],
-                pattern=src_pattern,
-            )
-            log("trace", f"[COPY] src_resolved={src_resolved}")
+    if src_pattern.endswith("/") and not has_glob_chars(src_pattern):
+        log(
+            "trace",
+            f"[MATCH] Treating as trailing-slash directory include → {src_pattern!r}",
+        )
+        root_dir = root / src_pattern.rstrip("/")
+        if root_dir.exists():
+            matches = [p for p in root_dir.rglob("*") if p.is_file()]
+        else:
+            log("trace", f"[MATCH] root_dir does not exist: {root_dir}")
 
-            dest_resolved = make_pathresolved(dest_rel, out_dir, out_entry["origin"])
-            log("trace", f"[COPY] dest_resolved={dest_resolved}")
+    elif src_pattern.endswith("/**"):
+        log("trace", f"[MATCH] Treating as recursive include → {src_pattern!r}")
+        root_dir = root / src_pattern.removesuffix("/**")
+        if root_dir.exists():
+            matches = [p for p in root_dir.rglob("*") if p.is_file()]
+        else:
+            log("trace", f"[MATCH] root_dir does not exist: {root_dir}")
 
-            copy_item(src_resolved, dest_resolved, excludes, dry_run)
+    elif has_glob_chars(src_pattern):
+        log("trace", f"[MATCH] Using glob() for pattern {src_pattern!r}")
+        matches = list(root.glob(src_pattern))
+        log("trace", f"[MATCH] glob found {len(matches)} match(es)")
 
+    else:
+        log("trace", f"[MATCH] Treating as literal include {root / src_pattern}")
+        matches = [root / src_pattern]
+
+    for i, m in enumerate(matches):
+        log("trace", f"[MATCH]   {i + 1:02d}. {m}")
+
+    return matches
+
+
+def _build_copy_matches(
+    matches: list[Path],
+    inc: IncludeResolved,
+    excludes: list[PathResolved],
+    out_entry: PathResolved,
+    *,
+    out_dir: Path,
+    dry_run: bool,
+) -> None:
+    for src in matches:
+        if not src.exists():
+            log("debug", f"⚠️ Missing: {src}")
+            continue
+
+        log("trace", f"[COPY] Preparing to copy {src}")
+
+        dest_rel = _compute_dest(
+            src,
+            Path(inc["root"]).resolve(),
+            out_dir=out_dir,
+            src_pattern=str(inc["path"]),
+            dest_name=inc.get("dest"),
+        )
+        log("trace", f"[COPY] dest_rel={dest_rel}")
+
+        src_resolved = make_pathresolved(
+            src,
+            inc["root"],
+            inc["origin"],
+            pattern=str(inc["path"]),
+        )
+        dest_resolved = make_pathresolved(dest_rel, out_dir, out_entry["origin"])
+
+        copy_item(src_resolved, dest_resolved, excludes, dry_run=dry_run)
+
+
+def run_build(
+    build_cfg: BuildConfigResolved,
+) -> None:
+    """Execute a single build task using a fully resolved config."""
+    dry_run = build_cfg.get("dry_run", False)
+    includes: list[IncludeResolved] = build_cfg["include"]
+    excludes: list[PathResolved] = build_cfg["exclude"]
+    out_entry: PathResolved = build_cfg["out"]
+    out_dir = (out_entry["root"] / out_entry["path"]).resolve()
+
+    log("trace", f"[RUN_BUILD] out_dir={out_dir}, includes={len(includes)} patterns")
+
+    # --- Clean and recreate output directory ---
+    _build_prepare_output_dir(out_dir, dry_run=dry_run)
+
+    # --- Process includes ---
+    _build_process_includes(
+        includes,
+        excludes,
+        out_entry,
+        out_dir=out_dir,
+        dry_run=dry_run,
+    )
     log("info", f"✅ Build completed → {out_dir}\n")
 
 
-def run_all_builds(resolved_builds: list[BuildConfigResolved], dry_run: bool) -> None:
+def run_all_builds(
+    resolved_builds: list[BuildConfigResolved],
+    *,
+    dry_run: bool,
+) -> None:
     log("trace", f"[run_all_builds] Resolved build: {resolved_builds}")
 
     for i, build_cfg in enumerate(resolved_builds, 1):

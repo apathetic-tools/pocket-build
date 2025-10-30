@@ -11,22 +11,24 @@ from .utils_types import cast_hint, safe_isinstance, schema_from_typeddict
 
 # --- types ----------------------------------------------------------
 
-# Aggregator structure:
-# {
-#   "strict_warnings": {
-#       "dry-run": {"msg": DRYRUN_MSG, "contexts": ["in build #0", "in build #2"]},
-#       ...
-#   },
-#   "warnings": { ... }
-# }
-
 
 class _SchErrAggEntry(TypedDict):
     msg: str
     contexts: list[str]
 
 
-# severity, tag
+"""
+severity, tag
+
+Aggregator structure example:
+{
+  "strict_warnings": {
+      "dry-run": {"msg": DRYRUN_MSG, "contexts": ["in build #0", "in build #2"]},
+      ...
+  },
+  "warnings": { ... }
+}
+"""
 SchemaErrorAggregator = dict[str, dict[str, dict[str, _SchErrAggEntry]]]
 
 
@@ -51,14 +53,13 @@ AGG_WARN = "warnings"
 
 
 def collect_msg(
-    strict: bool,
     msg: str,
-    summary: ValidationSummary,  # modified in function, not returned
     *,
+    strict: bool,
+    summary: ValidationSummary,  # modified in function, not returned
     is_error: bool = False,
 ) -> None:
-    """
-    Route a message to the appropriate bucket.
+    """Route a message to the appropriate bucket.
     Errors are always fatal.
     Warnings may escalate to strict_warnings in strict mode.
     """
@@ -71,6 +72,7 @@ def collect_msg(
 
 
 def flush_schema_aggregators(
+    *,
     summary: ValidationSummary,
     agg: SchemaErrorAggregator,
 ) -> None:
@@ -82,13 +84,17 @@ def flush_schema_aggregators(
                 return ctx[len(prefix) :].strip()
         return ctx
 
-    def _flush_one(bucket: dict[str, dict[str, Any]], strict: bool) -> None:
+    def _flush_one(
+        bucket: dict[str, dict[str, Any]],
+        *,
+        strict: bool,
+    ) -> None:
         for tag, entry in bucket.items():
             msg_tmpl = entry["msg"]
             contexts = [_clean_context(c) for c in entry["contexts"]]
             joined_ctx = ", ".join(contexts)
             rendered = msg_tmpl.format(keys=tag, ctx=f"in {joined_ctx}")
-            collect_msg(strict, rendered, summary)
+            collect_msg(rendered, strict=strict, summary=summary)
         bucket.clear()
 
     strict_bucket = agg.get(AGG_STRICT_WARN, {})
@@ -96,9 +102,9 @@ def flush_schema_aggregators(
 
     if strict_bucket:
         summary.valid = False
-        _flush_one(strict_bucket, True)
+        _flush_one(strict_bucket, strict=True)
     if warn_bucket:
-        _flush_one(warn_bucket, False)
+        _flush_one(warn_bucket, strict=False)
 
 
 # ---------------------------------------------------------------------------
@@ -118,24 +124,24 @@ def _infer_type_label(
         if isinstance(expected_type, type):
             return expected_type.__name__
         return str(expected_type)
-    except Exception:
+    except Exception:  # noqa: BLE001
         return repr(expected_type)
 
 
 def _validate_scalar_value(
-    strict: bool,
     context: str,
     key: str,
     val: Any,
     expected_type: Any,
     *,
+    strict: bool,
     summary: ValidationSummary,  # modified in function, not returned
 ) -> bool:
     """Validate a single non-container value against its expected type."""
     try:
         if safe_isinstance(val, expected_type):  # self-ref guard
             return True
-    except Exception:
+    except Exception:  # noqa: BLE001
         # Defensive fallback — e.g. weird typing generics
         fallback_type = (
             expected_type if isinstance(expected_type, type) else type(expected_type)
@@ -145,21 +151,21 @@ def _validate_scalar_value(
 
     exp_label = _infer_type_label(expected_type)
     collect_msg(
-        strict,
         f"{context}: key `{key}` expected {exp_label}, got {type(val).__name__}",
-        summary,
+        summary=summary,
+        strict=strict,
         is_error=True,
     )
     return False
 
 
 def _validate_list_value(
-    strict: bool,
     context: str,
     key: str,
     val: Any,
     subtype: Any,
     *,
+    strict: bool,
     summary: ValidationSummary,  # modified in function, not returned
     prewarn: set[str],
 ) -> bool:
@@ -167,9 +173,9 @@ def _validate_list_value(
     if not isinstance(val, list):
         exp_label = f"list[{_infer_type_label(subtype)}]"
         collect_msg(
-            strict,
             f"{context}: key `{key}` expected {exp_label}, got {type(val).__name__}",
-            summary,
+            strict=strict,
+            summary=summary,
             is_error=True,
         )
         return False
@@ -191,68 +197,81 @@ def _validate_list_value(
         ):
             if not isinstance(item, dict):
                 collect_msg(
-                    strict,
                     f"{context}: key `{key}` #{i + 1} expected an "
                     " object with named keys for "
                     f"{subtype.__name__}, got {type(item).__name__}",
-                    summary,
+                    strict=strict,
+                    summary=summary,
                     is_error=True,
                 )
                 valid = False
                 continue
             valid &= _validate_typed_dict(
-                strict,
                 f"{context}.{key}[{i}]",
                 item,
                 subtype,
+                strict=strict,
                 summary=summary,
                 prewarn=prewarn,
             )
         else:
             valid &= _validate_scalar_value(
-                strict,
                 context,
                 f"{key}[{i}]",
                 item,
                 subtype,
+                strict=strict,
                 summary=summary,
             )
     return valid
 
 
-def _validate_typed_dict(
-    strict: bool,
+def _dict_unknown_keys(
     context: str,
     val: Any,
-    typedict_cls: type[Any],
+    schema: dict[str, Any],
     *,
+    strict: bool,
     summary: ValidationSummary,  # modified in function, not returned
     prewarn: set[str],
-    ignore_keys: set[str] = set(),
 ) -> bool:
-    """Validate a dict against a TypedDict schema recursively.
+    # --- Unknown keys ---
+    val_dict = cast("dict[str, Any]", val)
+    unknown: list[str] = [k for k in val_dict if k not in schema and k not in prewarn]
+    if unknown:
+        joined = ", ".join(f"`{u}`" for u in unknown)
 
-    - Return False if val is not a dict
-    - Recurse into its fields using _validate_scalar_value or _validate_list_value
-    - Warn about unknown keys under strict=True
-    """
-    if not isinstance(val, dict):
-        collect_msg(
-            strict,
-            f"{context}: expected an object with named keys for"
-            f" {typedict_cls.__name__}, got {type(val).__name__}",
-            summary,
-            is_error=True,
-        )
-        return False
+        location = context
+        if "in top-level configuration." in location:
+            location = "in " + location.split("in top-level configuration.")[-1]
 
-    if not hasattr(typedict_cls, "__annotations__"):
-        raise AssertionError(
-            "Internal schema invariant violated: "
-            f"{typedict_cls!r} has no __annotations__."
-        )
+        msg = f"Unknown key{plural(unknown)} {joined} {location}."
 
-    schema = schema_from_typeddict(typedict_cls)
+        hints: list[str] = []
+        for k in unknown:
+            close = get_close_matches(k, schema.keys(), n=1, cutoff=DEFAULT_HINT_CUTOFF)
+            if close:
+                hints.append(f"'{k}' → '{close[0]}'")
+        if hints:
+            msg += "\nHint: did you mean " + ", ".join(hints) + "?"
+
+        collect_msg(msg.strip(), strict=strict, summary=summary)
+        if strict:
+            return False
+
+    return True
+
+
+def _dict_fields(
+    context: str,
+    val: Any,
+    schema: dict[str, Any],
+    *,
+    strict: bool,
+    summary: ValidationSummary,  # modified in function, not returned
+    prewarn: set[str],
+    ignore_keys: set[str],
+) -> bool:
     valid = True
 
     for field, expected_type in schema.items():
@@ -260,7 +279,7 @@ def _validate_typed_dict(
             # Optional or missing field → not a failure
             continue
 
-        inner_val = cast(Any, val[field])
+        inner_val = val[field]
         origin = get_origin(expected_type)
         args = get_args(expected_type)
         exp_label = _infer_type_label(expected_type)
@@ -268,11 +287,11 @@ def _validate_typed_dict(
         if origin is list:
             subtype = args[0] if args else Any
             valid &= _validate_list_value(
-                strict,
                 context,
                 field,
                 inner_val,
                 subtype,
+                strict=strict,
                 summary=summary,
                 prewarn=prewarn,
             )
@@ -294,50 +313,96 @@ def _validate_typed_dict(
             else:
                 location = f"{context}.{field}"
             valid &= _validate_typed_dict(
-                strict,
                 location,
                 inner_val,
                 expected_type,
+                strict=strict,
                 summary=summary,
                 prewarn=prewarn,
             )
         else:
             val_scalar = _validate_scalar_value(
-                strict, context, field, inner_val, expected_type, summary=summary
+                context,
+                field,
+                inner_val,
+                expected_type,
+                strict=strict,
+                summary=summary,
             )
             if not val_scalar:
                 collect_msg(
-                    strict,
                     f"{context}: key `{field}` expected {exp_label}, "
                     f"got {type(inner_val).__name__}",
-                    summary,
+                    strict=strict,
+                    summary=summary,
                     is_error=True,
                 )
                 valid = False
 
+    return valid
+
+
+def _validate_typed_dict(
+    context: str,
+    val: Any,
+    typedict_cls: type[Any],
+    *,
+    strict: bool,
+    summary: ValidationSummary,  # modified in function, not returned
+    prewarn: set[str],
+    ignore_keys: set[str] | None = None,
+) -> bool:
+    """Validate a dict against a TypedDict schema recursively.
+
+    - Return False if val is not a dict
+    - Recurse into its fields using _validate_scalar_value or _validate_list_value
+    - Warn about unknown keys under strict=True
+    """
+    if ignore_keys is None:
+        ignore_keys = set()
+
+    if not isinstance(val, dict):
+        collect_msg(
+            f"{context}: expected an object with named keys for"
+            f" {typedict_cls.__name__}, got {type(val).__name__}",
+            strict=strict,
+            summary=summary,
+            is_error=True,
+        )
+        return False
+
+    if not hasattr(typedict_cls, "__annotations__"):
+        xmsg = (
+            "Internal schema invariant violated: "
+            f"{typedict_cls!r} has no __annotations__."
+        )
+        raise AssertionError(xmsg)
+
+    schema = schema_from_typeddict(typedict_cls)
+    valid = True
+
+    # --- walk through all the fields recursively ---
+    if not _dict_fields(
+        context,
+        val,
+        schema,
+        strict=strict,
+        summary=summary,
+        prewarn=prewarn,
+        ignore_keys=ignore_keys,
+    ):
+        valid = False
+
     # --- Unknown keys ---
-    val_dict = cast(dict[str, Any], val)
-    unknown: list[str] = [k for k in val_dict if k not in schema and k not in prewarn]
-    if unknown:
-        joined = ", ".join(f"`{u}`" for u in unknown)
-
-        location = context
-        if "in top-level configuration." in location:
-            location = "in " + location.split("in top-level configuration.")[-1]
-
-        msg = f"Unknown key{plural(unknown)} {joined} {location}."
-
-        hints: list[str] = []
-        for k in unknown:
-            close = get_close_matches(k, schema.keys(), n=1, cutoff=DEFAULT_HINT_CUTOFF)
-            if close:
-                hints.append(f"'{k}' → '{close[0]}'")
-        if hints:
-            msg += "\nHint: did you mean " + ", ".join(hints) + "?"
-
-        collect_msg(strict, msg.strip(), summary)
-        if strict:
-            valid = False
+    if not _dict_unknown_keys(
+        context,
+        val,
+        schema,
+        strict=strict,
+        summary=summary,
+        prewarn=prewarn,
+    ):
+        valid = False
 
     return valid
 
@@ -351,18 +416,17 @@ def _validate_typed_dict(
 
 
 def warn_keys_once(
-    strict_config: bool,
     tag: str,
     bad_keys: set[str],
     cfg: dict[str, Any],
     context: str,
     msg: str,
-    summary: ValidationSummary,  # modified in function, not returned
     *,
+    strict_config: bool,
+    summary: ValidationSummary,  # modified in function, not returned
     agg: SchemaErrorAggregator | None,
 ) -> tuple[bool, set[str]]:
-    """
-    Warn once for known bad keys (e.g. dry-run, root-only).
+    """Warn once for known bad keys (e.g. dry-run, root-only).
 
     agg indexes are: severity, tag, msg, context (list[str])
 
@@ -372,7 +436,7 @@ def warn_keys_once(
 
     # Normalize keys to lowercase for case-insensitive matching
     bad_keys_lower = {k.lower(): k for k in bad_keys}
-    cfg_keys_lower = {k.lower(): k for k in cfg.keys()}
+    cfg_keys_lower = {k.lower(): k for k in cfg}
     found_lower = bad_keys_lower & cfg_keys_lower.keys()
 
     if not found_lower:
@@ -392,9 +456,9 @@ def warn_keys_once(
     else:
         # immediate fallback
         collect_msg(
-            strict_config,
             f"{msg.format(keys=', '.join(sorted(found)), ctx=context)}",
-            summary,
+            strict=strict_config,
+            summary=summary,
         )
 
     if strict_config:
@@ -407,16 +471,20 @@ def warn_keys_once(
 
 
 def check_schema_conformance(
-    strict_config: bool,
     cfg: dict[str, Any],
     schema: dict[str, Any],
     context: str,
     *,
+    strict_config: bool,
     summary: ValidationSummary,  # modified in function, not returned
-    prewarn: set[str] = set(),
-    ignore_keys: set[str] = set(),
+    prewarn: set[str] | None = None,
+    ignore_keys: set[str] | None = None,
 ) -> bool:
     """Thin wrapper around _validate_typed_dict for root-level schema checks."""
+    if prewarn is None:
+        prewarn = set()
+    if ignore_keys is None:
+        ignore_keys = set()
 
     # Pretend schema is a TypedDict for uniformity
     class _AnonTypedDict(TypedDict):
@@ -426,10 +494,10 @@ def check_schema_conformance(
     _AnonTypedDict.__annotations__ = schema
 
     return _validate_typed_dict(
-        strict_config,
         context,
         cfg,
         _AnonTypedDict,
+        strict=strict_config,
         summary=summary,
         prewarn=prewarn,
         ignore_keys=ignore_keys,

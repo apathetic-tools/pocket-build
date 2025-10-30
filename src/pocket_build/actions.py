@@ -1,10 +1,12 @@
 # src/pocket_build/actions.py
-import glob
 import re
+import shutil
 import subprocess
+import tempfile
 import time
+from collections.abc import Callable
+from contextlib import suppress
 from pathlib import Path
-from typing import Callable
 
 from .build import run_build
 from .constants import DEFAULT_WATCH_INTERVAL
@@ -18,11 +20,19 @@ def _collect_included_files(resolved_builds: list[BuildConfigResolved]) -> list[
     """Flatten all include globs into a unique list of files."""
     log("trace", "_collect_included_files", __name__, id(_collect_included_files))
     files: set[Path] = set()
+
     for b in resolved_builds:
         for inc in b.get("include", []):
-            pattern = str(inc["root"] / inc["path"])
-            for match in glob.glob(pattern, recursive=True):
-                p = Path(match)
+            # Merge root and path into a single glob pattern (as before)
+            full_pattern = Path(inc["root"]) / inc["path"]
+
+            # Use Path.glob/rglob equivalently to glob.glob(recursive=True)
+            if "**" in str(full_pattern):
+                matches = full_pattern.parent.rglob(full_pattern.name)
+            else:
+                matches = full_pattern.parent.glob(full_pattern.name)
+
+            for p in matches:
                 if p.is_file():
                     files.add(p.resolve())
 
@@ -42,7 +52,6 @@ def watch_for_changes(
     - Polling interval defaults to 1 second (tune 0.5–2.0 for balance).
     Stops on KeyboardInterrupt.
     """
-
     log("trace", "_watch_for_changes", __name__, id(watch_for_changes))
     log(
         "info",
@@ -94,12 +103,15 @@ def watch_for_changes(
                     mtimes[f] = new_m
 
             if changed:
-                print(f"\n🔁 Detected {len(changed)} modified file(s). Rebuilding...")
+                log(
+                    "info",
+                    f"\n🔁 Detected {len(changed)} modified file(s). Rebuilding...",
+                )
                 rebuild_func()
                 # refresh timestamps after rebuild
                 mtimes = {f: f.stat().st_mtime for f in included_files if f.exists()}
     except KeyboardInterrupt:
-        print("\n🛑 Watch stopped.")
+        log("info", "\n🛑 Watch stopped.")
 
 
 def _get_metadata_from_header(script_path: Path) -> tuple[str, str]:
@@ -113,7 +125,7 @@ def _get_metadata_from_header(script_path: Path) -> tuple[str, str]:
 
     log("trace", "reading commit from header:", script_path)
 
-    try:
+    with suppress(Exception):
         text = script_path.read_text(encoding="utf-8")
 
         # --- Prefer Python constants if defined ---
@@ -132,15 +144,12 @@ def _get_metadata_from_header(script_path: Path) -> tuple[str, str]:
                 elif line.startswith("# Commit:") and commit == "unknown":
                     commit = line.split(":", 1)[1].strip()
 
-    except Exception:
-        pass
-
     return version, commit
 
 
 def get_metadata() -> Metadata:
-    """
-    Return (version, commit) tuple for this tool.
+    """Return (version, commit) tuple for this tool.
+
     - Standalone script → parse from header
     - Source installed → read pyproject.toml + git
     """
@@ -171,18 +180,16 @@ def get_metadata() -> Metadata:
             version = match.group(1)
 
     # Try git for commit
-    try:
+    with suppress(Exception):
         log("trace", "trying to get commit from git")
         result = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
+            ["git", "rev-parse", "--short", "HEAD"],  # noqa: S607
             cwd=root,
             capture_output=True,
             text=True,
             check=True,
         )
         commit = result.stdout.strip()
-    except Exception:
-        pass
 
     log("trace", f"got package version {version} with commit {commit}")
     return Metadata(version, commit)
@@ -190,9 +197,6 @@ def get_metadata() -> Metadata:
 
 def run_selftest() -> bool:
     """Run a lightweight functional test of the tool itself."""
-    import shutil
-    import tempfile
-
     log("info", "🧪 Running self-test...")
 
     tmp_dir: Path | None = None
@@ -238,7 +242,7 @@ def run_selftest() -> bool:
         log("error", "Self-test failed: output file not found or invalid.")
         return False
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         log("error", f"Self-test failed: {e}")
         return False
 

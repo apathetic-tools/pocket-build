@@ -5,23 +5,25 @@
 from pathlib import Path
 
 import pytest
-from pytest import MonkeyPatch
 
 import pocket_build.cli as mod_cli
+
+# --- constants --------------------------------------------------------------------
+
+ARGPARSE_ERROR_EXIT_CODE = 2
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
 
-def _run_cli(monkeypatch: MonkeyPatch, tmp_path: Path, argv: list[str]) -> int:
+def _run_cli(monkeypatch: pytest.MonkeyPatch, tmp_path: Path, argv: list[str]) -> int:
     """Helper to run CLI with a temporary working directory."""
     full_argv = [*argv, "--log-level", "trace"]
 
     # --- patch and execute ---
     monkeypatch.chdir(tmp_path)
-    code = mod_cli.main(full_argv)
-    return code
+    return mod_cli.main(full_argv)
 
 
 def _make_src(tmp_path: Path, *names: str) -> Path:
@@ -43,7 +45,10 @@ def _make_src(tmp_path: Path, *names: str) -> Path:
 # ---------------------------------------------------------------------------
 
 
-def test_positional_include_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_positional_include_and_out(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     """`src dist/` should treat src as include and dist/ as out."""
     # --- setup ---
     _make_src(tmp_path, "file.txt")
@@ -58,7 +63,10 @@ def test_positional_include_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) ->
     assert (dist / "file.txt").exists()
 
 
-def test_multiple_includes_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_multiple_includes_and_out(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     """`src1 src2 dist` should treat src1/src2 as includes and dist as out."""
     # --- setup ---
     (tmp_path / "src1").mkdir()
@@ -83,7 +91,8 @@ def test_multiple_includes_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> 
 
 
 def test_explicit_out_allows_many_includes(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """If --out is given, all positionals become includes."""
     # --- setup ---
@@ -116,7 +125,9 @@ def test_explicit_out_allows_many_includes(
     ],
 )
 def test_error_on_positional_with_include(
-    monkeypatch: MonkeyPatch, tmp_path: Path, argv: list[str]
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+    argv: list[str],
 ) -> None:
     """Any positional args combined with --include should error."""
     # --- setup ---
@@ -125,10 +136,13 @@ def test_error_on_positional_with_include(
     # --- patch, execute and verify ---
     with pytest.raises(SystemExit) as e:
         _run_cli(monkeypatch, tmp_path, argv)
-    assert e.value.code == 2
+    assert e.value.code == ARGPARSE_ERROR_EXIT_CODE
 
 
-def test_positional_with_dry_run(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_positional_with_dry_run(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     # --- setup ---
     _make_src(tmp_path, "x.txt")
 
@@ -140,7 +154,10 @@ def test_positional_with_dry_run(monkeypatch: MonkeyPatch, tmp_path: Path) -> No
     assert not (tmp_path / "dist").exists()
 
 
-def test_trailing_slash_handled(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_trailing_slash_handled(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     # --- setup ---
     _make_src(tmp_path, "x.txt")
 

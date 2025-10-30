@@ -1,6 +1,8 @@
 # tests/30-utils-tests/test_utils_schema_check.py
 """Focused tests for pocket_build.config_validate._check_schema_conformance."""
 
+# we import `_` private for testing purposes only
+# ruff: noqa: SLF001
 # pyright: reportPrivateUsage=false
 
 from typing import Any, TypedDict
@@ -31,7 +33,8 @@ class MiniBuild(TypedDict, total=False):
 
 def test_check_schema_conformance_matches_list_validator() -> None:
     """Ensures _check_schema_conformance returns
-    same validity as low-level list validator."""
+    same validity as low-level list validator.
+    """
     # --- setup ---
     schema: dict[str, Any] = {"include": list[str], "out": str}
     cfg: dict[str, Any] = {"include": ["src", 42], "out": "dist"}
@@ -39,18 +42,22 @@ def test_check_schema_conformance_matches_list_validator() -> None:
     # --- patch and execute ---
     summary1 = mod_utils_schema.ValidationSummary(True, [], [], [], True)
     ok_list = mod_utils_schema._validate_list_value(
-        True,
         "ctx",
         "include",
         ["src", 42],
         str,
+        strict=True,
         summary=summary1,
         prewarn=set(),
     )
 
     summary2 = mod_utils_schema.ValidationSummary(True, [], [], [], True)
     ok_schema = mod_utils_schema.check_schema_conformance(
-        True, cfg, schema, "ctx", summary=summary2
+        cfg,
+        schema,
+        "ctx",
+        strict_config=True,
+        summary=summary2,
     )
 
     # --- verify ---
@@ -66,7 +73,11 @@ def test_check_schema_conformance_smoke() -> None:
 
     # --- execute ---
     result = mod_utils_schema.check_schema_conformance(
-        True, cfg, schema, "root", summary=make_summary()
+        cfg,
+        schema,
+        "root",
+        strict_config=True,
+        summary=make_summary(),
     )
 
     # --- verify ---
@@ -83,10 +94,10 @@ def test_check_schema_conformance_respects_prewarn() -> None:
     # --- execute ---
     summary = make_summary()
     ok = mod_utils_schema.check_schema_conformance(
-        True,
         cfg,
         schema,
         "ctx",
+        strict_config=True,
         summary=summary,
         prewarn=prewarn,
     )
@@ -109,7 +120,11 @@ def test_accepts_matching_simple_types() -> None:
     # --- execute and validate ---
     assert (
         mod_utils_schema.check_schema_conformance(
-            False, cfg, schema, "root", summary=summary
+            cfg,
+            schema,
+            "root",
+            strict_config=False,
+            summary=summary,
         )
         is True
     )
@@ -124,7 +139,11 @@ def test_rejects_wrong_type() -> None:
     # --- execute and validate ---
     assert (
         mod_utils_schema.check_schema_conformance(
-            True, cfg, schema, "root", summary=summary
+            cfg,
+            schema,
+            "root",
+            strict_config=True,
+            summary=summary,
         )
         is False
     )
@@ -139,7 +158,11 @@ def test_list_of_str_ok() -> None:
     # --- execute and validate ---
     assert (
         mod_utils_schema.check_schema_conformance(
-            False, cfg, schema, "root", summary=summary
+            cfg,
+            schema,
+            "root",
+            strict_config=False,
+            summary=summary,
         )
         is True
     )
@@ -154,7 +177,11 @@ def test_list_with_bad_inner_type() -> None:
     # --- execute and validate ---
     assert (
         mod_utils_schema.check_schema_conformance(
-            True, cfg, schema, "root", summary=summary
+            cfg,
+            schema,
+            "root",
+            strict_config=True,
+            summary=summary,
         )
         is False
     )
@@ -169,7 +196,11 @@ def test_list_of_typeddict_allows_dicts() -> None:
     # --- execute and validate ---
     assert (
         mod_utils_schema.check_schema_conformance(
-            False, cfg, schema, "root", summary=summary
+            cfg,
+            schema,
+            "root",
+            strict_config=False,
+            summary=summary,
         )
         is True
     )
@@ -184,7 +215,11 @@ def test_list_of_typeddict_rejects_non_dict() -> None:
     # --- execute and validate ---
     assert (
         mod_utils_schema.check_schema_conformance(
-            True, cfg, schema, "root", summary=summary
+            cfg,
+            schema,
+            "root",
+            strict_config=True,
+            summary=summary,
         )
         is False
     )
@@ -199,7 +234,11 @@ def test_unknown_keys_fail_in_strict() -> None:
     # --- execute and validate ---
     assert (
         mod_utils_schema.check_schema_conformance(
-            True, cfg, schema, "ctx", summary=summary
+            cfg,
+            schema,
+            "ctx",
+            strict_config=True,
+            summary=summary,
         )
         is False
     )
@@ -214,7 +253,11 @@ def test_unknown_keys_warn_in_non_strict() -> None:
     # --- execute and validate ---
     assert (
         mod_utils_schema.check_schema_conformance(
-            False, cfg, schema, "ctx", summary=summary
+            cfg,
+            schema,
+            "ctx",
+            strict_config=False,
+            summary=summary,
         )
         is True
     )
@@ -230,7 +273,12 @@ def test_prewarn_keys_ignored() -> None:
     # prewarn tells it to skip foo
     assert (
         mod_utils_schema.check_schema_conformance(
-            True, cfg, schema, "ctx", summary=summary, prewarn={"foo"}
+            cfg,
+            schema,
+            "ctx",
+            strict_config=True,
+            summary=summary,
+            prewarn={"foo"},
         )
         is False
     )
@@ -245,7 +293,11 @@ def test_list_of_typeddict_with_invalid_inner_type() -> None:
     # --- execute and validate ---
     assert (
         mod_utils_schema.check_schema_conformance(
-            True, cfg, schema, "root", summary=summary
+            cfg,
+            schema,
+            "root",
+            strict_config=True,
+            summary=summary,
         )
         is False
     )
@@ -255,14 +307,18 @@ def test_extra_field_in_typeddict_strict() -> None:
     # --- setup ---
     schema = {"builds": list[MiniBuild]}
     cfg: dict[str, Any] = {
-        "builds": [{"include": ["src"], "out": "dist", "weird": True}]
+        "builds": [{"include": ["src"], "out": "dist", "weird": True}],
     }
     summary = make_summary()
 
     # --- execute and validate ---
     assert (
         mod_utils_schema.check_schema_conformance(
-            True, cfg, schema, "root", summary=summary
+            cfg,
+            schema,
+            "root",
+            strict_config=True,
+            summary=summary,
         )
         is False
     )
@@ -274,5 +330,9 @@ def test_empty_schema_and_config() -> None:
 
     # --- execute and validate ---
     assert mod_utils_schema.check_schema_conformance(
-        False, {}, {}, "root", summary=summary
+        {},
+        {},
+        "root",
+        strict_config=False,
+        summary=summary,
     )

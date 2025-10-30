@@ -1,10 +1,11 @@
 # tests/utils/patch_everywhere.py
 
 import sys
+from collections.abc import Callable
 from types import ModuleType
-from typing import Any, Callable
+from typing import Any
 
-from pytest import MonkeyPatch
+import pytest
 
 import pocket_build.meta as mod_meta
 
@@ -12,7 +13,7 @@ from .trace import TRACE
 
 
 def patch_everywhere(
-    mp: MonkeyPatch,
+    mp: pytest.MonkeyPatch,
     mod_env: ModuleType | Any,
     func_name: str,
     replacement_func: Callable[..., object],
@@ -23,11 +24,11 @@ def patch_everywhere(
     that have imported the same function object.
     Uses pytest's MonkeyPatch so patches are reverted automatically.
     """
-
     # --- Sanity checks ---
     func = getattr(mod_env, func_name, None)
     if func is None:
-        raise TypeError(f"Could not find {func_name!r} on {mod_env!r}")
+        xmsg = f"Could not find {func_name!r} on {mod_env!r}"
+        raise TypeError(xmsg)
 
     mod_name = getattr(mod_env, "__name__", type(mod_env).__name__)
 

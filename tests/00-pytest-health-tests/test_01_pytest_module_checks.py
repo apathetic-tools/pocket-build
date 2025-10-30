@@ -1,6 +1,5 @@
 # tests/test_01_pytest_module_checks.py
-"""
-Ensures pytest is running against the intended runtime (installed vs singlefile)
+"""Ensures pytest is running against the intended runtime (installed vs singlefile)
 and that Python’s import cache (`sys.modules`) points to the correct sources.
 
 If RUNTIME_MODE=singlefile, all modules must resolve to the standalone file.
@@ -40,7 +39,8 @@ def list_important_modules() -> list[str]:
         important.append(app_package.__name__)
     else:
         for _, name, _ in pkgutil.walk_packages(
-            app_package.__path__, app_package.__name__ + "."
+            app_package.__path__,
+            app_package.__name__ + ".",
         ):
             important.append(name)
 
@@ -113,11 +113,11 @@ def test_pytest_runtime_cache_integrity() -> None:
         # troubleshooting info
         TRACE(
             f"sys.modules['{mod_meta.PROGRAM_PACKAGE}']"
-            f" = {sys.modules.get(mod_meta.PROGRAM_PACKAGE)}"
+            f" = {sys.modules.get(mod_meta.PROGRAM_PACKAGE)}",
         )
         TRACE(
             f"sys.modules['{mod_meta.PROGRAM_PACKAGE}.utils']"
-            f" = {sys.modules.get(f'{mod_meta.PROGRAM_PACKAGE}.utils')}"
+            f" = {sys.modules.get(f'{mod_meta.PROGRAM_PACKAGE}.utils')}",
         )
 
     else:
@@ -149,7 +149,6 @@ def test_debug_dump_all_module_origins() -> None:
     TRACE=1 poetry run pytest -k debug -s
     RUNTIME_MODE=singlefile TRACE=1 poetry run pytest -k debug -s
     """
-
     # --- verify ---
 
     # dump everything we know
@@ -160,6 +159,7 @@ def test_debug_dump_all_module_origins() -> None:
     TRACE(f"Loaded {count} {mod_meta.PROGRAM_PACKAGE} modules total")
 
     # force visible failure for debugging runs
-    raise AssertionError(
+    xmsg = (
         f"Intentional fail — {count} {mod_meta.PROGRAM_PACKAGE} modules listed above."
     )
+    raise AssertionError(xmsg)

@@ -1,8 +1,8 @@
 # src/pocket_build/cli.py
 
-
 import argparse
 import sys
+import traceback
 from pathlib import Path
 
 from .actions import get_metadata, run_selftest, watch_for_changes
@@ -155,14 +155,15 @@ def _setup_parser() -> argparse.ArgumentParser:
 
 
 def _normalize_positional_args(
-    args: argparse.Namespace, parser: argparse.ArgumentParser
+    args: argparse.Namespace,
+    parser: argparse.ArgumentParser,
 ) -> None:
     """Normalize positional arguments into explicit include/out flags."""
     includes: list[str] = getattr(args, "positional_include", [])
     out_pos: str | None = getattr(args, "positional_out", None)
 
     # If no --out, assume last positional is output if we have ≥2 positionals
-    if not getattr(args, "out", None) and len(includes) >= 2 and not out_pos:
+    if not getattr(args, "out", None) and len(includes) >= 2 and not out_pos:  # noqa: PLR2004
         out_pos = includes.pop()
 
     # If --out provided, treat all positionals as includes
@@ -182,7 +183,7 @@ def _normalize_positional_args(
         )
 
     # Internal sanity check
-    assert not (getattr(args, "out", None) and out_pos), (
+    assert not (getattr(args, "out", None) and out_pos), (  # only for dev # noqa: S101
         "out_pos not cleared after normalization"
     )
 
@@ -198,7 +199,7 @@ def _normalize_positional_args(
 # --------------------------------------------------------------------------- #
 
 
-def main(argv: list[str] | None = None) -> int:
+def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915
     try:
         parser = _setup_parser()
         args = parser.parse_args(argv)
@@ -207,21 +208,19 @@ def main(argv: list[str] | None = None) -> int:
         use_color = getattr(args, "use_color", should_use_color())
         current_runtime["use_color"] = use_color
 
-        print("[TRACE] main ran from:", Path(__file__).resolve(), file=sys.__stderr__)
-
         # --- Version flag ---
         if getattr(args, "version", None):
             meta = get_metadata()
             standalone = (
                 " [standalone]" if globals().get("__STANDALONE__", False) else ""
             )
-            print(f"{PROGRAM_DISPLAY} {meta.version} ({meta.commit}){standalone}")
+            print(f"{PROGRAM_DISPLAY} {meta.version} ({meta.commit}){standalone}")  # noqa: T201
             return 0
 
         # --- Python version check ---
-        if sys.version_info < (3, 10):
+        if sys.version_info < (3, 10):  # noqa: UP036
             # error before log-level exists
-            print(
+            print(  # noqa: T201
                 f"❌  {PROGRAM_DISPLAY} requires Python 3.10 or newer.",
                 file=sys.stderr,
             )
@@ -297,34 +296,35 @@ def main(argv: list[str] | None = None) -> int:
             watch_interval = resolved_root["watch_interval"]
             watch_for_changes(
                 lambda: run_all_builds(
-                    resolved_builds, getattr(args, "dry_run", False)
+                    resolved_builds,
+                    dry_run=getattr(args, "dry_run", False),
                 ),
                 resolved_builds,
                 interval=watch_interval,
             )
 
         else:
-            run_all_builds(resolved_builds, getattr(args, "dry_run", False))
+            run_all_builds(resolved_builds, dry_run=getattr(args, "dry_run", False))
 
         return 0
 
     except (FileNotFoundError, ValueError, TypeError, RuntimeError) as e:
         # controlled termination
-        try:
-            log("error", str(e))
-        except Exception:
-            safe_log(f"[FATAL] Logging failed while reporting: {e}")
+        silent = getattr(e, "silent", False)
+        if not silent:
+            try:
+                log("error", str(e))
+            except Exception:  # noqa: BLE001
+                safe_log(f"[FATAL] Logging failed while reporting: {e}")
         return getattr(e, "code", 1)
 
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         # unexpected internal error
         try:
             log("critical", f"Unexpected internal error: {e}")
-        except Exception:
+        except Exception:  # noqa: BLE001
             safe_log(f"[FATAL] Logging failed while reporting: {e}")
         # optionally print traceback in debug/trace mode only
         if current_runtime.get("log_level") in {"debug", "trace"}:
-            import traceback
-
             traceback.print_exc()
         return getattr(e, "code", 1)

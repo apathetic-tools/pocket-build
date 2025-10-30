@@ -1,13 +1,12 @@
 # tests/test_standalone_metadata.py
-"""
-Verify that the standalone standalone version (`bin/script.py`)
+"""Verify that the standalone standalone version (`bin/script.py`)
 was generated correctly — includes metadata, license header,
 and matches the declared version from pyproject.toml.
 """
 
 # we import `_` private for testing purposes only
+# ruff: noqa: SLF001
 # pyright: reportPrivateUsage=false
-# ruff: noqa: F401
 
 import os
 import re
@@ -56,10 +55,10 @@ def test_standalone_script_metadata_and_execution() -> None:
 
     # - Load declared version from pyproject.toml -
     with pyproject.open("rb") as f:
-        pyproject_data = cast(dict[str, Any], tomllib.load(f))  # type: ignore[attr-defined]
+        pyproject_data = cast("dict[str, Any]", tomllib.load(f))  # type: ignore[attr-defined]
 
-    project_section = cast(dict[str, Any], pyproject_data.get("project", {}))
-    declared_version = cast(str, project_section.get("version"))
+    project_section = cast("dict[str, Any]", pyproject_data.get("project", {}))
+    declared_version = cast("str", project_section.get("version"))
     assert declared_version, "Version not found in pyproject.toml"
 
     # - Read standalone script text -
@@ -79,7 +78,9 @@ def test_standalone_script_metadata_and_execution() -> None:
         commit_match = re.search(r"^# Commit:\s*([0-9a-f]{4,})", text, re.MULTILINE)
     else:
         commit_match = re.search(
-            r"^# Commit:\s*unknown \(local build\)", text, re.MULTILINE
+            r"^# Commit:\s*unknown \(local build\)",
+            text,
+            re.MULTILINE,
         )
 
     assert version_match, "Missing version stamp"
@@ -103,8 +104,9 @@ def test_standalone_script_metadata_and_execution() -> None:
             encoding="utf-8",
         )
 
-        result = subprocess.run(
-            ["python3", str(script), "--out", "tmp-dist"],
+        result = subprocess.run(  # noqa: S603
+            ["python3", str(script), "--out", "tmp-dist"],  # noqa: S607
+            check=False,
             cwd=tmp,  # ✅ run in empty temp dir
             capture_output=True,
             text=True,

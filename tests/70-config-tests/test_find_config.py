@@ -3,7 +3,7 @@
 from argparse import Namespace
 from pathlib import Path
 
-from pytest import MonkeyPatch, raises
+import pytest
 
 import pocket_build.config as mod_config
 import pocket_build.meta as mod_meta
@@ -17,7 +17,7 @@ def test_find_config_raises_for_missing_file(tmp_path: Path) -> None:
     args = Namespace(config=str(tmp_path / "nope.json"))
 
     # --- execute and verify ---
-    with raises(FileNotFoundError, match="not found"):
+    with pytest.raises(FileNotFoundError, match="not found"):
         mod_config.find_config(args, tmp_path)
 
 
@@ -36,7 +36,8 @@ def test_find_config_returns_explicit_file(tmp_path: Path) -> None:
 
 
 def test_find_config_logs_and_returns_none_when_missing(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Should log and return None when no default config file exists."""
     # --- setup ---
@@ -44,7 +45,7 @@ def test_find_config_logs_and_returns_none_when_missing(
     args = Namespace(config=None)
 
     # --- stubs ---
-    def fake_log(level: str, *a: object, **k: object) -> None:
+    def fake_log(level: str, *_a: object, **_k: object) -> None:
         called["logged"] = True
         assert level == "error"
 
@@ -58,7 +59,8 @@ def test_find_config_logs_and_returns_none_when_missing(
 
 
 def test_find_config_warns_for_multiple_candidates(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """If multiple config files exist, should warn and use the first."""
     # --- setup ---
@@ -73,7 +75,7 @@ def test_find_config_warns_for_multiple_candidates(
     args = Namespace(config=None)
 
     # --- stubs ---
-    def fake_log(level: str, *args: object, **kwargs: object) -> None:
+    def fake_log(level: str, *_args: object, **_kwargs: object) -> None:
         messages.append(level)
 
     # --- execute ---
@@ -91,12 +93,13 @@ def test_find_config_raises_for_directory(tmp_path: Path) -> None:
     args = Namespace(config=str(tmp_path))
 
     # --- execute and verify ---
-    with raises(ValueError, match="directory"):
+    with pytest.raises(ValueError, match="directory"):
         mod_config.find_config(args, tmp_path)
 
 
 def test_find_config_respects_missing_level(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """missing_level argument should control log level on missing config."""
     # --- setup ---
@@ -104,7 +107,7 @@ def test_find_config_respects_missing_level(
     args = Namespace(config=None)
 
     # --- stubs ---
-    def fake_log(level: str, *a: object, **k: object) -> None:
+    def fake_log(level: str, *_a: object, **_k: object) -> None:
         levels.append(level)
 
     # --- execute ---

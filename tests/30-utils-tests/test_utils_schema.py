@@ -1,8 +1,5 @@
 # tests/30-utils-tests/test_utils_schema.py
 
-# pyright: reportPrivateUsage=false
-
-
 from typing import TypedDict, cast
 
 import pocket_build.utils_schema as mod_utils_schema
@@ -30,7 +27,10 @@ def test_collect_msg_appends_to_errors_when_is_error_true() -> None:
 
     # --- execute ---
     mod_utils_schema.collect_msg(
-        strict=False, msg="bad thing", summary=summary, is_error=True
+        strict=False,
+        msg="bad thing",
+        summary=summary,
+        is_error=True,
     )
 
     # --- verify ---
@@ -71,7 +71,10 @@ def test_collect_msg_error_always_overrides_strict_mode() -> None:
 
     # --- execute ---
     mod_utils_schema.collect_msg(
-        strict=True, msg="kaboom", summary=summary, is_error=True
+        strict=True,
+        msg="kaboom",
+        summary=summary,
+        is_error=True,
     )
 
     # --- verify ---
@@ -87,19 +90,19 @@ def test_flush_schema_aggregators_flushes_strict_bucket() -> None:
     # --- setup ---
     summary = make_summary(strict=True)
     agg: mod_utils_schema.SchemaErrorAggregator = cast(
-        mod_utils_schema.SchemaErrorAggregator,
+        "mod_utils_schema.SchemaErrorAggregator",
         {
             mod_utils_schema.AGG_STRICT_WARN: {
                 "dry-run": {
                     "msg": "Ignored config key(s) {keys} {ctx}",
                     "contexts": ["in build #1", "on build #2"],
-                }
-            }
+                },
+            },
         },
     )
 
     # --- execute ---
-    mod_utils_schema.flush_schema_aggregators(summary, agg)
+    mod_utils_schema.flush_schema_aggregators(summary=summary, agg=agg)
 
     # --- verify ---
     assert not agg[mod_utils_schema.AGG_STRICT_WARN]  # bucket should be cleared
@@ -116,19 +119,19 @@ def test_flush_schema_aggregators_flushes_warning_bucket() -> None:
     # --- setup ---
     summary = make_summary(strict=False)
     agg: mod_utils_schema.SchemaErrorAggregator = cast(
-        mod_utils_schema.SchemaErrorAggregator,
+        "mod_utils_schema.SchemaErrorAggregator",
         {
             mod_utils_schema.AGG_WARN: {
                 "root-only": {
                     "msg": "Ignored {keys} {ctx}",
                     "contexts": ["in top-level configuration"],
-                }
-            }
+                },
+            },
         },
     )
 
     # --- execute ---
-    mod_utils_schema.flush_schema_aggregators(summary, agg)
+    mod_utils_schema.flush_schema_aggregators(summary=summary, agg=agg)
 
     # --- verify ---
     assert not agg[mod_utils_schema.AGG_WARN]
@@ -142,19 +145,19 @@ def test_flush_schema_aggregators_cleans_context_prefixes() -> None:
     # --- setup ---
     summary = make_summary(strict=True)
     agg: mod_utils_schema.SchemaErrorAggregator = cast(
-        mod_utils_schema.SchemaErrorAggregator,
+        "mod_utils_schema.SchemaErrorAggregator",
         {
             mod_utils_schema.AGG_STRICT_WARN: {
                 "noop": {
                     "msg": "Ignored {keys} {ctx}",
                     "contexts": ["in build #3", "on build #4", "build #5"],
-                }
-            }
+                },
+            },
         },
     )
 
     # --- execute ---
-    mod_utils_schema.flush_schema_aggregators(summary, agg)
+    mod_utils_schema.flush_schema_aggregators(summary=summary, agg=agg)
 
     # --- verify ---
     assert not agg[mod_utils_schema.AGG_STRICT_WARN]

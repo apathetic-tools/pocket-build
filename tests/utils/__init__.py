@@ -14,15 +14,15 @@ from .runtime_swap import runtime_swap
 from .trace import TRACE, make_trace
 
 __all__ = [
-    "runtime_swap",
+    "TRACE",
     "force_mtime_advance",
-    "patch_everywhere",
-    "make_trace",
-    "make_meta",
-    "make_resolved",
-    "make_include_resolved",
     "make_build_cfg",
     "make_build_input",
-    "TRACE",
+    "make_include_resolved",
+    "make_meta",
+    "make_resolved",
     "make_summary",
+    "make_trace",
+    "patch_everywhere",
+    "runtime_swap",
 ]

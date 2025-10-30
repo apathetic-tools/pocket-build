@@ -2,16 +2,15 @@
 """Tests for package.cli (package and standalone versions)."""
 
 # we import `_` private for testing purposes only
+# ruff: noqa: SLF001
 # pyright: reportPrivateUsage=false
-# ruff: noqa: F401
 
 import time
+from collections.abc import Callable
 from pathlib import Path
-from typing import Any, Callable
+from typing import Any
 
 import pytest
-from pytest import approx  # type: ignore[reportUnknownVariableType]
-from pytest import MonkeyPatch
 
 import pocket_build.actions as mod_actions
 import pocket_build.cli as mod_cli
@@ -62,7 +61,8 @@ def test_collect_included_files_handles_nonexistent_paths(tmp_path: Path) -> Non
 
 @pytest.mark.slow
 def test_watch_for_changes_triggers_rebuild(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Ensure that watch_for_changes() rebuilds on file modification.
 
@@ -74,7 +74,6 @@ def test_watch_for_changes_triggers_rebuild(
     and fakes _collect_included_files() to simulate file changes
     without waiting for real filesystem events.
     """
-
     # --- setup ---
     src = tmp_path / "src"
     src.mkdir()
@@ -87,6 +86,8 @@ def test_watch_for_changes_triggers_rebuild(
     )
 
     calls: list[str] = []
+    min_rebuild_cycles = 2
+    max_rebuild_cycles = 3
 
     # --- stubs ---
     def fake_build(*_args: Any, **_kwargs: Any) -> None:
@@ -99,7 +100,7 @@ def test_watch_for_changes_triggers_rebuild(
     def fake_sleep(*_args: Any, **_kwargs: Any) -> None:
         """Replace time.sleep to advance the watch loop deterministically."""
         counter["n"] += 1
-        if counter["n"] >= 3:
+        if counter["n"] >= max_rebuild_cycles:
             # stop after the second rebuild cycle
             raise KeyboardInterrupt
 
@@ -118,12 +119,12 @@ def test_watch_for_changes_triggers_rebuild(
     mod_actions.watch_for_changes(fake_build, [build], interval=0.01)
 
     # --- verify ---
-    assert 2 <= calls.count("rebuilt") <= 3
+    assert min_rebuild_cycles <= calls.count("rebuilt") <= max_rebuild_cycles
 
 
 def test_watch_flag_invokes_watch_mode(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Ensure --watch flag triggers watch_for_changes() call.
 
@@ -158,7 +159,7 @@ def test_watch_flag_invokes_watch_mode(
 
 def test_watch_for_changes_exported_and_callable(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Ensure watch_for_changes runs and rebuilds exactly twice."""
     # --- setup ---
@@ -173,6 +174,9 @@ def test_watch_for_changes_exported_and_callable(
     )
     calls: list[str] = []
 
+    min_rebuild_cycles = 2
+    max_rebuild_cycles = 3
+
     # --- stubs ---
     def fake_build(*_args: Any, **_kwargs: Any) -> None:
         calls.append("rebuilt")
@@ -182,7 +186,7 @@ def test_watch_for_changes_exported_and_callable(
 
     def fake_sleep(*_args: Any, **_kwargs: Any) -> None:
         counter["n"] += 1
-        if counter["n"] >= 3:  # never infinite loop
+        if counter["n"] >= max_rebuild_cycles:  # never infinite loop
             raise KeyboardInterrupt  # stop after second iteration
 
     # simulate file discovery
@@ -193,7 +197,7 @@ def test_watch_for_changes_exported_and_callable(
 
         # second call: file modified
         #   need to ensure file's mtime advances
-        # time.sleep(0.002) # we monkeypatched time.sleep so this is fake_sleep # broken
+        # we monkeypatched time.sleep so can't call it here
         f.write_text("y")
         # modify the file's mtime to fake a modified date in the future
         force_mtime_advance(f)
@@ -206,10 +210,10 @@ def test_watch_for_changes_exported_and_callable(
     mod_actions.watch_for_changes(fake_build, [build], interval=0.01)
 
     # --- verify ---
-    assert 2 <= calls.count("rebuilt") <= 3
+    assert min_rebuild_cycles <= calls.count("rebuilt") <= max_rebuild_cycles
 
 
-def test_watch_ignores_out_dir(tmp_path: Path, monkeypatch: MonkeyPatch) -> None:
+def test_watch_ignores_out_dir(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Ensure watch_for_changes() ignores files in output directory."""
     # --- setup ---
     src = tmp_path / "src"
@@ -257,21 +261,23 @@ def test_watch_interval_flag_parsing() -> None:
     # With new semantics, --watch sets None, meaning "use config/default interval"
     assert getattr(args, "watch", None) is None
 
-    args = parser.parse_args(["--watch", "2.5"])
-    assert getattr(args, "watch", None) == 2.5
+    interval = 2.5
+    args = parser.parse_args(["--watch", str(interval)])
+    assert getattr(args, "watch", None) == interval
 
     args = parser.parse_args([])
     assert getattr(args, "watch", None) is None
 
 
 def test_watch_uses_config_interval_when_flag_passed(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Ensure that --watch (no value) uses watch_interval from config when defined."""
     # --- setup ---
     config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(
-        '{"watch_interval": 0.42, "builds": [{"include": [], "out": "dist"}]}'
+        '{"watch_interval": 0.42, "builds": [{"include": [], "out": "dist"}]}',
     )
 
     called: dict[str, float] = {}
@@ -296,11 +302,14 @@ def test_watch_uses_config_interval_when_flag_passed(
     # --- verify ---
     assert code == 0, "Expected main() to exit cleanly"
     assert "interval" in called, "watch_for_changes() was never invoked"
-    assert called["interval"] == approx(0.42), f"Expected interval=0.42, got {called}"
+    assert called["interval"] == pytest.approx(0.42), (  # pyright: ignore[reportUnknownMemberType]
+        f"Expected interval=0.42, got {called}"
+    )
 
 
 def test_watch_falls_back_to_default_interval_when_no_config(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Ensure --watch uses DEFAULT_WATCH_INTERVAL when no config interval is defined."""
     # --- setup ---
@@ -327,6 +336,6 @@ def test_watch_falls_back_to_default_interval_when_no_config(
     # --- verify ---
     assert code == 0
     assert "interval" in called, "watch_for_changes() was never invoked"
-    assert called["interval"] == approx(mod_constants.DEFAULT_WATCH_INTERVAL), (
+    assert called["interval"] == pytest.approx(mod_constants.DEFAULT_WATCH_INTERVAL), (  # pyright: ignore[reportUnknownMemberType]
         f"Expected interval=0.42, got {called}"
     )

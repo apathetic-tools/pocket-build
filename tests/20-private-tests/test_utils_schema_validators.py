@@ -1,11 +1,13 @@
 # tests/20-private/test_utils_schema_validators.py
 """Smoke tests for pocket_build.config_validate internal validator helpers."""
 
+# we import `_` private for testing purposes only
+# ruff: noqa: SLF001
 # pyright: reportPrivateUsage=false
 
 from typing import Any, TypedDict
 
-from pytest import MonkeyPatch
+import pytest
 
 import pocket_build.utils_schema as mod_utils_schema
 import pocket_build.utils_types as mod_utils_types
@@ -81,12 +83,19 @@ def test_validate_scalar_value_accepts_correct_type() -> None:
 
     # --- patch and execute ---
     ok = mod_utils_schema._validate_scalar_value(
-        True, "ctx", "x", 42, int, summary=summary
+        "ctx",
+        "x",
+        42,
+        int,
+        strict=True,
+        summary=summary,
     )
 
     # --- verify ---
     assert ok is True
-    assert not summary.errors and not summary.warnings and not summary.strict_warnings
+    assert not summary.errors
+    assert not summary.warnings
+    assert not summary.strict_warnings
 
 
 def test_validate_scalar_value_rejects_wrong_type() -> None:
@@ -95,7 +104,12 @@ def test_validate_scalar_value_rejects_wrong_type() -> None:
 
     # --- patch and execute ---
     ok = mod_utils_schema._validate_scalar_value(
-        True, "ctx", "x", "abc", int, summary=summary
+        "ctx",
+        "x",
+        "abc",
+        int,
+        strict=True,
+        summary=summary,
     )
 
     # --- verify ---
@@ -103,19 +117,30 @@ def test_validate_scalar_value_rejects_wrong_type() -> None:
     assert any("expected int" in m for m in summary.errors)
 
 
-def test_validate_scalar_value_handles_fallback_path(monkeypatch: MonkeyPatch) -> None:
+def test_validate_scalar_value_handles_fallback_path(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """If safe_isinstance raises, fallback isinstance check still works."""
 
     # --- setup ---
     def _fake_safe_isinstance(_value: Any, _expected_type: Any) -> bool:
-        raise TypeError("simulated typing bug")
+        xmsg = "simulated typing bug"
+        raise TypeError(xmsg)
 
     # --- patch and execute ---
     patch_everywhere(
-        monkeypatch, mod_utils_types, "safe_isinstance", _fake_safe_isinstance
+        monkeypatch,
+        mod_utils_types,
+        "safe_isinstance",
+        _fake_safe_isinstance,
     )
     ok = mod_utils_schema._validate_scalar_value(
-        True, "ctx", "x", 5, int, summary=make_summary()
+        "ctx",
+        "x",
+        5,
+        int,
+        strict=True,
+        summary=make_summary(),
     )
 
     # --- verify ---
@@ -128,11 +153,11 @@ def test_validate_scalar_value_handles_fallback_path(monkeypatch: MonkeyPatch) -
 def test_validate_list_value_accepts_list() -> None:
     # --- execute ---
     result = mod_utils_schema._validate_list_value(
-        strict=False,
         context="root",
         key="nums",
         val=[1, 2, 3],
         subtype=int,
+        strict=False,
         summary=make_summary(),
         prewarn=set(),
     )
@@ -147,11 +172,11 @@ def test_validate_list_value_rejects_nonlist() -> None:
 
     # --- patch and execute ---
     ok = mod_utils_schema._validate_list_value(
-        True,
         "ctx",
         "nums",
         "notalist",
         int,
+        strict=True,
         summary=summary,
         prewarn=set(),
     )
@@ -167,11 +192,11 @@ def test_validate_list_value_rejects_wrong_element_type() -> None:
 
     # --- patch and execute ---
     ok = mod_utils_schema._validate_list_value(
-        True,
         "ctx",
         "nums",
         [1, "two", 3],
         int,
+        strict=True,
         summary=summary,
         prewarn=set(),
     )
@@ -191,11 +216,11 @@ def test_validate_list_value_handles_typed_dict_elements() -> None:
 
     # --- patch and execute ---
     ok = mod_utils_schema._validate_list_value(
-        True,
         "ctx",
         "builds",
         val,
         MiniBuild,
+        strict=True,
         summary=summary,
         prewarn=set(),
     )
@@ -210,11 +235,11 @@ def test_validate_list_value_accepts_empty_list() -> None:
     # --- execute and verify ---
     assert (
         mod_utils_schema._validate_list_value(
-            True,
             "ctx",
             "empty",
             [],
             int,
+            strict=True,
             summary=make_summary(),
             prewarn=set(),
         )
@@ -229,11 +254,11 @@ def test_validate_list_value_rejects_nested_mixed_types() -> None:
 
     # --- patch and execute ---
     ok = mod_utils_schema._validate_list_value(
-        True,
         "ctx",
         "nums",
         [[1, 2], ["a"]],
         list[int],
+        strict=True,
         summary=summary,
         prewarn=set(),
     )
@@ -250,11 +275,11 @@ def test_validate_list_value_mixed_types_like_integration() -> None:
 
     # --- patch and execute ---
     ok = mod_utils_schema._validate_list_value(
-        True,
         "ctx",
         "include",
         ["src", 42],
         str,
+        strict=True,
         summary=summary,
         prewarn=set(),
     )
@@ -276,11 +301,11 @@ def test_validate_list_value_respects_prewarn() -> None:
 
     # --- execute ---
     ok = mod_utils_schema._validate_list_value(
-        True,
         "ctx",
         "builds",
         val,
         MiniBuild,
+        strict=True,
         summary=summary,
         prewarn=prewarn,
     )
@@ -297,10 +322,10 @@ def test_validate_list_value_respects_prewarn() -> None:
 def test_validate_typed_dict_accepts_dict() -> None:
     # --- execute ---
     result = mod_utils_schema._validate_typed_dict(
-        strict=True,
         context="root",
         val={"include": ["src"], "out": "dist"},
         typedict_cls=MiniBuild,
+        strict=True,
         summary=make_summary(),
         prewarn=set(),
     )
@@ -315,10 +340,10 @@ def test_validate_typed_dict_rejects_non_dict() -> None:
 
     # --- patch and execute ---
     ok = mod_utils_schema._validate_typed_dict(
-        True,
         "root",
         "notadict",
         MiniBuild,
+        strict=True,
         summary=summary,
         prewarn=set(),
     )
@@ -334,10 +359,10 @@ def test_validate_typed_dict_detects_unknown_keys() -> None:
 
     # --- patch and execute ---
     ok = mod_utils_schema._validate_typed_dict(
-        True,
         "root",
         {"include": ["x"], "out": "y", "weird": 1},
         MiniBuild,
+        strict=True,
         summary=summary,
         prewarn=set(),
     )
@@ -356,10 +381,10 @@ def test_validate_typed_dict_allows_missing_field() -> None:
 
     # --- execute ---
     ok = mod_utils_schema._validate_typed_dict(
-        True,
         "ctx",
         val,
         MiniBuild,
+        strict=True,
         summary=make_summary(),
         prewarn=set(),
     )
@@ -381,20 +406,20 @@ def test_validate_typed_dict_nested_recursion() -> None:
     # --- patch, execute and verify ---
     summary1 = mod_utils_schema.ValidationSummary(True, [], [], [], True)
     assert mod_utils_schema._validate_typed_dict(
-        True,
         "root",
         good,
         Outer,
+        strict=True,
         summary=summary1,
         prewarn=set(),
     )
 
     summary2 = mod_utils_schema.ValidationSummary(True, [], [], [], True)
     assert not mod_utils_schema._validate_typed_dict(
-        True,
         "root",
         bad,
         Outer,
+        strict=True,
         summary=summary2,
         prewarn=set(),
     )
@@ -410,10 +435,10 @@ def test_validate_typed_dict_respects_prewarn() -> None:
 
     # --- execute ---
     ok = mod_utils_schema._validate_typed_dict(
-        True,
         "ctx",
         cfg,
         MiniBuild,
+        strict=True,
         summary=summary,
         prewarn=prewarn,
     )

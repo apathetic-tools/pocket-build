@@ -1,6 +1,5 @@
 # tests/utils/trace.py
-"""
-Unified trace logger for pytest diagnostics.
+"""Unified trace logger for pytest diagnostics.
 
 Uses monotonic timestamps for ordering and writes directly to sys.__stderr__
 to bypass pytest’s capture system. This makes output visible even during
@@ -11,7 +10,8 @@ import builtins
 import importlib
 import os
 import sys
-from typing import Any, Callable
+from collections.abc import Callable
+from typing import Any
 
 # Flag for quick runtime enable/disable
 TRACE_ENABLED = os.getenv("TRACE", "").lower() in {"1", "true", "yes"}
@@ -28,13 +28,14 @@ def make_trace(icon: str = "🧪") -> Callable[..., Any]:
     return local_trace
 
 
-def TRACE(label: str, *args: object, icon: str = "🧪") -> None:
+def TRACE(label: str, *args: object, icon: str = "🧪") -> None:  # noqa: N802
     """Emit a synchronized, flush-safe diagnostic line.
 
     Args:
         label: Short identifier or context string.
         *args: Optional values to append.
         icon: Emoji prefix/suffix for easier visual scanning.
+
     """
     if not TRACE_ENABLED:
         return

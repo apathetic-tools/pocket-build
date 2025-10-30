@@ -6,7 +6,7 @@ from pathlib import Path
 import pocket_build.meta as mod_meta
 
 
-def test_no_from_imports_in_tests():
+def test_no_from_imports_in_tests() -> None:
     tests_dir = Path(__file__).parents[2]
     bad_files: list[Path] = []
 
@@ -33,6 +33,5 @@ def test_no_from_imports_in_tests():
             + mod_meta.PROGRAM_PACKAGE
             + ".<module> from mod_<module>`` instead."
         )
-        raise AssertionError(
-            f"{len(bad_files)} test file(s) import from project directly."
-        )
+        xmsg = f"{len(bad_files)} test file(s) import from project directly."
+        raise AssertionError(xmsg)

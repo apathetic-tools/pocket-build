@@ -1,7 +1,7 @@
 # tests/test_utils_safe_isinstance.py
 """Focused tests for pocket_build.utils_core.safe_isinstance."""
 
-import typing
+from typing import Any, Literal, TypedDict, TypeVar
 
 import pocket_build.utils_types as mod_utils_types
 
@@ -15,29 +15,29 @@ def test_plain_types_work_normally() -> None:
 
 def test_union_types() -> None:
     # --- setup ---
-    U = typing.Union[str, int]
+    u = str | int
 
     # --- execute and verify ---
-    assert mod_utils_types.safe_isinstance("abc", U)
-    assert mod_utils_types.safe_isinstance(42, U)
-    assert not mod_utils_types.safe_isinstance(3.14, U)
+    assert mod_utils_types.safe_isinstance("abc", u)
+    assert mod_utils_types.safe_isinstance(42, u)
+    assert not mod_utils_types.safe_isinstance(3.14, u)
 
 
 def test_optional_types() -> None:
     # --- setup ---
-    Opt = typing.Optional[int]  # Union[int, NoneType]
+    opt = int | None
 
     # --- execute and verify ---
-    assert mod_utils_types.safe_isinstance(5, Opt)
-    assert mod_utils_types.safe_isinstance(None, Opt)
-    assert not mod_utils_types.safe_isinstance("nope", Opt)
+    assert mod_utils_types.safe_isinstance(5, opt)
+    assert mod_utils_types.safe_isinstance(None, opt)
+    assert not mod_utils_types.safe_isinstance("nope", opt)
 
 
 def test_any_type_always_true() -> None:
     # --- execute and verify ---
-    assert mod_utils_types.safe_isinstance("anything", typing.Any)
-    assert mod_utils_types.safe_isinstance(None, typing.Any)
-    assert mod_utils_types.safe_isinstance(42, typing.Any)
+    assert mod_utils_types.safe_isinstance("anything", Any)
+    assert mod_utils_types.safe_isinstance(None, Any)
+    assert mod_utils_types.safe_isinstance(42, Any)
 
 
 def test_list_type_accepts_lists() -> None:
@@ -48,16 +48,16 @@ def test_list_type_accepts_lists() -> None:
 
 def test_list_of_str_type_accepts_strings_inside() -> None:
     # --- setup ---
-    ListStr = list[str]
+    list_str = list[str]
 
     # --- execute and verify ---
-    assert mod_utils_types.safe_isinstance(["a", "b"], ListStr)
-    assert not mod_utils_types.safe_isinstance(["a", 2], ListStr)
+    assert mod_utils_types.safe_isinstance(["a", "b"], list_str)
+    assert not mod_utils_types.safe_isinstance(["a", 2], list_str)
 
 
 def test_typed_dict_like_accepts_dicts() -> None:
     # --- setup ---
-    class DummyDict(typing.TypedDict):
+    class DummyDict(TypedDict):
         foo: str
         bar: int
 
@@ -69,12 +69,12 @@ def test_typed_dict_like_accepts_dicts() -> None:
 
 def test_union_with_list_and_dict() -> None:
     # --- setup ---
-    U = typing.Union[list[str], dict[str, int]]
+    u = list[str] | dict[str, int]
 
     # --- execute and verify ---
-    assert mod_utils_types.safe_isinstance(["a", "b"], U)
-    assert mod_utils_types.safe_isinstance({"a": 1}, U)
-    assert not mod_utils_types.safe_isinstance(42, U)
+    assert mod_utils_types.safe_isinstance(["a", "b"], u)
+    assert mod_utils_types.safe_isinstance({"a": 1}, u)
+    assert not mod_utils_types.safe_isinstance(42, u)
 
 
 def test_does_not_raise_on_weird_types() -> None:
@@ -83,7 +83,7 @@ def test_does_not_raise_on_weird_types() -> None:
     # --- setup ---
     class A: ...
 
-    T = typing.TypeVar("T", bound=A)
+    T = TypeVar("T", bound=A)
 
     # --- execute ---
     # just ensure it returns a boolean, not crash
@@ -95,26 +95,26 @@ def test_does_not_raise_on_weird_types() -> None:
 
 def test_nested_generics_work() -> None:
     # --- setup ---
-    L2 = list[list[int]]
+    l2 = list[list[int]]
 
     # --- execute and verify ---
-    assert mod_utils_types.safe_isinstance([[1, 2], [3, 4]], L2)
-    assert not mod_utils_types.safe_isinstance([[1, "a"]], L2)
+    assert mod_utils_types.safe_isinstance([[1, 2], [3, 4]], l2)
+    assert not mod_utils_types.safe_isinstance([[1, "a"]], l2)
 
 
 def test_literal_values_match() -> None:
     # --- setup ---
-    Lit = typing.Literal["x", "y"]
+    lit = Literal["x", "y"]
 
     # --- execute and verify ---
-    assert mod_utils_types.safe_isinstance("x", Lit)
-    assert not mod_utils_types.safe_isinstance("z", Lit)
+    assert mod_utils_types.safe_isinstance("x", lit)
+    assert not mod_utils_types.safe_isinstance("z", lit)
 
 
 def test_tuple_generic_support() -> None:
     # --- setup ---
-    Tup = tuple[int, str]
+    tup = tuple[int, str]
 
     # --- execute and verify ---
-    assert mod_utils_types.safe_isinstance((1, "a"), Tup)
-    assert not mod_utils_types.safe_isinstance(("a", 1), Tup)
+    assert mod_utils_types.safe_isinstance((1, "a"), tup)
+    assert not mod_utils_types.safe_isinstance(("a", 1), tup)

@@ -12,8 +12,8 @@ Checklist:
 """
 
 # we import `_` private for testing purposes only
+# ruff: noqa: SLF001
 # pyright: reportPrivateUsage=false
-# ruff: noqa: F401
 
 from pathlib import Path
 
@@ -29,7 +29,9 @@ def test_compute_dest_with_explicit_dest(tmp_path: Path) -> None:
     dest_name = "custom"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, root, out_dir, "a/*.txt", dest_name)
+    result = mod_build._compute_dest(
+        src, root, out_dir=out_dir, src_pattern="a/*.txt", dest_name=dest_name
+    )
 
     # --- verify ---
     assert result == out_dir / "custom"
@@ -44,7 +46,9 @@ def test_compute_dest_with_glob_pattern(tmp_path: Path) -> None:
     pattern = "a/*"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
+    result = mod_build._compute_dest(
+        src, root, out_dir=out_dir, src_pattern=pattern, dest_name=None
+    )
 
     # --- verify ---
     # The prefix 'a/' (the glob root) is stripped — file goes under 'out/sub/b.txt'
@@ -60,7 +64,9 @@ def test_compute_dest_without_glob(tmp_path: Path) -> None:
     pattern = "docs/readme.md"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
+    result = mod_build._compute_dest(
+        src, root, out_dir=out_dir, src_pattern=pattern, dest_name=None
+    )
 
     # --- verify ---
     assert result == out_dir / "docs/readme.md"
@@ -75,7 +81,9 @@ def test_compute_dest_root_not_ancestor(tmp_path: Path) -> None:
     pattern = "*.txt"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
+    result = mod_build._compute_dest(
+        src, root, out_dir=out_dir, src_pattern=pattern, dest_name=None
+    )
 
     # --- verify ---
     # When root and src don't align, fallback uses just the filename
@@ -91,7 +99,9 @@ def test_compute_dest_directory_literal(tmp_path: Path) -> None:
     pattern = "src"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
+    result = mod_build._compute_dest(
+        src, root, out_dir=out_dir, src_pattern=pattern, dest_name=None
+    )
 
     # --- verify ---
     # Directory itself preserved → out/src
@@ -107,7 +117,9 @@ def test_compute_dest_star_star_glob(tmp_path: Path) -> None:
     pattern = "src/**"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
+    result = mod_build._compute_dest(
+        src, root, out_dir=out_dir, src_pattern=pattern, dest_name=None
+    )
 
     # --- verify ---
     # The 'src/' prefix is stripped
@@ -123,7 +135,9 @@ def test_compute_dest_top_level_glob(tmp_path: Path) -> None:
     pattern = "*.txt"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
+    result = mod_build._compute_dest(
+        src, root, out_dir=out_dir, src_pattern=pattern, dest_name=None
+    )
 
     # --- verify ---
     # Pattern is at top level — file goes directly in out_dir
@@ -140,7 +154,9 @@ def test_compute_dest_with_trailing_slash(tmp_path: Path) -> None:
     pattern = "src/"
 
     # --- execute ---
-    result = mod_build._compute_dest(src, root, out_dir, pattern, None)
+    result = mod_build._compute_dest(
+        src, root, out_dir=out_dir, src_pattern=pattern, dest_name=None
+    )
 
     # --- verify ---
     assert result == out_dir / "a.txt"

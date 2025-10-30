@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-"""
-dev/make_script.py
+"""dev/make_script.py
 ------------------
 Concatenate all modular source files into one self-contained `script.py`.
 
@@ -12,9 +11,11 @@ collected, deduplicated, and placed neatly at the top.
 import argparse
 import ast
 import os
+import py_compile
 import re
 import subprocess
 from collections import OrderedDict
+from datetime import datetime, timezone
 from pathlib import Path
 
 # ------------------------------------------------------------
@@ -72,7 +73,7 @@ def extract_commit() -> str:
         return "unknown (local build)"
     try:
         result = subprocess.run(
-            ["git", "rev-parse", "--short", "HEAD"],
+            ["git", "rev-parse", "--short", "HEAD"],  # noqa: S607
             cwd=ROOT,
             capture_output=True,
             text=True,
@@ -117,9 +118,8 @@ def split_imports(
             mod = node.module or ""
             if node.level > 0 or mod.startswith(package_name):
                 is_internal = True
-        else:  # isinstance(node, ast.Import):
-            if any(alias.name.startswith(package_name) for alias in node.names):
-                is_internal = True
+        elif any(alias.name.startswith(package_name) for alias in node.names):
+            is_internal = True
 
         # Always skip import lines from body, internal or not
         all_import_ranges.append((start, end))
@@ -139,7 +139,9 @@ def strip_redundant_blocks(text: str) -> str:
     """Remove shebangs and __main__ guards."""
     text = re.sub(r"^#!.*\n", "", text)
     text = re.sub(
-        r"(?s)\n?if\s+__name__\s*==\s*[\"']__main__[\"']\s*:\s*\n.*?$", "", text
+        r"(?s)\n?if\s+__name__\s*==\s*[\"']__main__[\"']\s*:\s*\n.*?$",
+        "",
+        text,
     )
 
     return text.strip()
@@ -147,21 +149,18 @@ def strip_redundant_blocks(text: str) -> str:
 
 def verify_compiles(path: Path) -> None:
     """Ensure the generated script compiles cleanly."""
-    import py_compile
-
     try:
         py_compile.compile(str(path), doraise=True)
         print("✅ Compiled successfully.")
     except py_compile.PyCompileError as e:
         print(f"❌ Syntax error in generated script: {e.msg}")
-        raise SystemExit(1)
+        raise SystemExit(1) from e
 
 
 def detect_name_collisions(sources: dict[str, str]) -> None:
     """Detect top-level name collisions across modules."""
-
     # list of harmless globals we don't mind having overwitten
-    IGNORE = {
+    ignore = {
         "__all__",
         "__version__",
         "__author__",
@@ -193,7 +192,7 @@ def detect_name_collisions(sources: dict[str, str]) -> None:
                 continue
 
             # skip known harmless globals
-            if name in IGNORE:
+            if name in ignore:
                 continue
 
             prev = symbols.get(name)
@@ -236,13 +235,11 @@ def build_single_file(
     version = extract_version()
     commit = extract_commit()
 
-    from datetime import datetime, timezone
-
     verify_all_modules_listed()
 
     build_date = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
-    all_imports: "OrderedDict[str, None]" = OrderedDict()
+    all_imports: OrderedDict[str, None] = OrderedDict()
 
     # imports for shim
     all_imports.setdefault("import sys\n", None)
@@ -272,7 +269,7 @@ def build_single_file(
     # --- Detect potential collisions ---
     detect_name_collisions(module_sources)
 
-    future_imports: "OrderedDict[str, None]" = OrderedDict()
+    future_imports: OrderedDict[str, None] = OrderedDict()
     for imp in list(all_imports.keys()):
         if imp.strip().startswith("from __future__"):
             future_imports.setdefault(imp, None)
@@ -338,7 +335,7 @@ def build_single_file(
     # 🧹 Auto-format if possible
     try:
         result = subprocess.run(
-            ["poetry", "run", "poe", "fix"],
+            ["poetry", "run", "poe", "fix"],  # noqa: S607
             cwd=ROOT,
             capture_output=True,
             text=True,
@@ -357,7 +354,7 @@ def build_single_file(
 # ------------------------------------------------------------
 def main() -> None:
     parser = argparse.ArgumentParser(
-        description="Bundle Pocket Build into a single script."
+        description="Bundle Pocket Build into a single script.",
     )
     parser.add_argument(
         "--package",

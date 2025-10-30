@@ -38,17 +38,17 @@ def _load_gitignore_patterns(path: Path) -> list[str]:
     patterns: list[str] = []
     if path.exists():
         for line in path.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if line and not line.startswith("#"):
-                patterns.append(line)
+            clean_line = line.strip()
+            if clean_line and not clean_line.startswith("#"):
+                patterns.append(clean_line)
     return patterns
 
 
 def _normalize_path_with_root(
-    raw: Path | str, context_root: Path | str
+    raw: Path | str,
+    context_root: Path | str,
 ) -> tuple[Path, Path | str]:
-    """
-    Normalize a user-provided path (from CLI or config).
+    """Normalize a user-provided path (from CLI or config).
 
     - If absolute → treat that path as its own root.
       * `/abs/path/**` → root=/abs/path, rel="**"
@@ -86,30 +86,13 @@ def _normalize_path_with_root(
 # --------------------------------------------------------------------------- #
 
 
-def resolve_build_config(
-    build_cfg: BuildConfig,
+def _resolve_includes(
+    resolved_cfg: dict[str, Any],
+    *,
     args: argparse.Namespace,
     config_dir: Path,
     cwd: Path,
-    root_cfg: RootConfig | None = None,
-) -> BuildConfigResolved:
-    """Resolve a single BuildConfig into a BuildConfigResolved.
-
-    Applies CLI overrides, normalizes paths, merges gitignore behavior,
-    and attaches provenance metadata.
-    """
-    # Make a mutable copy
-    resolved_cfg: dict[str, Any] = dict(build_cfg)
-
-    # root provenance for all resolutions
-    meta: MetaBuildConfigResolved = {
-        "cli_root": cwd,
-        "config_root": config_dir,
-    }
-
-    # ------------------------------
-    # Includes
-    # ------------------------------
+) -> list[IncludeResolved]:
     includes: list[IncludeResolved] = []
 
     if getattr(args, "include", None):
@@ -155,18 +138,26 @@ def resolve_build_config(
                         f"Include path does not exist: {full_path}"
                         f" (origin: {i['origin']})",
                     )
-    includes = unique_inc
-    resolved_cfg["include"] = includes
 
+    return unique_inc
+
+
+def _resolve_excludes(
+    resolved_cfg: dict[str, Any],
+    *,
+    args: argparse.Namespace,
+    config_dir: Path,
+    cwd: Path,
+    root_cfg: RootConfig | None,
+) -> list[PathResolved]:
     # ------------------------------
     # Excludes
     # ------------------------------
     excludes: list[PathResolved] = []
 
     def _add_excludes(paths: list[str], context: Path, origin: OriginType) -> None:
-        for raw in paths:
-            # Exclude patterns (from CLI, config, or gitignore) should stay literal
-            excludes.append(make_pathresolved(raw, context, origin))
+        # Exclude patterns (from CLI, config, or gitignore) should stay literal
+        excludes.extend(make_pathresolved(raw, context, origin) for raw in paths)
 
     if getattr(args, "exclude", None):
         # Full override → relative to cwd
@@ -215,12 +206,17 @@ def resolve_build_config(
         if key not in seen_exc:
             seen_exc.add(key)
             unique_exc.append(ex)
-    excludes = unique_exc
-    resolved_cfg["exclude"] = excludes
 
-    # ------------------------------
-    # Output directory
-    # ------------------------------
+    return unique_exc
+
+
+def _resolve_output(
+    resolved_cfg: dict[str, Any],
+    *,
+    args: argparse.Namespace,
+    config_dir: Path,
+    cwd: Path,
+) -> PathResolved:
     if getattr(args, "out", None):
         # Full override → relative to cwd
         root, rel = _normalize_path_with_root(args.out, cwd)
@@ -233,7 +229,54 @@ def resolve_build_config(
         root, rel = _normalize_path_with_root(DEFAULT_OUT_DIR, cwd)
         out_wrapped = make_pathresolved(rel, root, "default")
 
-    resolved_cfg["out"] = out_wrapped
+    return out_wrapped
+
+
+def resolve_build_config(
+    build_cfg: BuildConfig,
+    args: argparse.Namespace,
+    config_dir: Path,
+    cwd: Path,
+    root_cfg: RootConfig | None = None,
+) -> BuildConfigResolved:
+    """Resolve a single BuildConfig into a BuildConfigResolved.
+
+    Applies CLI overrides, normalizes paths, merges gitignore behavior,
+    and attaches provenance metadata.
+    """
+    # Make a mutable copy
+    resolved_cfg: dict[str, Any] = dict(build_cfg)
+
+    # root provenance for all resolutions
+    meta: MetaBuildConfigResolved = {
+        "cli_root": cwd,
+        "config_root": config_dir,
+    }
+
+    # --- Includes ---------------------------
+    resolved_cfg["include"] = _resolve_includes(
+        resolved_cfg,
+        args=args,
+        config_dir=config_dir,
+        cwd=cwd,
+    )
+
+    # --- Excludes ---------------------------
+    resolved_cfg["exclude"] = _resolve_excludes(
+        resolved_cfg,
+        args=args,
+        config_dir=config_dir,
+        cwd=cwd,
+        root_cfg=root_cfg,
+    )
+
+    # --- Output ---------------------------
+    resolved_cfg["out"] = _resolve_output(
+        resolved_cfg,
+        args=args,
+        config_dir=config_dir,
+        cwd=cwd,
+    )
 
     # ------------------------------
     # Log level

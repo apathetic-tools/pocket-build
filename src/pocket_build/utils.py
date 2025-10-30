@@ -5,13 +5,13 @@ import json
 import os
 import re
 import sys
-from contextlib import contextmanager
+from collections.abc import Iterator
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass
 from io import StringIO
 from pathlib import Path
 from typing import (
     Any,
-    Iterator,
     TextIO,
     cast,
 )
@@ -58,10 +58,12 @@ def should_use_color() -> bool:
 def load_jsonc(path: Path) -> dict[str, Any] | list[Any] | None:
     """Load JSONC (JSON with comments and trailing commas)."""
     if not path.exists():
-        raise FileNotFoundError(f"JSONC file not found: {path}")
+        xmsg = f"JSONC file not found: {path}"
+        raise FileNotFoundError(xmsg)
 
     if not path.is_file():
-        raise ValueError(f"Expected a file: {path}")
+        xmsg = f"Expected a file: {path}"
+        raise ValueError(xmsg)
 
     text = path.read_text(encoding="utf-8")
 
@@ -84,23 +86,23 @@ def load_jsonc(path: Path) -> dict[str, Any] | list[Any] | None:
     try:
         data = json.loads(text)
     except json.JSONDecodeError as e:
-        raise ValueError(
+        xmsg = (
             f"Invalid JSONC syntax in {path}:"
             f" {e.msg} (line {e.lineno}, column {e.colno})"
-        ) from e
+        )
+        raise ValueError(xmsg) from e
 
     # Guard against scalar roots (invalid config structure)
     if not isinstance(data, (dict, list)):
-        raise ValueError(f"Invalid JSONC root type: {type(data).__name__}")
+        xmsg = f"Invalid JSONC root type: {type(data).__name__}"
+        raise ValueError(xmsg)  # noqa: TRY004
 
     # narrow type
-    return cast(dict[str, Any] | list[Any], data)
+    return cast("dict[str, Any] | list[Any]", data)
 
 
 def is_standalone() -> bool:
-    """
-    Return True if running from a standalone single-file build.
-    """
+    """Return True if running from a standalone single-file build."""
     return bool(globals().get("__STANDALONE__", False))
 
 
@@ -112,9 +114,10 @@ def remove_path_in_error_message(inner_msg: str, path: Path) -> str:
     embeds its own file reference, so the higher-level message
     can use its own path without duplication.
 
-     Example:
+    Example:
         "Invalid JSONC syntax in /abs/path/config.jsonc: Expecting value"
         → "Invalid JSONC syntax: Expecting value"
+
     """
     # Normalize both path and name for flexible matching
     full_path = str(path)
@@ -160,15 +163,13 @@ def plural(obj: Any) -> str:
 
 def safe_log(msg: str) -> None:
     """Emergency logger that never fails."""
-    stream = cast(TextIO, sys.__stderr__)
+    stream = cast("TextIO", sys.__stderr__)
     try:
         print(msg, file=stream)
-    except Exception:
+    except Exception:  # noqa: BLE001
         # As final guardrail — never crash during crash reporting
-        try:
+        with suppress(Exception):
             stream.write(f"[INTERNAL] {msg}\n")
-        except Exception:
-            pass
 
 
 @contextmanager
@@ -191,6 +192,7 @@ def capture_output() -> Iterator[CapturedOutput]:
         "stderr": err.getvalue(),
         "merged": merged.getvalue(),
     }
+
     """
     merged = StringIO()
 
@@ -208,7 +210,7 @@ def capture_output() -> Iterator[CapturedOutput]:
         yield cap
     except Exception as e:
         # Attach captured output to the raised exception for API introspection
-        setattr(e, "captured_output", cap)
+        e.captured_output = cap  # type: ignore[attr-defined]
         raise
     finally:
         sys.stdout, sys.stderr = old_out, old_err
@@ -218,7 +220,9 @@ def detect_runtime_mode() -> str:
     if getattr(sys, "frozen", False):
         return "frozen"
     if "__main__" in sys.modules and getattr(
-        sys.modules["__main__"], __file__, ""
+        sys.modules["__main__"],
+        __file__,
+        "",
     ).endswith(".pyz"):
         return "zipapp"
     if "__STANDALONE__" in globals():

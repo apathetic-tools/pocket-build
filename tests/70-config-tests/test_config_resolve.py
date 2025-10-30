@@ -6,7 +6,7 @@ import argparse
 from argparse import Namespace
 from pathlib import Path
 
-from pytest import MonkeyPatch
+import pytest
 
 import pocket_build.config_resolve as mod_resolve
 import pocket_build.constants as mod_const  # for changing constants using monkeypatch
@@ -46,12 +46,13 @@ def _args(**kwargs: object) -> argparse.Namespace:
 # ---------------------------------------------------------------------------
 
 # ---------------------------------------------------------------------------
-# resolve_config()
+# resolve_config
 # ---------------------------------------------------------------------------
 
 
 def test_resolve_config_aggregates_builds_and_defaults(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Ensure resolve_config merges builds and assigns default values."""
     # --- setup ---
@@ -70,32 +71,37 @@ def test_resolve_config_aggregates_builds_and_defaults(
 
     # --- validate ---
     builds = resolved["builds"]
-    assert len(builds) == 2
+    assert len(builds) == len(root["builds"])
     assert all("include" in b for b in builds)
     assert resolved["log_level"] in ("warning", "info")  # env/cli may override
     assert isinstance(resolved["watch_interval"], float)
     assert resolved["strict_config"] is False
 
 
-def test_resolve_config_env_overrides(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_resolve_config_env_overrides(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     """Environment variables for watch interval and log level should override."""
     # --- setup ---
     root: mod_types.RootConfig = {"builds": [{"include": ["src/**"], "out": "dist"}]}
     args = _args()
+    interval = 9.9
 
     # --- patch and execute ---
-    monkeypatch.setenv(mod_const.DEFAULT_ENV_WATCH_INTERVAL, "9.9")
+    monkeypatch.setenv(mod_const.DEFAULT_ENV_WATCH_INTERVAL, str(interval))
     monkeypatch.setenv(mod_const.DEFAULT_ENV_LOG_LEVEL, "debug")
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
     resolved = mod_resolve.resolve_config(root, args, tmp_path, tmp_path)
 
     # --- validate ---
-    assert abs(resolved["watch_interval"] - 9.9) < 0.001
+    assert resolved["watch_interval"] == pytest.approx(interval)  # pyright: ignore[reportUnknownMemberType]
     assert resolved["log_level"] == "debug"
 
 
 def test_resolve_config_invalid_env_watch_falls_back(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Invalid watch interval env var should log warning and use default."""
     # --- setup ---
@@ -113,7 +119,8 @@ def test_resolve_config_invalid_env_watch_falls_back(
 
 
 def test_resolve_config_propagates_cli_log_level(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """CLI --log-level should propagate into resolved root and runtime."""
     # --- setup ---
@@ -130,12 +137,13 @@ def test_resolve_config_propagates_cli_log_level(
 
 
 # ---------------------------------------------------------------------------
-# resolve_build_config()
+# resolve_build_config
 # ---------------------------------------------------------------------------
 
 
 def test_resolve_build_config_from_config_paths(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Ensure config-based include/out/exclude resolve relative to config_dir."""
     # --- setup ---
@@ -161,7 +169,8 @@ def test_resolve_build_config_from_config_paths(
 
 
 def test_resolve_build_config_cli_overrides_include_and_out(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """CLI --include and --out should override config include/out."""
     # --- setup ---
@@ -183,7 +192,8 @@ def test_resolve_build_config_cli_overrides_include_and_out(
 
 
 def test_resolve_build_config_add_include_extends(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """--add-include should append to config includes, not override."""
     # --- setup ---
@@ -199,11 +209,13 @@ def test_resolve_build_config_add_include_extends(
     assert "src/**" in paths
     assert "extra/**" in paths
     origins = {i["origin"] for i in resolved["include"]}
-    assert "config" in origins and "cli" in origins
+    assert "config" in origins
+    assert "cli" in origins
 
 
 def test_resolve_build_config_gitignore_patterns_added(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """When .gitignore exists, its patterns should be appended as gitignore excludes."""
     # --- setup ---
@@ -224,7 +236,8 @@ def test_resolve_build_config_gitignore_patterns_added(
 
 
 def test_resolve_build_config_respects_cli_exclude_override(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """CLI --exclude should override config excludes."""
     # --- setup ---
@@ -242,7 +255,8 @@ def test_resolve_build_config_respects_cli_exclude_override(
 
 
 def test_resolve_build_config_respects_dest_override(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """IncludeResolved with explicit dest should survive resolution unchanged."""
     # --- setup ---
@@ -261,7 +275,8 @@ def test_resolve_build_config_respects_dest_override(
 
 
 def test_resolve_build_config_respect_gitignore_false(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """If --no-gitignore is passed, .gitignore patterns are not loaded."""
     # --- setup ---
@@ -280,7 +295,8 @@ def test_resolve_build_config_respect_gitignore_false(
 
 
 def test_resolve_build_config_add_exclude_extends(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     # --- setup ---
     raw = make_build_input(exclude=["*.tmp"], include=["src/**"])
@@ -295,7 +311,8 @@ def test_resolve_build_config_add_exclude_extends(
     assert "*.tmp" in patterns
     assert "*.log" in patterns
     origins = {e["origin"] for e in resolved["exclude"]}
-    assert "config" in origins and "cli" in origins
+    assert "config" in origins
+    assert "cli" in origins
 
 
 def test_resolve_build_config_handles_empty_include(tmp_path: Path) -> None:
@@ -354,7 +371,8 @@ def test_resolve_build_config_preserves_trailing_slash(tmp_path: Path) -> None:
 
 
 def test_resolve_build_config_warns_for_missing_include_root(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Warn if include root directory does not exist and pattern is not a glob."""
     # --- setup ---
@@ -380,7 +398,8 @@ def test_resolve_build_config_warns_for_missing_include_root(
 
 
 def test_resolve_build_config_warns_for_missing_absolute_include(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Warn if absolute include path does not exist and pattern is not a glob."""
     # --- setup ---
@@ -406,7 +425,8 @@ def test_resolve_build_config_warns_for_missing_absolute_include(
 
 
 def test_resolve_build_config_warns_for_missing_relative_include(
-    tmp_path: Path, monkeypatch: MonkeyPatch
+    tmp_path: Path,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Warn if relative include path does not exist under an existing root."""
     # --- setup ---

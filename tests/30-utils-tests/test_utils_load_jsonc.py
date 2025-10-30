@@ -79,7 +79,8 @@ def test_load_jsonc_strips_comments_and_trailing_commas(
     ext: str,
 ) -> None:
     """Ensure both JSONC loader removes
-    comments and trailing commas in JSON and JSONC files."""
+    comments and trailing commas in JSON and JSONC files.
+    """
     # --- setup ---
     cfg = tmp_path / f"config.{ext}"
     cfg.write_text(
@@ -136,11 +137,10 @@ def test_load_jsonc_invalid_json(tmp_path: Path) -> None:
     cfg = tmp_path / "bad.jsonc"
     cfg.write_text("{ unquoted_key: 1 }")
 
-    # --- execute ---
-    with pytest.raises(ValueError) as e:
+    # --- execute and verify ---
+    with pytest.raises(ValueError, match=r"Invalid JSONC syntax") as e:
         mod_utils_core.load_jsonc(cfg)
 
-    # --- verify ---
     assert "bad.jsonc" in str(e.value)
 
 

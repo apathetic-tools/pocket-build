@@ -5,16 +5,21 @@ import json
 from pathlib import Path
 
 import pytest
-from pytest import MonkeyPatch
 
 import pocket_build.cli as mod_cli
 import pocket_build.meta as mod_meta
 import pocket_build.runtime as mod_runtime
 
+# --- constants --------------------------------------------------------------------
+
+ARGPARSE_ERROR_EXIT_CODE = 2
+
+# --- tests ------------------------------------------------------------------------
+
 
 def test_quiet_flag(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Should suppress most output but still succeed."""
@@ -36,7 +41,7 @@ def test_quiet_flag(
 
 def test_verbose_flag(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Should print detailed file-level logs when --verbose is used."""
@@ -48,7 +53,7 @@ def test_verbose_flag(
 
     config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(
-        json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]})
+        json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]}),
     )
 
     # --- patch and execute ---
@@ -71,7 +76,7 @@ def test_verbose_flag(
 
 def test_verbose_and_quiet_mutually_exclusive(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Should fail when both --verbose and --quiet are provided."""
@@ -86,19 +91,20 @@ def test_verbose_and_quiet_mutually_exclusive(
     with pytest.raises(SystemExit) as e:
         mod_cli.main(["--quiet", "--verbose"])
 
-    assert e.value.code == 2  # argparse error exit code # must be outside context
+    assert e.value.code == ARGPARSE_ERROR_EXIT_CODE  # must be outside context
 
     # --- verify only ---
     captured = capsys.readouterr()
     combined = captured.out + captured.err
 
     assert "not allowed with argument" in combined or "mutually exclusive" in combined
-    assert "--quiet" in combined and "--verbose" in combined
+    assert "--quiet" in combined
+    assert "--verbose" in combined
 
 
 def test_log_level_flag_sets_runtime(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """--log-level should override config and environment."""
@@ -121,7 +127,7 @@ def test_log_level_flag_sets_runtime(
 
 def test_log_level_from_env_var(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """LOG_LEVEL and {PROGRAM_ENV}_LOG_LEVEL should be respected when flag not given."""
     # --- setup ---
@@ -151,7 +157,7 @@ def test_log_level_from_env_var(
 
 def test_per_build_log_level_override(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """A build's own log_level should temporarily override the runtime level."""
@@ -166,8 +172,8 @@ def test_per_build_log_level_override(
                     {"include": [], "out": "dist1"},
                     {"include": [], "out": "dist2", "log_level": "debug"},
                 ],
-            }
-        )
+            },
+        ),
     )
 
     # --- patch and execute ---

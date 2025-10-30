@@ -1,6 +1,5 @@
 # tests/conftest.py
-"""
-Shared test setup for project.
+"""Shared test setup for project.
 
 Each pytest run now targets a single runtime mode:
 - Normal mode (default): uses src/pocket_build
@@ -10,14 +9,9 @@ Switch mode with: RUNTIME_MODE=singlefile pytest
 """
 
 import os
-import subprocess
-import sys
-from pathlib import Path
 
 import pytest
-from pytest import Config, Item as PytestItem
 
-import pocket_build.meta as mod_meta
 from tests.utils import make_trace, runtime_swap
 
 TRACE = make_trace("⚡️")
@@ -25,52 +19,19 @@ TRACE = make_trace("⚡️")
 # early jank hook
 runtime_swap()
 
+# ----------------------------------------------------------------------
+# Helpers
+# ----------------------------------------------------------------------
+
 
 def _mode() -> str:
     return os.getenv("RUNTIME_MODE", "installed")
 
 
-def pytest_report_header(config: Config) -> str:
-    mode = _mode()
-    return f"Runtime mode: {mode}"
-
-
-# ------------------------------------------------------------
-# ⚙️ Auto-build helper for standalone script
-# ------------------------------------------------------------
-def ensure_standalone_script_up_to_date(root: Path) -> Path:
-    """Rebuild `bin/script.py` if missing or outdated."""
-    bin_path = root / "bin" / f"{mod_meta.PROGRAM_SCRIPT}.py"
-    src_dir = root / "src" / f"{mod_meta.PROGRAM_PACKAGE}"
-    builder = root / "dev" / "make_script.py"
-
-    # If the output file doesn't exist or is older than any source file → rebuild.
-    needs_rebuild = not bin_path.exists()
-    if not needs_rebuild:
-        bin_mtime_ns = bin_path.stat().st_mtime_ns
-        for src_file in src_dir.rglob("*.py"):
-            if src_file.stat().st_mtime_ns > bin_mtime_ns:
-                needs_rebuild = True
-                break
-
-    if needs_rebuild:
-        print("⚙️  Rebuilding standalone bundle (make_script.py)...")
-        subprocess.run([sys.executable, str(builder)], check=True)
-        # force mtime update in case contents identical
-        bin_path.touch()
-        assert bin_path.exists(), "❌ Failed to generate standalone script."
-
-    return bin_path
-
-
-def pytest_collection_modifyitems(
-    config: Config,
-    items: list[PytestItem],
+def _filter_debug_tests(
+    config: pytest.Config,
+    items: list[pytest.Item],
 ) -> None:
-    """Filter and record runtime-specific tests for later reporting.
-    also automatically skips debug tests unless asked for"""
-
-    # --- debug filtering ---
     # detect if the user is filtering for debug tests
     keywords = config.getoption("-k") or ""
     running_debug = "debug" in keywords.lower()
@@ -81,10 +42,14 @@ def pytest_collection_modifyitems(
     for item in items:
         if "debug" in item.keywords:
             item.add_marker(
-                pytest.mark.skip(reason="Skipped debug test (use -k debug to run)")
+                pytest.mark.skip(reason="Skipped debug test (use -k debug to run)"),
             )
 
-    # --- mode-specific tests ---
+
+def _filter_runtime_mode_tests(
+    config: pytest.Config,
+    items: list[pytest.Item],
+) -> None:
     mode = _mode()
 
     # file → number of tests
@@ -117,8 +82,30 @@ def pytest_collection_modifyitems(
             included_map[file_path] = included_map.get(file_path, 0) + 1
 
     # Store results for later reporting
-    config._included_map = included_map  # type: ignore[attr-defined]
-    config._runtime_mode = mode  # type: ignore[attr-defined]
+    config._included_map = included_map  # noqa: SLF001 # pyright: ignore[reportAttributeAccessIssue]
+    config._runtime_mode = mode  # noqa: SLF001 # pyright: ignore[reportAttributeAccessIssue]
+
+
+# ----------------------------------------------------------------------
+# Hooks
+# ----------------------------------------------------------------------
+
+
+def pytest_report_header(config: pytest.Config) -> str:  # noqa: ARG001 # pyright: ignore[reportUnknownParameterType]
+    mode = _mode()
+    return f"Runtime mode: {mode}"
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config,
+    items: list[pytest.Item],
+) -> None:
+    """Filter and record runtime-specific tests for later reporting.
+
+    also automatically skips debug tests unless asked for
+    """
+    _filter_debug_tests(config, items)
+    _filter_runtime_mode_tests(config, items)
 
 
 def pytest_unconfigure(config: pytest.Config) -> None:

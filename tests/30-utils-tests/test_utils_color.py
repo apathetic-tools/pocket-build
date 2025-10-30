@@ -5,10 +5,8 @@
 
 import sys
 import types
-from typing import Generator
 
 import pytest
-from pytest import MonkeyPatch
 
 import pocket_build.runtime as mod_runtime
 import pocket_build.utils as mod_utils_core
@@ -20,12 +18,11 @@ import pocket_build.utils_using_runtime as mod_utils_runtime
 
 
 @pytest.fixture(autouse=True)
-def clean_env(monkeypatch: MonkeyPatch) -> Generator[None, None, None]:
+def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
     """Reset environment variables and cached state before each test."""
     # fixture itself deals with context teardown, don't need to explicitly set
     for var in ("NO_COLOR", "FORCE_COLOR"):
         monkeypatch.delenv(var, raising=False)
-    yield
 
 
 # ---------------------------------------------------------------------------
@@ -34,7 +31,7 @@ def clean_env(monkeypatch: MonkeyPatch) -> Generator[None, None, None]:
 
 
 def test_should_use_color_no_color(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Disables color if NO_COLOR is present in environment."""
     # --- patch, execute, and verify ---
@@ -44,18 +41,17 @@ def test_should_use_color_no_color(
 
 @pytest.mark.parametrize("value", ["1", "true", "TRUE", "yes", "Yes"])
 def test_should_use_color_force_color(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     value: str,
 ) -> None:
     """Enables color when FORCE_COLOR is set to truthy value."""
-
     # --- patch, execute, and verify ---
     monkeypatch.setenv("FORCE_COLOR", value)
     assert mod_utils_core.should_use_color() is True
 
 
 def test_should_use_color_tty(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Falls back to TTY detection when no env vars set."""
     # --- patch, execute, and verify ---
@@ -70,7 +66,6 @@ def test_should_use_color_tty(
 
 def test_colorize_explicit_true_false() -> None:
     """Explicit use_color argument forces color on or off."""
-
     # --- setup ---
     test_string = "test string"
 
@@ -80,16 +75,17 @@ def test_colorize_explicit_true_false() -> None:
     ) == f"{mod_utils_runtime.GREEN}{test_string}{mod_utils_runtime.RESET}"
     assert (
         mod_utils_runtime.colorize(
-            test_string, mod_utils_runtime.GREEN, use_color=False
+            test_string,
+            mod_utils_runtime.GREEN,
+            use_color=False,
         )
     ) == test_string
 
 
 def test_colorize_respects_reset(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Recomputes cache if manually cleared."""
-
     # --- setup ---
     test_string = "test string"
 
@@ -103,9 +99,8 @@ def test_colorize_respects_reset(
     assert result == test_string
 
 
-def test_colorize_respects_runtime_flag(monkeypatch: MonkeyPatch) -> None:
+def test_colorize_respects_runtime_flag(monkeypatch: pytest.MonkeyPatch) -> None:
     """colorize() should follow current_runtime['use_color'] exactly."""
-
     # --- setup ---
     text = "sample"
 
@@ -121,7 +116,7 @@ def test_colorize_respects_runtime_flag(monkeypatch: MonkeyPatch) -> None:
     assert result == text
 
 
-def test_no_color_overrides_force_color(monkeypatch: MonkeyPatch) -> None:
+def test_no_color_overrides_force_color(monkeypatch: pytest.MonkeyPatch) -> None:
     # --- patch, execute and verify ---
     monkeypatch.setenv("NO_COLOR", "1")
     monkeypatch.setenv("FORCE_COLOR", "1")

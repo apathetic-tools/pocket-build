@@ -1,7 +1,5 @@
 # src/pocket_build/constants.py
-"""
-Central constants used across the project.
-"""
+"""Central constants used across the project."""
 
 RUNTIME_MODES = {
     "standalone",  # single stitched file

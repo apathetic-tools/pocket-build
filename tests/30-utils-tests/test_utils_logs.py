@@ -1,4 +1,4 @@
-# tests/test_utils_logs.py
+# tests/30-utils-tests/test_utils_logs.py
 
 # not doing tests for _is_error_level() and _should_log()
 
@@ -9,7 +9,6 @@ from io import StringIO
 from typing import Any, cast
 
 import pytest
-from pytest import MonkeyPatch
 
 import pocket_build.meta as mod_meta
 import pocket_build.runtime as mod_runtime
@@ -28,7 +27,7 @@ def strip_ansi(s: str) -> str:
 
 
 def capture_log_output(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     msg_level: str,
     runtime_level: str = "debug",
     *,
@@ -70,10 +69,11 @@ def capture_log_output(
 
 
 def test_is_bypass_capture_env_vars(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """is_bypass_capture() should return True
-    when *_BYPASS_CAPTURE or BYPASS_CAPTURE is set."""
+    when *_BYPASS_CAPTURE or BYPASS_CAPTURE is set.
+    """
     # --- patch, execute, and verify ---
     # Clear all possibly conflicting env vars first
     monkeypatch.delenv(f"{mod_meta.PROGRAM_ENV}_BYPASS_CAPTURE", raising=False)
@@ -104,7 +104,7 @@ def test_is_bypass_capture_env_vars(
 
 
 @pytest.mark.parametrize(
-    "msg_level,expected_stream",
+    ("msg_level", "expected_stream"),
     [
         ("debug", "stdout"),
         ("info", "stdout"),
@@ -115,10 +115,13 @@ def test_is_bypass_capture_env_vars(
     ],
 )
 def test_log_routes_correct_stream(
-    monkeypatch: MonkeyPatch, msg_level: str, expected_stream: str
+    monkeypatch: pytest.MonkeyPatch,
+    msg_level: str,
+    expected_stream: str,
 ) -> None:
     """Ensure log() routes to the correct stream and message appears,
-    ignoring prefixes/colors."""
+    ignoring prefixes/colors.
+    """
     # --- setup, patch, and execute ---
     text = f"msg:{msg_level}"
     out, err = capture_log_output(monkeypatch, msg_level, "trace", msg=text)
@@ -137,18 +140,20 @@ def test_log_routes_correct_stream(
 
 
 @pytest.mark.parametrize(
-    "runtime_level,visible_levels",
+    ("runtime_level", "visible_levels"),
     [
         ("critical", {"critical"}),
         ("error", {"critical", "error"}),
         ("warning", {"critical", "error", "warning"}),
         ("info", {"critical", "error", "warning", "info"}),
         ("debug", {"critical", "error", "warning", "info", "debug"}),
-        ("trace", set(["critical", "error", "warning", "info", "debug", "trace"])),
+        ("trace", {"critical", "error", "warning", "info", "debug", "trace"}),
     ],
 )
 def test_log_respects_current_log_level(
-    monkeypatch: MonkeyPatch, runtime_level: str, visible_levels: set[str]
+    monkeypatch: pytest.MonkeyPatch,
+    runtime_level: str,
+    visible_levels: set[str],
 ) -> None:
     """Messages below the current log level should not be printed."""
     # --- setup, patch, execute, and verify ---
@@ -163,7 +168,7 @@ def test_log_respects_current_log_level(
 
 
 def test_log_bypass_capture_env(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """When *_BYPASS_CAPTURE=1, log() should write to __stdout__/__stderr__."""
     # --- setup, patch, and execute ---
@@ -191,7 +196,7 @@ def test_log_bypass_capture_env(
 
 
 @pytest.mark.parametrize(
-    "msg_level,expected_prefix",
+    ("msg_level", "expected_prefix"),
     [
         ("info", ""),  # info has no prefix
         ("debug", "[DEBUG] "),  # debug has one
@@ -202,7 +207,9 @@ def test_log_bypass_capture_env(
     ],
 )
 def test_log_includes_default_prefix(
-    monkeypatch: MonkeyPatch, msg_level: str, expected_prefix: str
+    monkeypatch: pytest.MonkeyPatch,
+    msg_level: str,
+    expected_prefix: str,
 ) -> None:
     """log() should include the correct default prefix based on level."""
     # --- setup, patch, and execute ---
@@ -218,11 +225,15 @@ def test_log_includes_default_prefix(
     assert text in clean
 
 
-def test_log_allows_custom_prefix(monkeypatch: MonkeyPatch) -> None:
+def test_log_allows_custom_prefix(monkeypatch: pytest.MonkeyPatch) -> None:
     """Explicit prefix argument should override default prefix entirely."""
     # --- patch and execute ---
     out, _ = capture_log_output(
-        monkeypatch, "debug", "debug", msg="world", prefix="[CUSTOM] "
+        monkeypatch,
+        "debug",
+        "debug",
+        msg="world",
+        prefix="[CUSTOM] ",
     )
     clean = strip_ansi(out.strip())
 
@@ -233,7 +244,7 @@ def test_log_allows_custom_prefix(monkeypatch: MonkeyPatch) -> None:
     assert "[DEBUG]" not in clean
 
 
-def test_log_includes_some_prefix_for_non_info(monkeypatch: MonkeyPatch) -> None:
+def test_log_includes_some_prefix_for_non_info(monkeypatch: pytest.MonkeyPatch) -> None:
     """Non-info levels should include some kind of prefix (emoji or tag)."""
     # --- patch and execute ---
     out, _ = capture_log_output(monkeypatch, "debug", "trace")
@@ -244,15 +255,16 @@ def test_log_includes_some_prefix_for_non_info(monkeypatch: MonkeyPatch) -> None
     assert any(cleaned.startswith(p) for p in ("[", "⚠️", "❌", "💥"))
 
 
-def test_log_below_threshold_suppressed(monkeypatch: MonkeyPatch) -> None:
+def test_log_below_threshold_suppressed(monkeypatch: pytest.MonkeyPatch) -> None:
     # --- patch and execute ---
     out, err = capture_log_output(monkeypatch, "info", "error", msg="hidden")
 
     # --- verify ---
-    assert not out and not err
+    assert not out
+    assert not err
 
 
-def test_log_includes_ansi_when_color_enabled(monkeypatch: MonkeyPatch) -> None:
+def test_log_includes_ansi_when_color_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "use_color", True)
     out, _ = capture_log_output(monkeypatch, "debug", "debug", msg="colored")
@@ -261,14 +273,14 @@ def test_log_includes_ansi_when_color_enabled(monkeypatch: MonkeyPatch) -> None:
     assert "\033[" in out
 
 
-def test_log_recursion_guard(monkeypatch: MonkeyPatch) -> None:
+def test_log_recursion_guard(monkeypatch: pytest.MonkeyPatch) -> None:
     # --- setup ---
     output = StringIO()
     monkeypatch.setattr(sys, "__stderr__", output)
 
     # --- stubs ---
     # Force recursion
-    def evil_print(*a: object, **k: object) -> None:  # triggers another log
+    def evil_print(*_a: object, **_k: object) -> None:  # triggers another log
         mod_utils_runtime.log("error", "nested boom")
 
     # --- patch and execute ---
@@ -280,7 +292,7 @@ def test_log_recursion_guard(monkeypatch: MonkeyPatch) -> None:
     assert "Recursive log call suppressed" in out
 
 
-def test_log_unknown_level(monkeypatch: MonkeyPatch) -> None:
+def test_log_unknown_level(monkeypatch: pytest.MonkeyPatch) -> None:
     # --- setup ---
     buf = StringIO()
 
@@ -292,7 +304,7 @@ def test_log_unknown_level(monkeypatch: MonkeyPatch) -> None:
     assert "Unknown log level" in buf.getvalue()
 
 
-def test_log_missing_log_level(monkeypatch: MonkeyPatch) -> None:
+def test_log_missing_log_level(monkeypatch: pytest.MonkeyPatch) -> None:
     """If current_runtime has no 'log_level', logger should fallback safely."""
     # --- setup ---
     output = StringIO()
@@ -307,7 +319,7 @@ def test_log_missing_log_level(monkeypatch: MonkeyPatch) -> None:
     try:
         mod_utils_runtime.log("error", "no level key")
     finally:
-        runtime_dict = cast(dict[str, object], mod_runtime.current_runtime)  # pylance
+        runtime_dict = cast("dict[str, object]", mod_runtime.current_runtime)  # pylance
         runtime_dict.update(backup)
 
     # --- verify ---
@@ -316,14 +328,15 @@ def test_log_missing_log_level(monkeypatch: MonkeyPatch) -> None:
     assert "log_level" in msg
 
 
-def test_log_handles_internal_failure(monkeypatch: MonkeyPatch) -> None:
+def test_log_handles_internal_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     """If print() raises, logger should fall back to safe_log."""
     # --- setup ---
     buf = StringIO()
 
     # --- stubs ---
-    def bad_print(*a: object, **k: object) -> None:
-        raise IOError("printer is broken")
+    def bad_print(*_a: object, **_k: object) -> None:
+        xmsg = "printer is broken"
+        raise OSError(xmsg)
 
     # --- patch and execute ---
     monkeypatch.setattr(sys, "__stderr__", buf)
@@ -338,7 +351,7 @@ def test_log_handles_internal_failure(monkeypatch: MonkeyPatch) -> None:
 # --- safe_log ------------------------------------------------------------
 
 
-def test_safe_log_writes_to_stderr(monkeypatch: MonkeyPatch) -> None:
+def test_safe_log_writes_to_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
     """safe_log() should write to __stderr__ without throwing."""
     # --- setup ---
     buf = StringIO()
@@ -351,7 +364,7 @@ def test_safe_log_writes_to_stderr(monkeypatch: MonkeyPatch) -> None:
     assert "hello safe" in buf.getvalue()
 
 
-def test_safe_log_fallback(monkeypatch: MonkeyPatch) -> None:
+def test_safe_log_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     """safe_log() should survive even if sys.__stderr__ is None."""
     # --- patch and execute ---
     monkeypatch.setattr(sys, "__stderr__", None)
@@ -359,14 +372,15 @@ def test_safe_log_fallback(monkeypatch: MonkeyPatch) -> None:
     mod_utils_runtime.safe_log("fallback works")
 
 
-def test_safe_log_handles_print_failure(monkeypatch: MonkeyPatch) -> None:
+def test_safe_log_handles_print_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     """If print() fails, safe_log() should fall back to .write()."""
     # --- setup ---
     buf = StringIO()
 
     # --- stubs ---
-    def bad_print(*args: object, **kwargs: object) -> None:
-        raise IOError("printer exploded")
+    def bad_print(*_args: object, **_kwargs: object) -> None:
+        xmsg = "printer exploded"
+        raise OSError(xmsg)
 
     # --- patch and execute ---
     monkeypatch.setattr(sys, "__stderr__", buf)

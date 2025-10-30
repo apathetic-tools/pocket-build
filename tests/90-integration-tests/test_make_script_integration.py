@@ -1,6 +1,5 @@
 # tests/test_make_script_integration.py
-"""
-Integration tests for `dev/make_script.py`.
+"""Integration tests for `dev/make_script.py`.
 
 These verify that the  standalone script (`bin/script.py`)
 embeds the correct commit information depending on environment variables.
@@ -31,7 +30,7 @@ PROJ_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 @pytest.mark.parametrize(
-    "env_vars, expected_pattern",
+    ("env_vars", "expected_pattern"),
     [
         ({}, r"\(unknown \(local build\)\)"),  # local dev
         ({"CI": "true"}, r"\([0-9a-f]{4,}\)"),  # simulated CI
@@ -41,11 +40,8 @@ def test_make_script_respects_ci_env(
     tmp_path: Path,
     env_vars: dict[str, str],
     expected_pattern: str,
-):
-    """
-    Should embed either '(unknown (local build))' or a real hash depending on env.
-    """
-
+) -> None:
+    """Should embed either '(unknown (local build))' or a real hash depending on env."""
     # --- setup ---
     builder = PROJ_ROOT / "dev" / "make_script.py"
     tmp_script = tmp_path / "script-test.py"
@@ -65,7 +61,7 @@ def test_make_script_respects_ci_env(
     # --- execute and verify ---
 
     # 1) generate the bundle
-    proc = subprocess.run(
+    proc = subprocess.run(  # noqa: S603
         [sys.executable, str(builder), "--out", str(tmp_script)],
         capture_output=True,
         text=True,
@@ -79,7 +75,7 @@ def test_make_script_respects_ci_env(
     assert tmp_script.exists(), "Expected temporary script to be generated"
 
     # 2) Execute the generated script
-    result = subprocess.run(
+    result = subprocess.run(  # noqa: S603
         [sys.executable, str(tmp_script), "--version"],
         capture_output=True,
         text=True,

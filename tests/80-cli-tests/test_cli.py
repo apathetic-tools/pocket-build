@@ -7,7 +7,6 @@ import re
 from pathlib import Path
 
 import pytest
-from pytest import MonkeyPatch
 
 import pocket_build.cli as mod_cli
 import pocket_build.meta as mod_meta
@@ -22,7 +21,7 @@ from tests.utils import TRACE, patch_everywhere
 
 def test_main_no_config(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Should print a warning and return exit code 1 when config is missing."""
@@ -39,7 +38,7 @@ def test_main_no_config(
 
 def test_main_with_config(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Should detect config, run one build, and exit cleanly."""
@@ -145,14 +144,15 @@ def test_main_invalid_config(tmp_path: Path) -> None:
 # --- exception catching -----------------------------------------
 
 
-def test_main_handles_controlled_exception(monkeypatch: MonkeyPatch) -> None:
+def test_main_handles_controlled_exception(monkeypatch: pytest.MonkeyPatch) -> None:
     """Simulate a controlled exception (e.g. ValueError) and verify clean handling."""
     # --- setup ---
     called: dict[str, bool] = {}
 
     # --- stubs ---
     def fake_parser() -> object:
-        raise ValueError("mocked config failure")
+        xmsg = "mocked config failure"
+        raise ValueError(xmsg)
 
     def fake_log(*_a: object, **_k: object) -> None:
         called.setdefault("log", True)
@@ -167,14 +167,15 @@ def test_main_handles_controlled_exception(monkeypatch: MonkeyPatch) -> None:
     assert "log" in called  # ensure log() was called for controlled exception
 
 
-def test_main_handles_unexpected_exception(monkeypatch: MonkeyPatch) -> None:
+def test_main_handles_unexpected_exception(monkeypatch: pytest.MonkeyPatch) -> None:
     """Simulate an unexpected internal error and ensure it logs as critical."""
     # --- setup ---
     called: dict[str, str] = {}
 
     # --- stubs ---
     def fake_parser() -> object:
-        raise OSError("boom!")  # not one of the controlled types
+        xmsg = "boom!"
+        raise OSError(xmsg)  # not one of the controlled types
 
     def fake_log(level: str, msg: str, **_kw: object) -> None:
         called["level"] = level
@@ -191,17 +192,19 @@ def test_main_handles_unexpected_exception(monkeypatch: MonkeyPatch) -> None:
     assert "Unexpected internal error" in called["msg"]
 
 
-def test_main_fallbacks_to_safe_log(monkeypatch: MonkeyPatch) -> None:
+def test_main_fallbacks_to_safe_log(monkeypatch: pytest.MonkeyPatch) -> None:
     """If log() itself fails, safe_log() should be called instead of recursion."""
     # --- setup ---
     called: dict[str, str] = {}
 
     # --- stubs ---
     def fake_parser() -> object:
-        raise ValueError("simulated fail")
+        xmsg = "simulated fail"
+        raise ValueError(xmsg)
 
     def bad_log(*_a: object, **_k: object) -> None:
-        raise RuntimeError("log fail")
+        xmsg = "log fail"
+        raise RuntimeError(xmsg)
 
     def fake_safe_log(msg: str) -> None:
         called["msg"] = msg

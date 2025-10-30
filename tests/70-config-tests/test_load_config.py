@@ -2,7 +2,7 @@
 
 from pathlib import Path
 
-from pytest import raises
+import pytest
 
 import pocket_build.config as mod_config
 import pocket_build.meta as mod_meta
@@ -56,7 +56,7 @@ def test_load_config_raises_if_no_expected_vars(tmp_path: Path) -> None:
     cfg.write_text("x = 42", encoding="utf-8")
 
     # --- execute and verify ---
-    with raises(ValueError, match="did not define"):
+    with pytest.raises(ValueError, match="did not define"):
         mod_config.load_config(cfg)
 
 
@@ -67,7 +67,7 @@ def test_load_config_raises_runtimeerror_on_exec_failure(tmp_path: Path) -> None
     cfg.write_text("raise Exception('boom')", encoding="utf-8")
 
     # --- execute and verify ---
-    with raises(RuntimeError, match="Error while executing Python config"):
+    with pytest.raises(RuntimeError, match="Error while executing Python config"):
         mod_config.load_config(cfg)
 
 
@@ -91,7 +91,7 @@ def test_load_config_jsonc_invalid(tmp_path: Path) -> None:
     cfg.write_text("{ bad json }", encoding="utf-8")
 
     # --- execute and verify ---
-    with raises(ValueError, match="Error while loading configuration file"):
+    with pytest.raises(ValueError, match="Error while loading configuration file"):
         mod_config.load_config(cfg)
 
 
@@ -102,7 +102,10 @@ def test_load_config_cleans_error_message(tmp_path: Path) -> None:
     cfg.write_text("{ bad json }", encoding="utf-8")
 
     # --- execute and verify ---
-    with raises(ValueError) as exc_info:
+    with pytest.raises(
+        ValueError,
+        match=r"Error while loading configuration file",
+    ) as exc_info:
         mod_config.load_config(cfg)
 
     msg = str(exc_info.value)
@@ -116,5 +119,5 @@ def test_load_config_rejects_invalid_config_type(tmp_path: Path) -> None:
     config_file.write_text("config = 123  # invalid type", encoding="utf-8")
 
     # --- execute and verify ---
-    with raises(TypeError, match="must be a dict, list, or None"):
+    with pytest.raises(TypeError, match="must be a dict, list, or None"):
         mod_config.load_config(config_file)

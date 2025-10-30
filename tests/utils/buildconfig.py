@@ -20,12 +20,19 @@ def make_resolved(path: Path | str, root: Path | str) -> mod_types.PathResolved:
     """Return a fake PathResolved-style dict."""
     raw_path = path if isinstance(path, str) else str(path)
     return cast(
-        mod_types.PathResolved, {"path": raw_path, "root": Path(root), "origin": "test"}
+        "mod_types.PathResolved",
+        {
+            "path": raw_path,
+            "root": Path(root),
+            "origin": "test",
+        },
     )
 
 
 def make_include_resolved(
-    path: Path | str, root: Path | str, dest: Path | str | None = None
+    path: Path | str,
+    root: Path | str,
+    dest: Path | str | None = None,
 ) -> mod_types.IncludeResolved:
     """Return a fake IncludeResolved-style dict."""
     # Preserve raw string form to retain trailing slashes
@@ -37,7 +44,7 @@ def make_include_resolved(
     }
     if dest:
         d["dest"] = Path(dest)
-    return cast(mod_types.IncludeResolved, d)
+    return cast("mod_types.IncludeResolved", d)
 
 
 def make_build_cfg(
@@ -77,4 +84,4 @@ def make_build_input(
     if out is not None:
         cfg["out"] = out
     cfg.update(extra)
-    return cast(mod_types.BuildConfig, cfg)
+    return cast("mod_types.BuildConfig", cfg)

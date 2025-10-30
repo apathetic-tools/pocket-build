@@ -33,12 +33,13 @@ def can_run_configless(args: argparse.Namespace) -> bool:
 
     Since this is pre-args normalization we need to still check
     positionals and not assume the positional out doesn't improperly
-    greed grab the include."""
+    greed grab the include.
+    """
     return bool(
         getattr(args, "include", None)
         or getattr(args, "add_include", None)
         or getattr(args, "positional_include", None)
-        or getattr(args, "positional_out", None)
+        or getattr(args, "positional_out", None),
     )
 
 
@@ -70,8 +71,7 @@ def find_config(
     *,
     missing_level: str = "error",
 ) -> Path | None:
-    """
-    Locate a configuration file.
+    """Locate a configuration file.
 
     missing_level: log-level for failing to find a configuration file.
 
@@ -82,7 +82,6 @@ def find_config(
 
     Returns the first matching path, or None if no config was found.
     """
-
     # NOTE: We only have early no-config Log-Level
 
     # --- 1. Explicit config path ---
@@ -90,11 +89,11 @@ def find_config(
         config = Path(args.config).expanduser().resolve()
         if not config.exists():
             # Explicit path → hard failure
-            raise FileNotFoundError(f"Specified config file not found: {config}")
+            xmsg = f"Specified config file not found: {config}"
+            raise FileNotFoundError(xmsg)
         if config.is_dir():
-            raise ValueError(
-                f"Specified config path is a directory, not a file: {config}"
-            )
+            xmsg = f"Specified config path is a directory, not a file: {config}"
+            raise ValueError(xmsg)
         return config
 
     # --- 2. Default candidate files ---
@@ -107,10 +106,7 @@ def find_config(
 
     if not found:
         # Expected absence — soft failure (continue)
-        log(
-            missing_level,
-            f"No config file found in {cwd}",
-        )
+        log(missing_level, f"No config file found in {cwd}")
         return None
 
     # --- 3. Handle multiple matches ---
@@ -124,8 +120,7 @@ def find_config(
 
 
 def load_config(config_path: Path) -> dict[str, Any] | list[Any] | None:
-    """
-    Load configuration data from a file.
+    """Load configuration data from a file.
 
     Supports:
       - Python configs: .py files exporting either `config`, `builds`, or `includes`
@@ -135,10 +130,11 @@ def load_config(config_path: Path) -> dict[str, Any] | list[Any] | None:
         The raw object defined in the config (dict, list, or None).
         Returns None for intentionally empty configs
           (e.g. empty files or `config = None`).
+
     Raises:
         ValueError if a .py config defines none of the expected variables.
-    """
 
+    """
     # NOTE: We only have early no-config Log-Level
 
     # --- Python config ---
@@ -155,16 +151,19 @@ def load_config(config_path: Path) -> dict[str, Any] | list[Any] | None:
         # Execute the python config file
         try:
             source = config_path.read_text(encoding="utf-8")
-            exec(compile(source, str(config_path), "exec"), config_globals)
+            exec(compile(source, str(config_path), "exec"), config_globals)  # noqa: S102
             log(
                 "trace",
                 f"[EXEC] globals after exec: {list(config_globals.keys())}",
             )
         except Exception as e:
             tb = traceback.format_exc()
-            msg = f"Error while executing Python config: {config_path.name}\n{e}\n{tb}"
+            xmsg = (
+                f"Error while executing Python config: {config_path.name}\n"
+                f"{type(e).__name__}: {e}\n{tb}"
+            )
             # Raise a generic runtime error for main() to catch and print cleanly
-            raise RuntimeError(msg) from e
+            raise RuntimeError(xmsg) from e
         finally:
             # Only remove if we actually inserted it
             if added_to_sys_path and sys.path[0] == parent_dir:
@@ -174,127 +173,99 @@ def load_config(config_path: Path) -> dict[str, Any] | list[Any] | None:
             if key in config_globals:
                 result = config_globals[key]
                 if not isinstance(result, (dict, list, type(None))):
-                    raise TypeError(
+                    xmsg = (
                         f"{key} in {config_path.name} must be a dict, list, or None"
                         f", not {type(result).__name__}"
                     )
+                    raise TypeError(xmsg)
 
                 # Explicitly narrow the loaded config to its expected union type.
-                return cast(dict[str, Any] | list[Any] | None, result)
+                return cast("dict[str, Any] | list[Any] | None", result)
 
-        raise ValueError(
-            f"{config_path.name} did not define `config` or `builds` or `includes`"
-        )
+        xmsg = f"{config_path.name} did not define `config` or `builds` or `includes`"
+        raise ValueError(xmsg)
 
     # JSONC / JSON fallback
     try:
         return load_jsonc(config_path)
     except ValueError as e:
         clean_msg = remove_path_in_error_message(str(e), config_path)
-        raise ValueError(
+        xmsg = (
             f"Error while loading configuration file '{config_path.name}': {clean_msg}"
-        ) from e
+        )
+        raise ValueError(xmsg) from e
 
 
-def parse_config(
-    raw_config: dict[str, Any] | list[Any] | None,
-) -> dict[str, Any] | None:
-    """
-    Normalize user config into canonical RootConfig shape (no filesystem work).
-
-    Accepted forms:
-      - #1 [] / {}                   → single build with `include` = []
-      - #2 ["src/**", "assets/**"]   → single build with those includes
-      - #3 [{...}, {...}]            → multi-build list
-      - #4 {"builds": [...]}         → multi-build config (returned shape)
-      - #5 {"build": {...}}          → single build config with root config
-      - #6 {...}                     → single build config
-
-     After normalization:
-      - Always returns {"builds": [ ... ]} (at least one empty {} build).
-      - Root-level defaults may be present:
-          log_level, out, respect_gitignore, watch_interval.
-      - Preserves all unknown keys for later validation.
-    """
-
-    # NOTE: This function only normalizes shape — it does NOT validate or restrict keys.
-    #       Unknown keys are preserved for the validation phase.
-
-    root: dict[str, Any]  # type it once
-
-    # --- Case 1: empty config → one blank build ---
-    # Includes None (empty file / config = None), [] (no builds), and {} (empty object)
-    if not raw_config or raw_config == {}:  # handles None, [], {}
-        return None
-
+def _parse_case_2_list_of_strings(
+    raw_config: list[str],
+) -> dict[str, Any]:
     # --- Case 2: naked list of strings → single build's include ---
-    if isinstance(raw_config, list) and all(isinstance(x, str) for x in raw_config):
-        return {"builds": [{"include": list(raw_config)}]}
+    return {"builds": [{"include": list(raw_config)}]}
 
+
+def _parse_case_3_list_of_dicts(
+    raw_config: list[dict[str, Any]],
+) -> dict[str, Any]:
     # --- Case 3: naked list of dicts (no root) → multi-build shorthand ---
-    if isinstance(raw_config, list) and all(isinstance(x, dict) for x in raw_config):
-        builds = [dict(b) for b in raw_config]
+    root: dict[str, Any]  # type it once
+    builds = [dict(b) for b in raw_config]
 
-        # Lift watch_interval from the first build that defines it (convenience),
-        # then remove it from ALL builds to avoid ambiguity.
-        first_watch = next(
-            (b.get("watch_interval") for b in builds if "watch_interval" in b), None
-        )
-        root = {"builds": builds}
-        if first_watch is not None:
-            root["watch_interval"] = first_watch
-            for b in builds:
-                b.pop("watch_interval", None)
-        return root
+    # Lift watch_interval from the first build that defines it (convenience),
+    # then remove it from ALL builds to avoid ambiguity.
+    first_watch = next(
+        (b.get("watch_interval") for b in builds if "watch_interval" in b),
+        None,
+    )
+    root = {"builds": builds}
+    if first_watch is not None:
+        root["watch_interval"] = first_watch
+        for b in builds:
+            b.pop("watch_interval", None)
+    return root
 
-    # --- better error message for mixed lists ---
-    if isinstance(raw_config, list):
-        raise TypeError(
-            "Invalid mixed-type list: "
-            "all elements must be strings or all must be objects."
-        )
 
-    # --- From here on, must be a dict ---
-    # Defensive check: should be unreachable after list cases above,
-    # but kept to guard against future changes or malformed input.
-    if not isinstance(raw_config, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
-        raise TypeError(
-            f"Invalid top-level value: {type(raw_config).__name__} "
-            "(expected object, list of objects, or list of strings)"
-        )
-
-    builds_val = raw_config.get("builds")
-    build_val = raw_config.get("build")
-
+def _parse_case_4_dict_multi_builds(
+    raw_config: dict[str, Any],
+    *,
+    build_val: Any,
+) -> dict[str, Any]:
     # --- Case 4: dict with "build(s)" key → root with multi-builds ---
-    if isinstance(builds_val, list) or (
-        isinstance(build_val, list) and "builds" not in raw_config
-    ):
-        root = dict(raw_config)  # preserve all user keys
+    root = dict(raw_config)  # preserve all user keys
 
-        # If user used "build" with a list → coerce, warn
-        if isinstance(build_val, list) and "builds" not in raw_config:
-            log("warning", "Config key 'build' was a list — treating as 'builds'.")
-            root["builds"] = build_val
-            root.pop("build", None)
+    # we might have a "builds" key that is a list, then nothing to do
 
-        return root
+    # If user used "build" with a list → coerce, warn
+    if isinstance(build_val, list) and "builds" not in raw_config:
+        log("warning", "Config key 'build' was a list — treating as 'builds'.")
+        root["builds"] = build_val
+        root.pop("build", None)
 
+    return root
+
+
+def _parse_case_5_dict_single_build(
+    raw_config: dict[str, Any],
+    *,
+    builds_val: Any,
+) -> dict[str, Any]:
     # --- Case 5: dict with "build(s)" key → root with single-build ---
-    if isinstance(build_val, dict) or isinstance(builds_val, dict):
-        root = dict(raw_config)  # preserve all user keys
+    root = dict(raw_config)  # preserve all user keys
 
-        # If user used "builds" with a dict → coerce, warn
-        if isinstance(builds_val, dict):
-            log("warning", "Config key 'builds' was a dict — treating as 'build'.")
-            root["builds"] = [builds_val]
-            # keep the 'builds' key — it's now properly normalized
-        else:
-            root["builds"] = [dict(root.pop("build"))]
+    # If user used "builds" with a dict → coerce, warn
+    if isinstance(builds_val, dict):
+        log("warning", "Config key 'builds' was a dict — treating as 'build'.")
+        root["builds"] = [builds_val]
+        # keep the 'builds' key — it's now properly normalized
+    else:
+        root["builds"] = [dict(root.pop("build"))]
 
-        # no hoisting since they specified a root
-        return root
+    # no hoisting since they specified a root
+    return root
 
+
+def _parse_case_6_root_single_build(
+    raw_config: dict[str, Any],
+) -> dict[str, Any]:
     # --- Case 6: single build fields (hoist only shared keys) ---
     # The user gave a flat single-build config.
     # We move only the overlapping fields (shared between Root and Build)
@@ -318,10 +289,88 @@ def parse_config(
             build.setdefault(k, v)
 
     # Construct normalized root
-    root = dict(hoisted)
+    root: dict[str, Any] = dict(hoisted)
     root["builds"] = [build]
 
     return root
+
+
+def parse_config(  # noqa: PLR0911
+    raw_config: dict[str, Any] | list[Any] | None,
+) -> dict[str, Any] | None:
+    """Normalize user config into canonical RootConfig shape (no filesystem work).
+
+    Accepted forms:
+      - #1 [] / {}                   → single build with `include` = []
+      - #2 ["src/**", "assets/**"]   → single build with those includes
+      - #3 [{...}, {...}]            → multi-build list
+      - #4 {"builds": [...]}         → multi-build config (returned shape)
+      - #5 {"build": {...}}          → single build config with root config
+      - #6 {...}                     → single build config
+
+     After normalization:
+      - Always returns {"builds": [ ... ]} (at least one empty {} build).
+      - Root-level defaults may be present:
+          log_level, out, respect_gitignore, watch_interval.
+      - Preserves all unknown keys for later validation.
+    """
+    # NOTE: This function only normalizes shape — it does NOT validate or restrict keys.
+    #       Unknown keys are preserved for the validation phase.
+
+    # --- Case 1: empty config → one blank build ---
+    # Includes None (empty file / config = None), [] (no builds), and {} (empty object)
+    if not raw_config or raw_config == {}:  # handles None, [], {}
+        return None
+
+    # --- Case 2: naked list of strings → single build's include ---
+    if isinstance(raw_config, list) and all(isinstance(x, str) for x in raw_config):
+        return _parse_case_2_list_of_strings(raw_config)
+
+    # --- Case 3: naked list of dicts (no root) → multi-build shorthand ---
+    if isinstance(raw_config, list) and all(isinstance(x, dict) for x in raw_config):
+        return _parse_case_3_list_of_dicts(raw_config)
+
+    # --- better error message for mixed lists ---
+    if isinstance(raw_config, list):
+        xmsg = (
+            "Invalid mixed-type list: "
+            "all elements must be strings or all must be objects."
+        )
+        raise TypeError(xmsg)
+
+    # --- From here on, must be a dict ---
+    # Defensive check: should be unreachable after list cases above,
+    # but kept to guard against future changes or malformed input.
+    if not isinstance(raw_config, dict):  # pyright: ignore[reportUnnecessaryIsInstance]
+        xmsg = (
+            f"Invalid top-level value: {type(raw_config).__name__} "
+            "(expected object, list of objects, or list of strings)",
+        )
+        raise TypeError(xmsg)
+
+    builds_val = raw_config.get("builds")
+    build_val = raw_config.get("build")
+
+    # --- Case 4: dict with "build(s)" key → root with multi-builds ---
+    if isinstance(builds_val, list) or (
+        isinstance(build_val, list) and "builds" not in raw_config
+    ):
+        return _parse_case_4_dict_multi_builds(
+            raw_config,
+            build_val=build_val,
+        )
+
+    # --- Case 5: dict with "build(s)" key → root with single-build ---
+    if isinstance(build_val, dict) or isinstance(builds_val, dict):
+        return _parse_case_5_dict_single_build(
+            raw_config,
+            builds_val=builds_val,
+        )
+
+    # --- Case 6: single build fields (hoist only shared keys) ---
+    return _parse_case_6_root_single_build(
+        raw_config,
+    )
 
 
 def _validation_summary(
@@ -338,11 +387,11 @@ def _validation_summary(
     if summary.strict_warnings:
         counts.append(
             f"{len(summary.strict_warnings)} strict warning"
-            f"{plural(summary.strict_warnings)}"
+            f"{plural(summary.strict_warnings)}",
         )
     if summary.warnings:
         counts.append(
-            f"{len(summary.warnings)} normal warning{plural(summary.warnings)}"
+            f"{len(summary.warnings)} normal warning{plural(summary.warnings)}",
         )
     counts_msg = f"\nFound {', '.join(counts)}." if counts else ""
 
@@ -373,15 +422,15 @@ def _validation_summary(
         )
     if summary.warnings:
         log(
-            "warning", "\nWarnings (non-fatal):\n  • " + "\n  • ".join(summary.warnings)
+            "warning",
+            "\nWarnings (non-fatal):\n  • " + "\n  • ".join(summary.warnings),
         )
 
 
 def load_and_validate_config(
     args: argparse.Namespace,
 ) -> tuple[Path, RootConfig] | None:
-    """
-    Find, load, parse, and validate the user's configuration.
+    """Find, load, parse, and validate the user's configuration.
 
     Also determines the effective log level (from CLI/env/config/default)
     early, so logging can initialize as soon as possible.
@@ -389,8 +438,8 @@ def load_and_validate_config(
     Returns:
         (config_path, root_cfg) if a config file was found and valid,
         or None if no config was found.
-    """
 
+    """
     # --- initialize logging wihtout config ---
     current_runtime["log_level"] = determine_log_level(args)
 
@@ -425,7 +474,8 @@ def load_and_validate_config(
     try:
         parsed_cfg = parse_config(raw_config)
     except TypeError as e:
-        raise TypeError(f"Could not parse config {config_path.name}: {e}") from e
+        xmsg = f"Could not parse config {config_path.name}: {e}"
+        raise TypeError(xmsg) from e
     if parsed_cfg is None:
         return None
 
@@ -433,14 +483,11 @@ def load_and_validate_config(
     validation_result = validate_config(parsed_cfg)
     _validation_summary(validation_result, config_path)
     if not validation_result.valid:
-        # TODO: make this a blank exception now that we print the path above instead
-        # should we perhaps add a ".silent" attribute to exceptions
-        #  where we want to raise a blank exception to the user, but still
-        # want to keep an exception message in case it is intercepted elsewhere?
-        # Perhaps we could even attach the summary to the exception
-        raise ValueError(
-            f"Configuration file {config_path.name} contains validation errors."
-        )
+        xmsg = f"Configuration file {config_path.name} contains validation errors."
+        exception = ValueError(xmsg)
+        exception.silent = True  # type: ignore[attr-defined]
+        exception.data = validation_result  # type: ignore[attr-defined]
+        raise exception
 
     # --- Upgrade to RootConfig type ---
     root_cfg: RootConfig = cast_hint(RootConfig, parsed_cfg)

@@ -1,7 +1,6 @@
 # src/pocket_build/__init__.py
 
-"""
-Pocket Build — a tiny build system that fits in your pocket.
+"""Pocket Build — a tiny build system that fits in your pocket.
 
 Full developer API
 ==================
@@ -90,27 +89,27 @@ from .utils_using_runtime import (
     log,
 )
 
-__all__ = [
+__all__ = [  # noqa: RUF022
     # --- CLI / Actions ---
-    "main",
     "get_metadata",  # verison info
+    "main",
     "run_selftest",
     "watch_for_changes",
     #
     # --- Build Engine ---
-    "run_all_builds",
-    "run_build",
-    "copy_item",
     "copy_directory",
     "copy_file",
+    "copy_item",
+    "run_all_builds",
+    "run_build",
     #
     # --- Config Handling ---
-    "resolve_config",
-    "resolve_build_config",
-    "load_and_validate_config",
     "find_config",
+    "load_and_validate_config",
     "load_config",
     "parse_config",
+    "resolve_build_config",
+    "resolve_config",
     "validate_config",
     #
     # --- Constants / Metadata / Runtime ---
@@ -122,11 +121,11 @@ __all__ = [
     "DEFAULT_RESPECT_GITIGNORE",
     "DEFAULT_STRICT_CONFIG",
     "DEFAULT_WATCH_INTERVAL",
+    "Metadata",
     "PROGRAM_DISPLAY",
     "PROGRAM_ENV",
     "PROGRAM_PACKAGE",
     "PROGRAM_SCRIPT",
-    "Metadata",
     "current_runtime",
     #
     # --- utils ---
@@ -136,8 +135,8 @@ __all__ = [
     "get_glob_root",
     "has_glob_chars",
     "is_bypass_capture",
-    "is_excluded",
     "is_excluded_raw",
+    "is_excluded",
     "load_jsonc",
     "log",
     "make_includeresolved",
@@ -147,13 +146,13 @@ __all__ = [
     "should_use_color",
     #
     # --- Types ---
-    "BuildConfigResolved",
     "BuildConfig",
+    "BuildConfigResolved",
     "IncludeResolved",
     "MetaBuildConfigResolved",
     "OriginType",
     "PathResolved",
-    "RootConfigResolved",
     "RootConfig",
+    "RootConfigResolved",
     "Runtime",
 ]

@@ -7,35 +7,35 @@ import math
 import sys
 from io import StringIO
 from pathlib import Path
+from typing import cast
 
 import pytest
-from pytest import CaptureFixture, raises
 
 import pocket_build.utils as mod_utils
 import pocket_build.utils_types as mod_utils_types
 import pocket_build.utils_using_runtime as mod_utils_runtime
 
 # ---------------------------------------------------------------------------
-# get_glob_root()
+# get_glob_root
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
-    "pattern,expected",
+    ("pattern", "expected"),
     [
         # Basic glob roots
         ("src/**/*.py", Path("src")),
         ("foo/bar/*.txt", Path("foo/bar")),
         ("assets/*", Path("assets")),
-        ("*.md", Path(".")),
-        ("**/*.js", Path(".")),
+        ("*.md", Path()),
+        ("**/*.js", Path()),
         ("no/globs/here", Path("no/globs/here")),
         ("./src/*/*.cfg", Path("src")),
         ("src\\**\\*.py", Path("src")),  # backslashes normalized
         ("a/b\\c/*", Path("a/b/c")),  # mixed separators normalized
-        ("", Path(".")),
-        (".", Path(".")),
-        ("./", Path(".")),
+        ("", Path()),
+        (".", Path()),
+        ("./", Path()),
         ("src/*/sub/*.py", Path("src")),
         # Escaped spaces should normalize gracefully
         ("dir\\ with\\ spaces/file.txt", Path("dir with spaces/file.txt")),
@@ -50,7 +50,7 @@ import pocket_build.utils_using_runtime as mod_utils_runtime
 def test_get_glob_root_extracts_static_prefix(
     pattern: str,
     expected: Path,
-):
+) -> None:
     """get_glob_root() should return the non-glob portion of a path pattern."""
     # --- execute --
     result = mod_utils_runtime.get_glob_root(pattern)
@@ -60,12 +60,12 @@ def test_get_glob_root_extracts_static_prefix(
 
 
 # ---------------------------------------------------------------------------
-# normalize_path_string()
+# normalize_path_string
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
-    "raw, expected",
+    ("raw", "expected"),
     [
         # ✅ Simple normalization
         ("src/**/*.py", "src/**/*.py"),
@@ -94,8 +94,8 @@ def test_get_glob_root_extracts_static_prefix(
 def test_normalize_path_string_behavior(
     raw: str,
     expected: str,
-    capsys: CaptureFixture[str],
-):
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     """normalize_path_string() should produce normalized cross-platform paths."""
     # --- execute ---
     result = mod_utils_runtime.normalize_path_string(raw)
@@ -125,12 +125,12 @@ def test_make_includeresolved_preserves_trailing_slash() -> None:
 
 
 # ---------------------------------------------------------------------------
-# remove_path_in_error_message()
+# remove_path_in_error_message
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
-    "inner_msg, path, expected",
+    ("inner_msg", "path", "expected"),
     [
         # ✅ Simple case — full path
         (
@@ -183,10 +183,13 @@ def test_make_includeresolved_preserves_trailing_slash() -> None:
     ],
 )
 def test_remove_path_in_error_message_normalizes_output(
-    inner_msg: str, path: Path, expected: str
-):
+    inner_msg: str,
+    path: Path,
+    expected: str,
+) -> None:
     """remove_path_in_error_message() should strip redundant path mentions
-    and normalize punctuation and whitespace cleanly."""
+    and normalize punctuation and whitespace cleanly.
+    """
     # --- execute ---
     result = mod_utils.remove_path_in_error_message(inner_msg, path)
 
@@ -195,12 +198,12 @@ def test_remove_path_in_error_message_normalizes_output(
 
 
 # ---------------------------------------------------------------------------
-# plural()
+# plural
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(
-    "value, expected",
+    ("value", "expected"),
     [
         # ✅ Integers
         (0, "s"),
@@ -224,8 +227,8 @@ def test_remove_path_in_error_message_normalizes_output(
         ({"a": 1}, ""),
         ({"a": 1, "b": 2}, "s"),
         # ✅ Custom objects with __len__()
-        (type("Fake", (), {"__len__": lambda self: 1})(), ""),  # type: ignore[reportUnknownLambdaType]
-        (type("Fake", (), {"__len__": lambda self: 2})(), "s"),  # type: ignore[reportUnknownLambdaType]
+        (type("Fake", (), {"__len__": lambda self: 1})(), ""),  # noqa: ARG005 # type: ignore[reportUnknownLambdaType]
+        (type("Fake", (), {"__len__": lambda self: 2})(), "s"),  # noqa: ARG005 # type: ignore[reportUnknownLambdaType]
         # ✅ Non-countable objects
         (object(), "s"),
         (None, "s"),
@@ -233,7 +236,8 @@ def test_remove_path_in_error_message_normalizes_output(
 )
 def test_plural_behavior(value: object, expected: str) -> None:
     """plural() should append 's' for pluralizable values,
-    and '' for singular ones (1 or length == 1)."""
+    and '' for singular ones (1 or length == 1).
+    """
     # --- execute ---
     result = mod_utils.plural(value)
 
@@ -247,7 +251,8 @@ def test_plural_custom_len_error_fallback() -> None:
     # --- setup ---
     class Weird:
         def __len__(self) -> int:
-            raise TypeError("unusable len()")
+            xmsg = "unusable len()"
+            raise TypeError(xmsg)
 
     # --- execute ---
     result = mod_utils.plural(Weird())
@@ -257,14 +262,15 @@ def test_plural_custom_len_error_fallback() -> None:
 
 
 # ---------------------------------------------------------------------------
-# capture_output()
+# capture_output
 # ---------------------------------------------------------------------------
 
 
 def test_capture_output_captures_stdout_and_stderr() -> None:
-    """stdout and stderr should be captured separately and merged together."""
+    """Stdout and stderr should be captured separately and merged together."""
     # --- setup ---
-    assert sys.stdout is not None and sys.stderr is not None
+    assert sys.stdout is not None
+    assert sys.stderr is not None
     old_out, old_err = sys.stdout, sys.stderr
 
     # --- execute ---
@@ -280,7 +286,8 @@ def test_capture_output_captures_stdout_and_stderr() -> None:
     assert "hello stdout" in out_text
     assert "oops stderr" in err_text
     # merged should contain both in order
-    assert "hello stdout" in merged_text and "oops stderr" in merged_text
+    assert "hello stdout" in merged_text
+    assert "oops stderr" in merged_text
 
     # Streams must have been restored
     assert sys.stdout is old_out
@@ -292,25 +299,26 @@ def test_capture_output_restores_streams_after_exception() -> None:
     # --- setup ---
     old_out, old_err = sys.stdout, sys.stderr
 
-    # --- execute ---
-    with raises(RuntimeError):
-        with mod_utils.capture_output():
-            print("before boom")
-            raise RuntimeError("boom")
+    # --- execute and verify ---
+    with mod_utils.capture_output():
+        print("before boom")
+        with pytest.raises(RuntimeError, match="boom"):
+            raise RuntimeError("boom")  # noqa: EM101
 
-    # --- verify ---
     assert sys.stdout is old_out
     assert sys.stderr is old_err
-    # The exception should have captured output attached
-    try:
+
+    # --- captured output attachment ---
+    with pytest.raises(ValueError, match="expected fail") as exc_info:  # noqa: SIM117
         with mod_utils.capture_output():
-            raise ValueError("expected fail")
-    except ValueError as e:
-        assert hasattr(e, "captured_output")
-        captured = getattr(e, "captured_output")
-        assert isinstance(captured.stdout, StringIO)
-        assert isinstance(captured.stderr, StringIO)
-        assert isinstance(captured.merged, StringIO)
+            raise ValueError("expected fail")  # noqa: EM101, TRY003
+
+    e = exc_info.value
+    assert hasattr(e, "captured_output")
+    captured = cast("mod_utils.CapturedOutput", getattr(e, "captured_output"))  # noqa: B009
+    assert isinstance(captured.stdout, StringIO)
+    assert isinstance(captured.stderr, StringIO)
+    assert isinstance(captured.merged, StringIO)
 
 
 def test_capture_output_interleaved_writes_preserve_order() -> None:
@@ -346,6 +354,7 @@ def test_capture_output_supports_str_method_and_as_dict() -> None:
     d = cap.as_dict()
 
     assert isinstance(s, str)
-    assert "hello" in s and "err" in s
+    assert "hello" in s
+    assert "err" in s
     assert all(k in d for k in ("stdout", "stderr", "merged"))
     assert d["stdout"].strip().startswith("hello")

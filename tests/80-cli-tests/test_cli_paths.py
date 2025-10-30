@@ -5,7 +5,6 @@ import json
 from pathlib import Path
 
 import pytest
-from pytest import CaptureFixture, MonkeyPatch
 
 import pocket_build.cli as mod_cli
 import pocket_build.meta as mod_meta
@@ -13,8 +12,8 @@ import pocket_build.meta as mod_meta
 
 def test_configless_run_with_include_flag(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-    capsys: CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Should run successfully without a config file when --include is provided."""
     # --- setup ---
@@ -46,8 +45,8 @@ def test_configless_run_with_include_flag(
 
 def test_configless_run_with_add_include_flag(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-    capsys: CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Should run in CLI-only mode when --add-include is provided (no config)."""
     # --- setup ---
@@ -69,8 +68,8 @@ def test_configless_run_with_add_include_flag(
 
 def test_custom_config_path(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-    capsys: CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     # --- setup ---
     cfg = tmp_path / "custom.json"
@@ -88,8 +87,8 @@ def test_custom_config_path(
 
 def test_out_flag_overrides_config(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-    capsys: CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Should use the --out flag instead of the config-defined output path."""
     # --- setup ---
@@ -100,8 +99,8 @@ def test_out_flag_overrides_config(
     config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(
         json.dumps(
-            {"builds": [{"include": ["src/**"], "exclude": [], "out": "ignored"}]}
-        )
+            {"builds": [{"include": ["src/**"], "exclude": [], "out": "ignored"}]},
+        ),
     )
 
     # --- patch and execute ---
@@ -125,7 +124,7 @@ def test_out_flag_overrides_config(
 
 def test_out_flag_relative_to_cwd(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """--out should be relative to where the command is run (cwd)."""
     # --- setup ---
@@ -136,7 +135,7 @@ def test_out_flag_relative_to_cwd(
 
     config = project / f".{mod_meta.PROGRAM_SCRIPT}.json"
     config.write_text(
-        json.dumps({"builds": [{"include": ["src/**"], "out": "ignored"}]})
+        json.dumps({"builds": [{"include": ["src/**"], "out": "ignored"}]}),
     )
 
     cwd = tmp_path / "runner"
@@ -157,7 +156,7 @@ def test_out_flag_relative_to_cwd(
 
 def test_config_out_relative_to_config_file(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Out path in config should be relative to the config file itself."""
     # --- setup ---
@@ -187,8 +186,8 @@ def test_config_out_relative_to_config_file(
 
 def test_python_config_preferred_over_json(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-    capsys: CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """A .script.py config should take precedence over .jsonc/.json."""
     # --- setup ---
@@ -208,7 +207,7 @@ builds = [
     )
 
     json_dump = json.dumps(
-        {"builds": [{"include": ["src/from_json.txt"], "out": "dist"}]}
+        {"builds": [{"include": ["src/from_json.txt"], "out": "dist"}]},
     )
 
     jsonc_cfg = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.jsonc"
@@ -235,12 +234,11 @@ builds = [
 @pytest.mark.parametrize("ext", [".jsonc", ".json"])
 def test_json_and_jsonc_config_supported(
     tmp_path: Path,
-    monkeypatch: MonkeyPatch,
-    capsys: CaptureFixture[str],
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
     ext: str,
 ) -> None:
-    """
-    Both .script.jsonc and .script.json
+    """Both .script.jsonc and .script.json
     configs should be detected and used.
     """
     # --- setup ---
@@ -281,7 +279,10 @@ def test_json_and_jsonc_config_supported(
 # ---------------------------------------------------------------------------
 
 
-def test_absolute_include_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_absolute_include_and_out(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     """Absolute paths on CLI should copy correctly and not resolve relative to cwd."""
     # --- setup ---
     abs_src = tmp_path / "abs_src"
@@ -304,7 +305,8 @@ def test_absolute_include_and_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> N
 
 
 def test_relative_include_with_parent_reference(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Relative include like ../shared/** should resolve against cwd correctly."""
     # --- setup ---
@@ -325,7 +327,8 @@ def test_relative_include_with_parent_reference(
 
 
 def test_mixed_relative_and_absolute_includes(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Mixing relative and absolute include paths should work with distinct roots."""
     # --- setup ---
@@ -341,7 +344,7 @@ def test_mixed_relative_and_absolute_includes(
     # --- patch and execute ---
     monkeypatch.chdir(tmp_path)
     code = mod_cli.main(
-        ["--include", "rel_src/**", str(abs_src / "**"), "--out", str(abs_out)]
+        ["--include", "rel_src/**", str(abs_src / "**"), "--out", str(abs_out)],
     )
 
     # --- verify ---
@@ -350,7 +353,10 @@ def test_mixed_relative_and_absolute_includes(
     assert (abs_out / "a.txt").exists()
 
 
-def test_trailing_slash_include(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_trailing_slash_include(
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
+) -> None:
     """Ensure `src/` copies contents directly (not nested src/src)."""
     # --- setup ---
     src = tmp_path / "src"
@@ -369,7 +375,8 @@ def test_trailing_slash_include(monkeypatch: MonkeyPatch, tmp_path: Path) -> Non
 
 
 def test_absolute_out_does_not_create_relative_copy(
-    monkeypatch: MonkeyPatch, tmp_path: Path
+    monkeypatch: pytest.MonkeyPatch,
+    tmp_path: Path,
 ) -> None:
     """Absolute --out should not create nested relative copies."""
     # --- setup ---
@@ -391,7 +398,7 @@ def test_absolute_out_does_not_create_relative_copy(
     assert not (tmp_path / "subdir" / "absolute_out").exists()
 
 
-def test_dot_prefix_include(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_dot_prefix_include(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """'./src' include should behave the same as 'src'."""
     # --- setup ---
     src = tmp_path / "src"
@@ -407,7 +414,7 @@ def test_dot_prefix_include(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
     assert (tmp_path / "dist" / "file.txt").exists()
 
 
-def test_trailing_slash_on_out(monkeypatch: MonkeyPatch, tmp_path: Path) -> None:
+def test_trailing_slash_on_out(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> None:
     """Trailing slash in --out should not change output directory."""
     # --- setup ---
     src = tmp_path / "src"

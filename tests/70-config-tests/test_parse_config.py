@@ -3,7 +3,7 @@
 
 from typing import Any, TextIO
 
-from pytest import MonkeyPatch, raises
+import pytest
 
 import pocket_build.config as mod_config
 import pocket_build.utils_using_runtime as mod_utils_runtime
@@ -12,7 +12,6 @@ from tests.utils import patch_everywhere
 
 def test_parse_config_builds_accepts_list_and_single_object() -> None:
     """Ensure parse_builds accepts both a list and a single build object."""
-
     # --- setup ---
     data_list: dict[str, Any] = {"builds": [{"include": ["src"], "out": "dist"}]}
     data_single: dict[str, Any] = {"include": ["src"], "out": "dist"}
@@ -33,7 +32,7 @@ def test_parse_config_builds_accepts_list_and_single_object() -> None:
 def test_parse_config_builds_handles_single_and_multiple() -> None:
     # --- execute and verify ---
     assert mod_config.parse_config({"builds": [{"include": []}]}) == {
-        "builds": [{"include": []}]
+        "builds": [{"include": []}],
     }
     assert mod_config.parse_config({"include": []}) == {"builds": [{"include": []}]}
 
@@ -64,18 +63,23 @@ def test_parse_config_dict_with_build_key() -> None:
 
 
 def test_parse_config_watch_interval_hoisting() -> None:
+    # --- setup ---
+    interval = 5.0
+
     # --- execute ---
     result = mod_config.parse_config(
-        [{"include": ["src"], "out": "dist", "watch_interval": 5.0}]
+        [{"include": ["src"], "out": "dist", "watch_interval": interval}],
     )
 
     # --- verify ---
     assert result is not None
-    assert result["watch_interval"] == 5.0
+    assert result["watch_interval"] == interval
     assert "watch_interval" not in result["builds"][0]
 
 
-def test_parse_config_coerces_build_list_to_builds(monkeypatch: MonkeyPatch) -> None:
+def test_parse_config_coerces_build_list_to_builds(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Dict with 'build' as a list should coerce to 'builds' with a warning."""
     # --- setup ---
     data: dict[str, Any] = {"build": [{"include": ["src"]}, {"include": ["assets"]}]}
@@ -104,7 +108,9 @@ def test_parse_config_coerces_build_list_to_builds(monkeypatch: MonkeyPatch) -> 
     assert any("Config key 'build' was a list" in msg for _, msg in logged)
 
 
-def test_parse_config_coerces_builds_dict_to_build(monkeypatch: MonkeyPatch) -> None:
+def test_parse_config_coerces_builds_dict_to_build(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """Dict with 'builds' as a dict should coerce to 'build' list with a warning."""
     # --- setup ---
     data: dict[str, Any] = {"builds": {"include": ["src"], "out": "dist"}}
@@ -149,7 +155,7 @@ def test_parse_config_does_not_coerce_when_both_keys_present() -> None:
 
 
 def test_parse_config_accepts_explicit_builds_list_no_warning(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """Explicit 'builds' list should pass through without coercion or warning."""
     # --- setup ---
@@ -181,7 +187,7 @@ def test_parse_config_accepts_explicit_builds_list_no_warning(
 def test_parse_config_rejects_invalid_root_type() -> None:
     """Non-dict or non-list root should raise a TypeError."""
     # --- execute and verify ---
-    with raises(TypeError) as excinfo:
+    with pytest.raises(TypeError) as excinfo:
         mod_config.parse_config("not_a_dict_or_list")  # type: ignore[arg-type]
 
     msg = str(excinfo.value)
@@ -190,10 +196,11 @@ def test_parse_config_rejects_invalid_root_type() -> None:
 
 
 def test_parse_config_build_list_does_not_warn_when_builds_also_present(
-    monkeypatch: MonkeyPatch,
-):
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """If both 'build' and 'builds' exist,
-    even if 'build' is a list, do not warn or coerce."""
+    even if 'build' is a list, do not warn or coerce.
+    """
     # --- setup ---
     data: dict[str, Any] = {
         "build": [{"include": ["src"]}],
@@ -226,10 +233,11 @@ def test_parse_config_build_list_does_not_warn_when_builds_also_present(
 def test_parse_config_build_dict_with_extra_root_fields() -> None:
     """Flat single build dict should hoist only shared keys, keep extras in build."""
     # --- setup ---
+    interval = 3.5
     data: dict[str, Any] = {
         "include": ["src"],
         "out": "dist",
-        "watch_interval": 3.5,  # shared field, should be hoisted
+        "watch_interval": interval,  # shared field, should be hoisted
         "mystery": True,  # unknown field, should remain inside build
     }
 
@@ -239,9 +247,10 @@ def test_parse_config_build_dict_with_extra_root_fields() -> None:
     # --- verify ---
     assert result is not None
     assert "builds" in result
-    assert result["watch_interval"] == 3.5
+    assert result["watch_interval"] == interval
     build = result["builds"][0]
-    assert "mystery" in build and build["mystery"] is True
+    assert "mystery" in build
+    assert build["mystery"] is True
     assert "watch_interval" not in build
 
 
@@ -272,10 +281,12 @@ def test_parse_config_builds_empty_list_is_returned_as_is() -> None:
 
 def test_parse_config_list_of_dicts_hoists_first_watch_interval() -> None:
     """Multi-build shorthand list should hoist
-    first watch_interval and clear it from builds."""
+    first watch_interval and clear it from builds.
+    """
     # --- setup ---
+    interval = 10.0
     data: list[dict[str, Any]] = [
-        {"include": ["src"], "watch_interval": 10.0},
+        {"include": ["src"], "watch_interval": interval},
         {"include": ["lib"]},
     ]
 
@@ -284,15 +295,16 @@ def test_parse_config_list_of_dicts_hoists_first_watch_interval() -> None:
 
     # --- verify ---
     assert result is not None
-    assert result["watch_interval"] == 10.0
+    assert result["watch_interval"] == interval
     assert all("watch_interval" not in b for b in result["builds"])
 
 
 def test_parse_config_prefers_builds_when_both_are_dicts(
-    monkeypatch: MonkeyPatch,
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """If both 'builds' and 'build' are dicts,
-    parser should use 'builds' and not warn."""
+    parser should use 'builds' and not warn.
+    """
     # --- setup ---
     data: dict[str, Any] = {
         "builds": {"include": ["src"]},
@@ -322,7 +334,8 @@ def test_parse_config_prefers_builds_when_both_are_dicts(
     # 'builds' dict is normalized to a single-item list
     assert result["builds"] == [{"include": ["src"]}]
     # 'build' remains present and unchanged
-    assert "build" in result and result["build"] == {"include": ["lib"]}
+    assert "build" in result
+    assert result["build"] == {"include": ["lib"]}
     # warning was emitted for coercing 'builds' dict → list
     assert any("Config key 'builds' was a dict" in msg for _, msg in logged)
 
@@ -334,5 +347,5 @@ def test_parse_config_rejects_mixed_type_list() -> None:
     bad_config: list[object] = ["src/**", {"out": "dist"}]
 
     # --- execute & verify ---
-    with raises(TypeError, match="Invalid mixed-type list"):
+    with pytest.raises(TypeError, match="Invalid mixed-type list"):
         mod_config.parse_config(bad_config)
