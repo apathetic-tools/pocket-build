@@ -13,6 +13,7 @@ import pocket_build.utils_schema as mod_utils_schema
 import pocket_build.utils_types as mod_utils_types
 from tests.utils import make_summary, patch_everywhere
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

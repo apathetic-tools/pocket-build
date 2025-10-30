@@ -13,6 +13,7 @@ import sys
 from collections.abc import Callable
 from typing import Any
 
+
 # Flag for quick runtime enable/disable
 TRACE_ENABLED = os.getenv("TRACE", "").lower() in {"1", "true", "yes"}
 

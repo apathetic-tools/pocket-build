@@ -10,6 +10,7 @@ from typing import Any, TypedDict
 import pocket_build.utils_schema as mod_utils_schema
 from tests.utils import make_summary
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

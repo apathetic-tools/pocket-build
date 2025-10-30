@@ -6,6 +6,7 @@ from typing import cast
 
 import pocket_build.types as mod_types
 
+
 # ---------------------------------------------------------------------------
 # Factories for resolved and unresolved configs
 # ---------------------------------------------------------------------------

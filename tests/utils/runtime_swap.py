@@ -21,6 +21,7 @@ import pocket_build.meta as mod_meta
 
 from .trace import make_trace
 
+
 if TYPE_CHECKING:
     from types import ModuleType
 

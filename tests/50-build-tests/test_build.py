@@ -10,6 +10,7 @@ import pocket_build.runtime as mod_runtime
 import pocket_build.types as mod_types
 from tests.utils import make_build_cfg, make_include_resolved
 
+
 # ---------------------------------------------------------------------------
 # End-to-end tests for run_build()
 # ---------------------------------------------------------------------------

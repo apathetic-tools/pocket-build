@@ -4,6 +4,7 @@
 
 from dataclasses import dataclass
 
+
 _BASE = "pocket-build"
 
 # CLI script name (the executable or `poetry run` entrypoint)

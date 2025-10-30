@@ -20,11 +20,8 @@ dependencies = [
 
 # 🔍 Linting and static checks
 check = ["lint", "typecheck",  "test"]
-lint = ["lint:isort", "lint:ruff", "lint:compile"]
+lint = ["lint:ruff", "lint:compile"]
 "lint:ruff" = "ruff check ."
-"lint:isort" = ["lint:isort:installed", "lint:isort:script"]
-"lint:isort:installed" = "isort . --check-only --color"
-"lint:isort:script" = {shell = "if [ -f bin/pocket-build.py ]; then isort bin/pocket-build.py --check-only --color; fi" }
 "lint:compile" = ["lint:compile:script"]
 "lint:compile:script" = { shell = "if [ -f bin/pocket-build.py ]; then python -m py_compile bin/pocket-build.py; fi" }
 
@@ -40,10 +37,7 @@ test = ["test:pytest:installed", "test:pytest:script"]
 ]
 
 # 🧹 Automated fixing / formatting
-fix = ["fix:isort", "fix:ruff", "lint:compile", "fix:format"]
-"fix:isort" = ["fix:isort:installed", "fix:isort:script"]
-"fix:isort:installed" = "isort . --color"
-"fix:isort:script" = {shell = "if [ -f bin/pocket-build.py ]; then isort bin/pocket-build.py --color; fi" }
+fix = ["fix:ruff", "lint:compile", "fix:format"]
 "fix:ruff" = "ruff check . --fix"
 "fix:format" = "ruff format ."
 
@@ -64,7 +58,6 @@ dev = [
     "pytest (>=8.4.2,<9.0.0)",
     "poethepoet (>=0.37.0,<0.38.0)",
     "pre-commit (>=4.3.0,<5.0.0)",
-    "isort (>=7.0.0,<8.0.0)",
     "colorama (>=0.4.6,<0.5.0)",
     "pinliner @ git+https://github.com/The-city-not-present/pinliner.git",
     "pytest-dependency (>=0.6.0,<0.7.0)",
@@ -79,7 +72,6 @@ line-length = 88
 fix = true
 
 [tool.ruff.lint]
-#select = ["E", "F", "W"]
 select = ["ALL"]
 
 ignore = [
@@ -99,9 +91,9 @@ ignore = [
   "D401", # First line of docstring should be in imperative mood
   "D415", # First line should end with a period, question mark, or exclamation point
 
-  "FBT003", # Boolean positional value in function call
+  "EXE001", # shebang files must be executable
 
-  "I", # I: isort handles import sortinga
+  "FBT003", # Boolean positional value in function call
 
   "RET504", # Unnecessary assignment to `var` before `return` statement
 
@@ -118,6 +110,12 @@ max-returns = 5
 [tool.ruff.lint.mccabe]
 # Flag errors (`C901`) whenever the complexity level exceeds 15.
 max-complexity = 15
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-first-party = ["pocket_build"]
+force-single-line = false
+lines-after-imports = 2
 
 [tool.ruff.lint.per-file-ignores]
 "bin/**/*.py" = [
@@ -137,16 +135,16 @@ quote-style = "double"
 indent-style = "space"
 
 
-# --- isort: formatter import sorting (and merging, which ruff doesn't do) ---
+# --- isort: kept in case someone runs it by accident in their editor ---
 [tool.isort]
-profile = "black"
-line_length = 88
-multi_line_output = 3
-include_trailing_comma = true
-force_grid_wrap = 0
-combine_as_imports = true
+profile = "black"                # Matches Ruff formatter style
+line_length = 88                 # Keep consistent with Ruff
+combine_as_imports = true        # Same as Ruff’s setting
 known_first_party = ["pocket_build"]
-skip_gitignore = true
+skip_gitignore = true            # Avoid touching ignored files
+force_single_line = false        # Don’t explode imports unnecessarily
+atomic = true                    # Fail instead of partial reordering if conflicts occur
+
 
 # --- Mypy: stricter typing options ---
 [tool.mypy]

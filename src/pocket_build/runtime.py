@@ -4,6 +4,7 @@
 from .types import Runtime
 from .utils import should_use_color
 
+
 current_runtime: Runtime = {
     "log_level": "info",
     "use_color": should_use_color(),

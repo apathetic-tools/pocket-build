@@ -14,6 +14,7 @@ import pytest
 
 from tests.utils import make_trace, runtime_swap
 
+
 TRACE = make_trace("⚡️")
 
 # early jank hook

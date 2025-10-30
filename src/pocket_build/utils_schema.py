@@ -9,6 +9,7 @@ from .constants import DEFAULT_HINT_CUTOFF
 from .utils import plural
 from .utils_types import cast_hint, safe_isinstance, schema_from_typeddict
 
+
 # --- types ----------------------------------------------------------
 
 

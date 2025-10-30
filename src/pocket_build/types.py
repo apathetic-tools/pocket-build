@@ -6,6 +6,7 @@ from typing import Literal, TypedDict
 
 from typing_extensions import NotRequired
 
+
 OriginType = Literal["cli", "config", "plugin", "default", "code", "gitignore", "test"]
 
 

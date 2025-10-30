@@ -10,6 +10,7 @@ import pytest
 import pocket_build.cli as mod_cli
 import pocket_build.meta as mod_meta
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

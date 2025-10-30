@@ -14,6 +14,7 @@ import pocket_build.utils as mod_utils
 import pocket_build.utils_using_runtime as mod_utils_runtime
 from tests.utils import TRACE, patch_everywhere
 
+
 # ---------------------------------------------------------------------------
 # Tests
 # ---------------------------------------------------------------------------

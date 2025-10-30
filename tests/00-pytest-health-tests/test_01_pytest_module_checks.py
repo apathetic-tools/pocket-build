@@ -20,6 +20,7 @@ import pocket_build.meta as mod_meta
 import pocket_build.utils as mod_utils
 from tests.utils import make_trace
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

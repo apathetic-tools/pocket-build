@@ -8,6 +8,7 @@ import pytest
 
 import pocket_build.cli as mod_cli
 
+
 # --- constants --------------------------------------------------------------------
 
 ARGPARSE_ERROR_EXIT_CODE = 2

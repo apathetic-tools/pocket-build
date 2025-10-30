@@ -16,6 +16,7 @@ import pocket_build.types as mod_types
 import pocket_build.utils_using_runtime as mod_utils_runtime
 from tests.utils import make_build_input, patch_everywhere
 
+
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------

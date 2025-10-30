@@ -9,6 +9,7 @@ import pocket_build.build as mod_build
 import pocket_build.runtime as mod_runtime
 from tests.utils import make_resolved
 
+
 # ---------------------------------------------------------------------------
 # Unit tests for individual functions
 # ---------------------------------------------------------------------------
