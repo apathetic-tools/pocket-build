@@ -91,6 +91,8 @@ ignore = [
   "D401", # First line of docstring should be in imperative mood
   "D415", # First line should end with a period, question mark, or exclamation point
 
+  "ERA001", # Found commented-out code (too aggresive)
+
   "EXE001", # shebang files must be executable
 
   "FBT003", # Boolean positional value in function call

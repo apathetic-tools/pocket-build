@@ -1,6 +1,5 @@
 # src/pocket_build/utils_types.py
 
-# ruff: noqa: ERA001
 
 from pathlib import Path
 from types import UnionType
