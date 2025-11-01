@@ -88,6 +88,7 @@ ignore = [
   "D107", # Missing docstring in `__init__`
   "D203", # Force blank between class and docstring
   "D205", # 1 blank line required between summary line and description
+  "D209", # Multi-line docstring closing quotes should be on a separate line
   "D213", # Force first line of docstring """ to not have text
   "D400", # First line should end with a period
   "D401", # First line of docstring should be in imperative mood

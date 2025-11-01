@@ -12,13 +12,14 @@ from .build import run_build
 from .config_types import BuildConfigResolved
 from .constants import DEFAULT_WATCH_INTERVAL
 from .meta import PROGRAM_DISPLAY, PROGRAM_SCRIPT, Metadata
-from .utils_logs import log
+from .utils_logs import get_logger
 from .utils_types import make_includeresolved, make_pathresolved
 
 
 def _collect_included_files(resolved_builds: list[BuildConfigResolved]) -> list[Path]:
     """Flatten all include globs into a unique list of files."""
-    log("trace", "_collect_included_files", __name__, id(_collect_included_files))
+    logger = get_logger()
+    logger.trace("_collect_included_files", __name__, id(_collect_included_files))
     files: set[Path] = set()
 
     for b in resolved_builds:
@@ -52,16 +53,16 @@ def watch_for_changes(
     - Polling interval defaults to 1 second (tune 0.5–2.0 for balance).
     Stops on KeyboardInterrupt.
     """
-    log("trace", "_watch_for_changes", __name__, id(watch_for_changes))
-    log(
-        "info",
-        f"👀 Watching for changes (interval={interval:.2f}s)... Press Ctrl+C to stop.",
+    logger = get_logger()
+    logger.trace("_watch_for_changes", __name__, id(watch_for_changes))
+    logger.info(
+        "👀 Watching for changes (interval=%.2fs)... Press Ctrl+C to stop.", interval
     )
 
     # discover at start
     included_files = _collect_included_files(resolved_builds)
-    log(
-        "trace", "_watch_for_changes", "initial files", [str(f) for f in included_files]
+    logger.trace(
+        "_watch_for_changes", "initial files", [str(f) for f in included_files]
     )
 
     mtimes: dict[Path, float] = {
@@ -77,21 +78,21 @@ def watch_for_changes(
 
     try:
         while True:
-            log("trace", "watch_for_changes", "sleep")
+            logger.trace("watch_for_changes", "sleep")
             time.sleep(interval)
-            log("trace", "watch_for_changes", "loop")
+            logger.trace("watch_for_changes", "loop")
 
             # 🔁 re-expand every tick so new/removed files are tracked
             included_files = _collect_included_files(resolved_builds)
 
             changed: list[Path] = []
             for f in included_files:
-                log("trace", "watch_for_changes", "could be out dir?", f)
+                logger.trace("watch_for_changes", "could be out dir?", f)
                 # skip anything inside any build's output directory
                 if any(f.is_relative_to(out_dir) for out_dir in out_dirs):
                     continue  # ignore output folder
                 old_m = mtimes.get(f)
-                log("trace", "watch_for_changes", "check", f, old_m)
+                logger.trace("watch_for_changes", "check", f, old_m)
                 if not f.exists():
                     if old_m is not None:
                         changed.append(f)
@@ -103,15 +104,14 @@ def watch_for_changes(
                     mtimes[f] = new_m
 
             if changed:
-                log(
-                    "info",
-                    f"\n🔁 Detected {len(changed)} modified file(s). Rebuilding...",
+                logger.info(
+                    "\n🔁 Detected %d modified file(s). Rebuilding...", len(changed)
                 )
                 rebuild_func()
                 # refresh timestamps after rebuild
                 mtimes = {f: f.stat().st_mtime for f in included_files if f.exists()}
     except KeyboardInterrupt:
-        log("info", "\n🛑 Watch stopped.")
+        logger.info("\n🛑 Watch stopped.")
 
 
 def _get_metadata_from_header(script_path: Path) -> tuple[str, str]:
@@ -120,10 +120,11 @@ def _get_metadata_from_header(script_path: Path) -> tuple[str, str]:
     Prefers in-file constants (__version__, __commit__) if present;
     falls back to commented header tags.
     """
+    logger = get_logger()
     version = "unknown"
     commit = "unknown"
 
-    log("trace", "reading commit from header:", script_path)
+    logger.trace("reading commit from header:", script_path)
 
     with suppress(Exception):
         text = script_path.read_text(encoding="utf-8")
@@ -154,13 +155,13 @@ def get_metadata() -> Metadata:
     - Source installed → read pyproject.toml + git
     """
     script_path = Path(__file__)
-
-    log("trace", "get_metadata ran from:", Path(__file__).resolve())
+    logger = get_logger()
+    logger.trace("get_metadata ran from:", Path(__file__).resolve())
 
     # --- Heuristic: standalone script lives outside `src/` ---
     if globals().get("__STANDALONE__", False):
         version, commit = _get_metadata_from_header(script_path)
-        log("trace", f"got standalone version {version} with commit {commit}")
+        logger.trace(f"got standalone version {version} with commit {commit}")
         return Metadata(version, commit)
 
     # --- Modular / source installed case ---
@@ -173,7 +174,7 @@ def get_metadata() -> Metadata:
     root = Path(__file__).resolve().parents[2]
     pyproject = root / "pyproject.toml"
     if pyproject.exists():
-        log("trace", f"trying to read metadata from {pyproject}")
+        logger.trace(f"trying to read metadata from {pyproject}")
         text = pyproject.read_text()
         match = re.search(r'(?m)^\s*version\s*=\s*["\']([^"\']+)["\']', text)
         if match:
@@ -181,7 +182,7 @@ def get_metadata() -> Metadata:
 
     # Try git for commit
     with suppress(Exception):
-        log("trace", "trying to get commit from git")
+        logger.trace("trying to get commit from git")
         result = subprocess.run(
             ["git", "rev-parse", "--short", "HEAD"],  # noqa: S607
             cwd=root,
@@ -191,13 +192,14 @@ def get_metadata() -> Metadata:
         )
         commit = result.stdout.strip()
 
-    log("trace", f"got package version {version} with commit {commit}")
+    logger.trace(f"got package version {version} with commit {commit}")
     return Metadata(version, commit)
 
 
 def run_selftest() -> bool:
     """Run a lightweight functional test of the tool itself."""
-    log("info", "🧪 Running self-test...")
+    logger = get_logger()
+    logger.info("🧪 Running self-test...")
 
     tmp_dir: Path | None = None
     try:
@@ -221,7 +223,7 @@ def run_selftest() -> bool:
             "__meta__": {"cli_root": tmp_dir, "config_root": tmp_dir},
         }
 
-        log("debug", f"[SELFTEST] using temp dir: {tmp_dir}")
+        logger.debug("[SELFTEST] using temp dir: %s", tmp_dir)
 
         # --- Run the build directly ---
         for dry_run in (True, False):
@@ -234,16 +236,26 @@ def run_selftest() -> bool:
             copied.exists()
             and copied.read_text().strip() == f"hello {PROGRAM_DISPLAY}!"
         ):
-            log(
-                "info", f"✅ Self-test passed — {PROGRAM_DISPLAY} is working correctly."
+            logger.info(
+                "✅ Self-test passed — %s is working correctly.", PROGRAM_DISPLAY
             )
             return True
 
-        log("error", "Self-test failed: output file not found or invalid.")
+        logger.error("Self-test failed: output file not found or invalid.")
         return False
 
-    except Exception as e:  # noqa: BLE001
-        log("error", f"Self-test failed: {e}")
+    except PermissionError:
+        logger.error("Self-test failed: insufficient permissions.")  # noqa: TRY400
+        return False
+    except FileNotFoundError:
+        logger.error("Self-test failed: missing file or directory.")  # noqa: TRY400
+        return False
+    except Exception:
+        # Unexpected bug — show traceback and ask for a bug report
+        logger.exception(
+            "Unexpected self-test failure. "
+            "Please report this issue with the following traceback:"
+        )
         return False
 
     finally:

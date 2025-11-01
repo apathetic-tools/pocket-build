@@ -74,7 +74,6 @@ from .utils_logs import (
     LEVEL_ORDER,
     RESET,
     colorize,
-    log,
 )
 from .utils_types import (
     make_includeresolved,
@@ -138,7 +137,6 @@ __all__ = [  # noqa: RUF022
     "is_excluded_raw",
     "is_excluded",
     "load_jsonc",
-    "log",
     "make_includeresolved",
     "make_pathresolved",
     "safe_isinstance",

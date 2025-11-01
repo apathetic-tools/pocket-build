@@ -11,8 +11,7 @@ import pytest
 import pocket_build.config_resolve as mod_resolve
 import pocket_build.config_types as mod_types
 import pocket_build.runtime as mod_runtime
-import pocket_build.utils_using_runtime as mod_utils_runtime
-from tests.utils import make_build_input, patch_everywhere
+from tests.utils import make_build_input
 
 
 # ---------------------------------------------------------------------------
@@ -277,79 +276,58 @@ def test_resolve_build_config_preserves_trailing_slash(tmp_path: Path) -> None:
 def test_resolve_build_config_warns_for_missing_include_root(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Warn if include root directory does not exist and pattern is not a glob."""
     # --- setup ---
     missing_root = tmp_path / "nonexistent_root"
     raw = make_build_input(include=[f"{missing_root}/src"])
     args = _args()
-    captured: list[tuple[str, str]] = []
-
-    # --- stubs ---
-    def fake_log(level: str, *values: object, **_: object) -> None:
-        captured.append((level, " ".join(map(str, values))))
 
     # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
     mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
-    warnings = [msg for level, msg in captured if level == "warning"]
-    assert any("Include root does not exist" in msg for msg in warnings), (
-        f"Expected warning about missing include root, got: {warnings}"
-    )
+    out = capsys.readouterr().err.lower()
+    assert "Include root does not exist".lower() in out
 
 
 def test_resolve_build_config_warns_for_missing_absolute_include(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Warn if absolute include path does not exist and pattern is not a glob."""
     # --- setup ---
     abs_missing = tmp_path / "abs_missing_dir"
     raw = make_build_input(include=[str(abs_missing)])
     args = _args()
-    captured: list[tuple[str, str]] = []
-
-    # --- stubs ---
-    def fake_log(level: str, *values: object, **_: object) -> None:
-        captured.append((level, " ".join(map(str, values))))
 
     # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
     mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
-    warnings = [msg for level, msg in captured if level == "warning"]
-    assert any("Include path does not exist" in msg for msg in warnings), (
-        f"Expected warning about missing absolute include path, got: {warnings}"
-    )
+    out = capsys.readouterr().err.lower()
+    assert "Include path does not exist".lower() in out
 
 
 def test_resolve_build_config_warns_for_missing_relative_include(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Warn if relative include path does not exist under an existing root."""
     # --- setup ---
     existing_root = tmp_path
     raw = make_build_input(include=["missing_rel_dir"])
     args = _args()
-    captured: list[tuple[str, str]] = []
-
-    # --- stubs ---
-    def fake_log(level: str, *values: object, **_: object) -> None:
-        captured.append((level, " ".join(map(str, values))))
 
     # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
     mod_resolve.resolve_build_config(raw, args, existing_root, tmp_path)
 
     # --- validate ---
-    warnings = [msg for level, msg in captured if level == "warning"]
-    assert any("Include path does not exist" in msg for msg in warnings), (
-        f"Expected warning about missing relative include path, got: {warnings}"
-    )
+    out = capsys.readouterr().err.lower()
+    assert "Include path does not exist".lower() in out

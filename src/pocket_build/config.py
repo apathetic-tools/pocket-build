@@ -15,9 +15,8 @@ from .config_validate import validate_config
 from .meta import (
     PROGRAM_SCRIPT,
 )
-from .runtime import current_runtime
 from .utils import determine_log_level, load_jsonc, plural, remove_path_in_error_message
-from .utils_logs import log
+from .utils_logs import get_logger, log_dynamic, set_log_level
 from .utils_schema import ValidationSummary
 from .utils_types import cast_hint, schema_from_typeddict
 
@@ -56,6 +55,7 @@ def find_config(
     Returns the first matching path, or None if no config was found.
     """
     # NOTE: We only have early no-config Log-Level
+    logger = get_logger()
 
     # --- 1. Explicit config path ---
     if getattr(args, "config", None):
@@ -79,15 +79,14 @@ def find_config(
 
     if not found:
         # Expected absence — soft failure (continue)
-        log(missing_level, f"No config file found in {cwd}")
+        log_dynamic(missing_level, f"No config file found in {cwd}")
         return None
 
     # --- 3. Handle multiple matches ---
     if len(found) > 1:
         names = ", ".join(p.name for p in found)
-        log(
-            "warning",
-            f"Multiple config files detected ({names}); using {found[0].name}.",
+        logger.warning(
+            "Multiple config files detected (%s); using %s.", names, found[0].name
         )
     return found[0]
 
@@ -109,6 +108,7 @@ def load_config(config_path: Path) -> dict[str, Any] | list[Any] | None:
 
     """
     # NOTE: We only have early no-config Log-Level
+    logger = get_logger()
 
     # --- Python config ---
     if config_path.suffix == ".py":
@@ -125,8 +125,7 @@ def load_config(config_path: Path) -> dict[str, Any] | list[Any] | None:
         try:
             source = config_path.read_text(encoding="utf-8")
             exec(compile(source, str(config_path), "exec"), config_globals)  # noqa: S102
-            log(
-                "trace",
+            logger.trace(
                 f"[EXEC] globals after exec: {list(config_globals.keys())}",
             )
         except Exception as e:
@@ -203,13 +202,14 @@ def _parse_case_4_dict_multi_builds(
     build_val: Any,
 ) -> dict[str, Any]:
     # --- Case 4: dict with "build(s)" key → root with multi-builds ---
+    logger = get_logger()
     root = dict(raw_config)  # preserve all user keys
 
     # we might have a "builds" key that is a list, then nothing to do
 
     # If user used "build" with a list → coerce, warn
     if isinstance(build_val, list) and "builds" not in raw_config:
-        log("warning", "Config key 'build' was a list — treating as 'builds'.")
+        logger.warning("Config key 'build' was a list — treating as 'builds'.")
         root["builds"] = build_val
         root.pop("build", None)
 
@@ -222,11 +222,12 @@ def _parse_case_5_dict_single_build(
     builds_val: Any,
 ) -> dict[str, Any]:
     # --- Case 5: dict with "build(s)" key → root with single-build ---
+    logger = get_logger()
     root = dict(raw_config)  # preserve all user keys
 
     # If user used "builds" with a dict → coerce, warn
     if isinstance(builds_val, dict):
-        log("warning", "Config key 'builds' was a dict — treating as 'build'.")
+        logger.warning("Config key 'builds' was a dict — treating as 'build'.")
         root["builds"] = [builds_val]
         # keep the 'builds' key — it's now properly normalized
     else:
@@ -351,6 +352,7 @@ def _validation_summary(
     config_path: Path,
 ) -> None:
     """Pretty-print a validation summary using the standard log() interface."""
+    logger = get_logger()
     mode = "strict mode" if summary.strict else "lenient mode"
 
     # --- Build concise counts line ---
@@ -370,34 +372,32 @@ def _validation_summary(
 
     # --- Header (single icon) ---
     if not summary.valid:
-        log(
-            "error",
-            f"Failed to validate configuration file {config_path.name} ({mode})."
-            + counts_msg,
+        logger.error(
+            "Failed to validate configuration file %s (%s).%s",
+            config_path.name,
+            mode,
+            counts_msg,
         )
     elif counts:
-        log(
-            "warning",
-            f"Validated configuration file {config_path.name} ({mode}) with warnings."
-            + counts_msg,
+        logger.warning(
+            "Validated configuration file  %s (%s) with warnings.%s",
+            config_path.name,
+            mode,
+            counts_msg,
         )
     else:
-        log("debug", f"Validated {config_path.name} ({mode}) successfully.")
+        logger.debug("Validated  %s (%s) successfully.", config_path.name, mode)
 
     # --- Detailed sections ---
     if summary.errors:
-        log("error", "\nErrors:\n  • " + "\n  • ".join(summary.errors))
+        msg_summary = "\n  • ".join(summary.errors)
+        logger.error("\nErrors:\n  • %s", msg_summary)
     if summary.strict_warnings:
-        log(
-            "error",
-            "\nStrict warnings (treated as errors):\n"
-            "  • " + "\n  • ".join(summary.strict_warnings),
-        )
+        msg_summary = "\n  • ".join(summary.strict_warnings)
+        logger.error("\nStrict warnings (treated as errors):\n  • %s", msg_summary)
     if summary.warnings:
-        log(
-            "warning",
-            "\nWarnings (non-fatal):\n  • " + "\n  • ".join(summary.warnings),
-        )
+        msg_summary = "\n  • ".join(summary.strict_warnings)
+        logger.warning("\nWarnings (non-fatal):\n  • %s", msg_summary)
 
 
 def load_and_validate_config(
@@ -413,10 +413,11 @@ def load_and_validate_config(
         or None if no config was found.
 
     """
+    logger = get_logger()
     # warn if cwd doesn't exist, edge case. We might still be able to run
     cwd = Path.cwd().resolve()
     if not cwd.exists():
-        log("warning", f"Working directory does not exist: {cwd}")
+        logger.warning("Working directory does not exist: %s", cwd)
 
     # --- Find config file ---
     cwd = Path.cwd().resolve()
@@ -438,7 +439,7 @@ def load_and_validate_config(
     if isinstance(raw_config, dict):
         raw_log_level = raw_config.get("log_level")
         if isinstance(raw_log_level, str) and raw_log_level:
-            current_runtime["log_level"] = determine_log_level(args, raw_log_level)
+            set_log_level(determine_log_level(args, raw_log_level))
 
     # --- Parse structure into final form without types ---
     try:

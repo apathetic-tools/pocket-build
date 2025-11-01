@@ -1,60 +1,57 @@
 # tests/test_cli.py
 """Tests for package.cli (package and standalone versions)."""
 
+import logging
+
 import pytest
 
 import pocket_build.cli as mod_cli
 import pocket_build.utils as mod_utils
-import pocket_build.utils_using_runtime as mod_utils_runtime
+import pocket_build.utils_logs as mod_logs
 from tests.utils import patch_everywhere
 
 
-def test_main_handles_controlled_exception(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_handles_controlled_exception(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     """Simulate a controlled exception (e.g. ValueError) and verify clean handling."""
-    # --- setup ---
-    called: dict[str, bool] = {}
 
     # --- stubs ---
     def fake_parser() -> object:
         xmsg = "mocked config failure"
         raise ValueError(xmsg)
 
-    def fake_log(*_a: object, **_k: object) -> None:
-        called.setdefault("log", True)
-
     # --- patch and execute ---
     patch_everywhere(monkeypatch, mod_cli, "_setup_parser", fake_parser)
-    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
     code = mod_cli.main([])
 
     # --- verify ---
     assert code == 1
-    assert "log" in called  # ensure log() was called for controlled exception
+    # ensure log() was called for controlled exception
+    out = capsys.readouterr().err.lower()
+    assert "mocked config failure".lower() in out
 
 
-def test_main_handles_unexpected_exception(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_handles_unexpected_exception(
+    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
     """Simulate an unexpected internal error and ensure it logs as critical."""
-    # --- setup ---
-    called: dict[str, str] = {}
 
     # --- stubs ---
     def fake_parser() -> object:
         xmsg = "boom!"
         raise OSError(xmsg)  # not one of the controlled types
 
-    def fake_log(level: str, msg: str, **_kw: object) -> None:
-        called["level"] = level
-        called["msg"] = msg
-
     # --- patch and execute ---
     patch_everywhere(monkeypatch, mod_cli, "_setup_parser", fake_parser)
-    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
     code = mod_cli.main([])
 
     # --- verify ---
     assert code == 1
-    assert called["level"] == "critical"
-    assert "Unexpected internal error" in called["msg"]
+    out = capsys.readouterr().err.lower()
+    assert "Unexpected internal error".lower() in out
 
 
 def test_main_fallbacks_to_safe_log(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -67,18 +64,34 @@ def test_main_fallbacks_to_safe_log(monkeypatch: pytest.MonkeyPatch) -> None:
         xmsg = "simulated fail"
         raise ValueError(xmsg)
 
-    def bad_log(*_a: object, **_k: object) -> None:
-        xmsg = "log fail"
-        raise RuntimeError(xmsg)
-
     def fake_safe_log(msg: str) -> None:
         called["msg"] = msg
 
+    # --- force the internal logger to explode ---
+    class BoomHandler(logging.Handler):
+        def emit(self, record: logging.LogRecord) -> None:  # noqa: ARG002
+            xmsg = "handler exploded"
+            raise RuntimeError(xmsg)
+
     # --- patch and execute ---
     patch_everywhere(monkeypatch, mod_cli, "_setup_parser", fake_parser)
-    patch_everywhere(monkeypatch, mod_utils_runtime, "log", bad_log)
     patch_everywhere(monkeypatch, mod_utils, "safe_log", fake_safe_log)
-    code = mod_cli.main([])
+
+    # Backup logger state
+    logger = mod_logs.get_logger()
+    old_handlers = list(logger.handlers)
+    old_level = logger.level
+
+    try:
+        # Replace handlers with the exploding one
+        logger.handlers = [BoomHandler()]
+        logger.setLevel(logging.DEBUG)
+
+        code = mod_cli.main([])
+    finally:
+        # Always restore to avoid affecting other tests
+        logger.handlers = old_handlers
+        logger.setLevel(old_level)
 
     # --- verify ---
     assert code == 1

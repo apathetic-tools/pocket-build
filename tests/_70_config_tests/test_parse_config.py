@@ -1,13 +1,11 @@
 # tests/test_config.py
 """Tests for package.config (package and standalone versions)."""
 
-from typing import Any, TextIO
+from typing import Any
 
 import pytest
 
 import pocket_build.config as mod_config
-import pocket_build.utils_using_runtime as mod_utils_runtime
-from tests.utils import patch_everywhere
 
 
 def test_parse_config_builds_accepts_list_and_single_object() -> None:
@@ -78,64 +76,36 @@ def test_parse_config_watch_interval_hoisting() -> None:
 
 
 def test_parse_config_coerces_build_list_to_builds(
-    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Dict with 'build' as a list should coerce to 'builds' with a warning."""
     # --- setup ---
     data: dict[str, Any] = {"build": [{"include": ["src"]}, {"include": ["assets"]}]}
-    logged: list[tuple[str, str]] = []
-
-    # --- stubs ---
-    def fake_log(
-        level: str,
-        *values: object,
-        _sep: str = " ",
-        _end: str = "\n",
-        _file: TextIO | None = None,
-        _flush: bool = False,
-        _prefix: str | None = None,
-    ) -> None:
-        msg = _sep.join(str(v) for v in values)
-        logged.append((level, msg))
 
     # --- patch and execute ---
     # Patch log() to capture warnings instead of printing
-    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
     result = mod_config.parse_config(data)
 
     # --- verify ---
     assert result == {"builds": [{"include": ["src"]}, {"include": ["assets"]}]}
-    assert any("Config key 'build' was a list" in msg for _, msg in logged)
+    out = capsys.readouterr().err.lower()
+    assert "Config key 'build' was a list".lower() in out
 
 
 def test_parse_config_coerces_builds_dict_to_build(
-    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Dict with 'builds' as a dict should coerce to 'build' list with a warning."""
     # --- setup ---
     data: dict[str, Any] = {"builds": {"include": ["src"], "out": "dist"}}
-    logged: list[tuple[str, str]] = []
-
-    # --- stubs ---
-    def fake_log(
-        level: str,
-        *values: object,
-        sep: str = " ",
-        _end: str = "\n",
-        _file: TextIO | None = None,
-        _flush: bool = False,
-        _prefix: str | None = None,
-    ) -> None:
-        msg = sep.join(str(v) for v in values)
-        logged.append((level, msg))
 
     # --- patch and execute ---
-    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
     result = mod_config.parse_config(data)
 
     # --- verify ---
     assert result == {"builds": [{"include": ["src"], "out": "dist"}]}
-    assert any("Config key 'builds' was a dict" in msg for _, msg in logged)
+    out = capsys.readouterr().err.lower()
+    assert "Config key 'builds' was a dict".lower() in out
 
 
 def test_parse_config_does_not_coerce_when_both_keys_present() -> None:
@@ -155,33 +125,19 @@ def test_parse_config_does_not_coerce_when_both_keys_present() -> None:
 
 
 def test_parse_config_accepts_explicit_builds_list_no_warning(
-    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Explicit 'builds' list should pass through without coercion or warning."""
     # --- setup ---
     data: dict[str, Any] = {"builds": [{"include": ["src"]}, {"include": ["lib"]}]}
-    logged: list[tuple[str, str]] = []
-
-    # --- stubs ---
-    def fake_log(
-        level: str,
-        *values: object,
-        sep: str = " ",
-        _end: str = "\n",
-        _file: TextIO | None = None,
-        _flush: bool = False,
-        _prefix: str | None = None,
-    ) -> None:
-        msg = sep.join(str(v) for v in values)
-        logged.append((level, msg))
 
     # --- patch and execute ---
-    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
     result = mod_config.parse_config(data)
 
     # --- verify ---
     assert result == data
-    assert not logged
+    out = capsys.readouterr().err.lower()
+    assert not out
 
 
 def test_parse_config_rejects_invalid_root_type() -> None:
@@ -196,7 +152,7 @@ def test_parse_config_rejects_invalid_root_type() -> None:
 
 
 def test_parse_config_build_list_does_not_warn_when_builds_also_present(
-    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """If both 'build' and 'builds' exist,
     even if 'build' is a list, do not warn or coerce.
@@ -206,28 +162,14 @@ def test_parse_config_build_list_does_not_warn_when_builds_also_present(
         "build": [{"include": ["src"]}],
         "builds": [{"include": ["lib"]}],
     }
-    logged: list[tuple[str, str]] = []
-
-    # --- stubs ---
-    def fake_log(
-        level: str,
-        *values: object,
-        sep: str = " ",
-        _end: str = "\n",
-        _file: TextIO | None = None,
-        _flush: bool = False,
-        _prefix: str | None = None,
-    ) -> None:
-        msg = sep.join(str(v) for v in values)
-        logged.append((level, msg))
 
     # --- patch and execute ---
-    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
     result = mod_config.parse_config(data)
 
     # --- verify ---
     assert result == data
-    assert not logged
+    out = capsys.readouterr().err.lower()
+    assert not out
 
 
 def test_parse_config_build_dict_with_extra_root_fields() -> None:
@@ -300,7 +242,7 @@ def test_parse_config_list_of_dicts_hoists_first_watch_interval() -> None:
 
 
 def test_parse_config_prefers_builds_when_both_are_dicts(
-    monkeypatch: pytest.MonkeyPatch,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """If both 'builds' and 'build' are dicts,
     parser should use 'builds' and not warn.
@@ -310,23 +252,8 @@ def test_parse_config_prefers_builds_when_both_are_dicts(
         "builds": {"include": ["src"]},
         "build": {"include": ["lib"]},
     }
-    logged: list[tuple[str, str]] = []
-
-    # --- stubs ---
-    def fake_log(
-        level: str,
-        *values: object,
-        sep: str = " ",
-        _end: str = "\n",
-        _file: TextIO | None = None,
-        _flush: bool = False,
-        _prefix: str | None = None,
-    ) -> None:
-        msg = sep.join(str(v) for v in values)
-        logged.append((level, msg))
 
     # --- patch and execute ---
-    patch_everywhere(monkeypatch, mod_utils_runtime, "log", fake_log)
     result = mod_config.parse_config(data)
 
     # --- verify ---
@@ -337,7 +264,8 @@ def test_parse_config_prefers_builds_when_both_are_dicts(
     assert "build" in result
     assert result["build"] == {"include": ["lib"]}
     # warning was emitted for coercing 'builds' dict → list
-    assert any("Config key 'builds' was a dict" in msg for _, msg in logged)
+    out = capsys.readouterr().err.lower()
+    assert "Config key 'builds' was a dict".lower() in out
 
 
 def test_parse_config_rejects_mixed_type_list() -> None:

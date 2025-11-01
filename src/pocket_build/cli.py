@@ -2,7 +2,6 @@
 
 import argparse
 import sys
-import traceback
 from pathlib import Path
 
 from .actions import get_metadata, run_selftest, watch_for_changes
@@ -24,7 +23,7 @@ from .meta import (
 )
 from .runtime import current_runtime
 from .utils import determine_log_level, safe_log, should_use_color
-from .utils_logs import LEVEL_ORDER, log
+from .utils_logs import LEVEL_ORDER, get_logger
 from .utils_types import cast_hint
 
 
@@ -160,6 +159,7 @@ def _normalize_positional_args(
     parser: argparse.ArgumentParser,
 ) -> None:
     """Normalize positional arguments into explicit include/out flags."""
+    logger = get_logger()
     includes: list[str] = getattr(args, "positional_include", [])
     out_pos: str | None = getattr(args, "positional_out", None)
 
@@ -169,8 +169,7 @@ def _normalize_positional_args(
 
     # If --out provided, treat all positionals as includes
     elif getattr(args, "out", None) and out_pos:
-        log(
-            "trace",
+        logger.trace(
             "Interpreting all positionals as includes since --out was provided.",
         )
         includes.append(out_pos)
@@ -201,6 +200,8 @@ def _normalize_positional_args(
 
 
 def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915
+    logger = get_logger()
+
     try:
         parser = _setup_parser()
         args = parser.parse_args(argv)
@@ -212,7 +213,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
                 "use_color": getattr(args, "use_color", should_use_color()),
             }
         )
-        log("trace", f"[BOOT] Runtime initialized: {current_runtime}")
+        logger.trace(f"[BOOT] Runtime initialized: {current_runtime}")
 
         # You can now safely use log() anywhere below this line.
 
@@ -222,16 +223,15 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
             standalone = (
                 " [standalone]" if globals().get("__STANDALONE__", False) else ""
             )
-            log("info", f"{PROGRAM_DISPLAY} {meta.version} ({meta.commit}){standalone}")
+            logger.info(
+                "%s %s (%s)%s", PROGRAM_DISPLAY, meta.version, meta.commit, standalone
+            )
             return 0
 
         # --- Python version check ---
         if sys.version_info < (3, 10):  # noqa: UP036
             # error before log-level exists
-            log(
-                "error",
-                f"{PROGRAM_DISPLAY} requires Python 3.10 or newer.",
-            )
+            logger.error("%s requires Python 3.10 or newer.", {PROGRAM_DISPLAY})
             return 1
 
         # --- Load configuration ---
@@ -242,7 +242,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
             config_path, root_cfg = config_result
 
         # NOTE: log-level now fully set from config file
-        log("trace", f"[CONFIG] Runtime re-resolved from config: {current_runtime}")
+        logger.trace(f"[CONFIG] Runtime re-resolved from config: {current_runtime}")
 
         # --- Self-test mode ---
         if getattr(args, "selftest", None):
@@ -255,16 +255,15 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
 
         # --- Configless early bailout ---
         if root_cfg is None and not can_run_configless(args):
-            log(
-                "error",
-                f"No build config found (.{PROGRAM_SCRIPT}.json)"
-                " and no includes provided.",
+            logger.error(
+                "No build config found (.%s.json) and no includes provided.",
+                PROGRAM_SCRIPT,
             )
             return 1
 
         # --- CLI-only mode fallback ---
         if root_cfg is None:
-            log("info", "No config file found — using CLI-only mode.")
+            logger.info("No config file found — using CLI-only mode.")
             # Create minimal pseudo-config when running without a file for args merging
             root_cfg = cast_hint(RootConfig, {"builds": [{}]})
 
@@ -278,24 +277,23 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
             and not getattr(args, "add_include", None)
             and not getattr(args, "include", None)
         ):
-            log(
-                "warning",
+            logger.warning(
                 "No include patterns found.\n"
                 "   Use 'include' in your config or pass --include / --add-include.",
             )
 
         # --- Dry-run notice ---
         if getattr(args, "dry_run", None):
-            log("info", "🧪 Dry-run mode: no files will be written or deleted.\n")
+            logger.info("🧪 Dry-run mode: no files will be written or deleted.\n")
 
         # --- Config summary ---
         if config_path:
-            log("info", f"🔧 Using config: {config_path.name}")
+            logger.info("🔧 Using config: %s", config_path.name)
         else:
-            log("info", "🔧 Running in CLI-only mode (no config file).")
-        log("info", f"📁 Config root: {config_dir}")
-        log("info", f"📂 Invoked from: {cwd}")
-        log("info", f"🔧 Running {len(resolved_builds)} build(s)\n")
+            logger.info("🔧 Running in CLI-only mode (no config file).")
+        logger.info("📁 Config root: %s", config_dir)
+        logger.info("📂 Invoked from: %s", cwd)
+        logger.info("🔧 Running %d build(s)\n", len(resolved_builds))
 
         # --- Watch or run ---
         watch_enabled = getattr(args, "watch", None) is not None or (
@@ -322,7 +320,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
         silent = getattr(e, "silent", False)
         if not silent:
             try:
-                log("error", str(e))
+                logger.error(str(e))  # noqa: TRY400
             except Exception:  # noqa: BLE001
                 safe_log(f"[FATAL] Logging failed while reporting: {e}")
         return getattr(e, "code", 1)
@@ -330,10 +328,13 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
     except Exception as e:  # noqa: BLE001
         # unexpected internal error
         try:
-            log("critical", f"Unexpected internal error: {e}")
+            if current_runtime.get("log_level") in {"debug", "trace"}:
+                # Show traceback only in verbose/debug modes
+                logger.exception("Unexpected internal error:")
+            else:
+                # Just a one-line summary for normal users
+                logger.critical("Unexpected internal error: %s", e)
         except Exception:  # noqa: BLE001
             safe_log(f"[FATAL] Logging failed while reporting: {e}")
-        # optionally print traceback in debug/trace mode only
-        if current_runtime.get("log_level") in {"debug", "trace"}:
-            traceback.print_exc()
+
         return getattr(e, "code", 1)

@@ -23,9 +23,8 @@ from .constants import (
     DEFAULT_RESPECT_GITIGNORE,
     DEFAULT_WATCH_INTERVAL,
 )
-from .runtime import current_runtime
 from .utils import determine_log_level
-from .utils_logs import log
+from .utils_logs import get_logger, set_log_level
 from .utils_types import cast_hint, make_includeresolved, make_pathresolved
 from .utils_using_runtime import has_glob_chars
 
@@ -58,6 +57,7 @@ def _normalize_path_with_root(
       * `/abs/path`    → root=/abs/path, rel="."   (treat as literal)
     - If relative → root = context_root, path = raw (preserve string form)
     """
+    logger = get_logger()
     raw_path = Path(raw)
     rel: Path | str
 
@@ -79,7 +79,7 @@ def _normalize_path_with_root(
         # preserve literal string if user provided one
         rel = raw if isinstance(raw, str) else Path(raw)
 
-    log("trace", f"Normalized: raw={raw!r} → root={root}, rel={rel}")
+    logger.trace(f"Normalized: raw={raw!r} → root={root}, rel={rel}")
     return root, rel
 
 
@@ -95,6 +95,7 @@ def _resolve_includes(
     config_dir: Path,
     cwd: Path,
 ) -> list[IncludeResolved]:
+    logger = get_logger()
     includes: list[IncludeResolved] = []
 
     if getattr(args, "include", None):
@@ -126,19 +127,20 @@ def _resolve_includes(
 
             # Check root existence
             if not i["root"].exists():
-                log(
-                    "warning",
-                    f"Include root does not exist: {i['root']} (origin: {i['origin']})",
+                logger.warning(
+                    "Include root does not exist: %s (origin: %s)",
+                    i["root"],
+                    i["origin"],
                 )
 
             # Check path existence
             if not has_glob_chars(str(i["path"])):
                 full_path = i["root"] / i["path"]  # absolute paths override root
                 if not full_path.exists():
-                    log(
-                        "warning",
-                        f"Include path does not exist: {full_path}"
-                        f" (origin: {i['origin']})",
+                    logger.warning(
+                        "Include path does not exist: %s (origin: %s)",
+                        full_path,
+                        i["origin"],
                     )
 
     return unique_inc
@@ -152,9 +154,7 @@ def _resolve_excludes(
     cwd: Path,
     root_cfg: RootConfig | None,
 ) -> list[PathResolved]:
-    # ------------------------------
-    # Excludes
-    # ------------------------------
+    logger = get_logger()
     excludes: list[PathResolved] = []
 
     def _add_excludes(paths: list[str], context: Path, origin: OriginType) -> None:
@@ -192,8 +192,7 @@ def _resolve_excludes(
         gitignore_path = config_dir / ".gitignore"
         patterns = _load_gitignore_patterns(gitignore_path)
         if patterns:
-            log(
-                "trace",
+            logger.trace(
                 f"Adding {len(patterns)} .gitignore patterns from {gitignore_path}",
             )
         _add_excludes(patterns, config_dir, "gitignore")
@@ -306,6 +305,7 @@ def resolve_config(
     cwd: Path,
 ) -> RootConfigResolved:
     """Fully resolve a loaded RootConfig into a ready-to-run RootConfigResolved."""
+    logger = get_logger()
     root_cfg = cast_hint(RootConfig, dict(root_input))
 
     # ------------------------------
@@ -318,9 +318,8 @@ def resolve_config(
         try:
             watch_interval = float(env_watch)
         except ValueError:
-            log(
-                "warning",
-                f"Invalid {DEFAULT_ENV_WATCH_INTERVAL}={env_watch!r}, using default.",
+            logger.warning(
+                "Invalid %s=%r, using default.", DEFAULT_ENV_WATCH_INTERVAL, env_watch
             )
             watch_interval = DEFAULT_WATCH_INTERVAL
     else:
@@ -337,7 +336,7 @@ def resolve_config(
         log_level = env_log  # environment wins over config if CLI missing
 
     # --- sync runtime ---
-    current_runtime["log_level"] = log_level
+    set_log_level(log_level)
 
     # ------------------------------
     # Resolve builds

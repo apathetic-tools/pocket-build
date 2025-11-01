@@ -2,6 +2,8 @@
 
 import logging
 import sys
+from collections.abc import Generator
+from contextlib import contextmanager
 from typing import Any, TextIO, cast
 
 from .meta import PROGRAM_PACKAGE
@@ -19,33 +21,44 @@ RED = "\033[91m"  # or \033[31m # or background \033[41m
 GREEN = "\033[92m"  # or \033[32m
 GRAY = "\033[90m"
 
+
+LEVEL_ORDER = [
+    "trace",
+    "debug",
+    "info",
+    "warning",
+    "error",
+    "critical",
+    "silent",  # disables all logging
+]
+
+
 TAG_STYLES = {
-    "TRACE": (CYAN, "[TRACE]"),
+    "TRACE": (GRAY, "[TRACE]"),
     "DEBUG": (CYAN, "[DEBUG]"),
     "WARNING": ("", "⚠️ "),
     "ERROR": ("", "❌ "),
     "CRITICAL": ("", "💥 "),
 }
 
+# sanity check
+assert set(TAG_STYLES.keys()) <= {lvl.upper() for lvl in LEVEL_ORDER}, (  # noqa: S101
+    "TAG_STYLES contains unknown levels"
+)
+
 
 # --- Custom TRACE level ------------------------------------------------------
 
 
+class LoggerWithTrace(logging.Logger):
+    def trace(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        if self.isEnabledFor(TRACE_LEVEL):
+            self._log(TRACE_LEVEL, msg, args, **kwargs)
+
+
 TRACE_LEVEL = logging.DEBUG - 5
 logging.addLevelName(TRACE_LEVEL, "TRACE")
-
-
-def trace(
-    self: logging.Logger,
-    message: str,
-    *args: Any,
-    **kwargs: Any,
-) -> None:
-    if self.isEnabledFor(TRACE_LEVEL):
-        self._log(TRACE_LEVEL, message, args, **kwargs)
-
-
-logging.Logger.trace = trace  # type: ignore[attr-defined]
+logging.setLoggerClass(LoggerWithTrace)
 
 
 # --- Tag formatter ---------------------------------------------------------
@@ -87,7 +100,7 @@ class DualStreamHandler(logging.StreamHandler[TextIO]):
 # --- Logger initialization ---------------------------------------------------
 
 
-_logger = logging.getLogger(PROGRAM_PACKAGE)
+_logger = cast("LoggerWithTrace", logging.getLogger(PROGRAM_PACKAGE))
 
 
 def _ensure_logger_initialized() -> None:
@@ -105,6 +118,7 @@ def _ensure_logger_initialized() -> None:
 
 def _set_logger_level_from_runtime() -> None:
     """Sync the internal logger level with runtime/env settings."""
+    _ensure_logger_initialized()
     level_name = current_runtime.get("log_level")
 
     if level_name is None:  # pyright: ignore[reportUnnecessaryComparison]
@@ -120,91 +134,22 @@ def _set_logger_level_from_runtime() -> None:
         "WARNING": logging.WARNING,
         "ERROR": logging.ERROR,
         "CRITICAL": logging.CRITICAL,
-        "SILENT": 1000,  # effectively disables everything
+        "SILENT": logging.CRITICAL + 1,  # built-in silent equivalent
     }
     _logger.setLevel(level_map.get(level_name, logging.INFO))
 
 
-def log(
-    level: str,
-    *values: object,
-    sep: str = " ",
-    end: str = "\n",
-    # file: TextIO | None = None,
-    # flush: bool = False,
-    # prefix: str | None = None,
-) -> None:
-    """Unified logging entry point using Python's logging system."""
+def get_logger() -> LoggerWithTrace:
+    """Return the configured pocket_build logger."""
     _ensure_logger_initialized()
     _set_logger_level_from_runtime()
-
-    message = sep.join(map(str, values))
-    if end != "\n":  # logging strips newlines automatically; preserve optional behavior
-        message = message + end
-
-    try:
-        level_name = level.lower()
-        if level_name == "trace":
-            _logger.trace(message)  # type: ignore[attr-defined]
-        elif level_name == "debug":
-            _logger.debug(message)
-        elif level_name == "info":
-            _logger.info(message)
-        elif level_name == "warning":
-            _logger.warning(message)
-        elif level_name == "error":
-            _logger.error(message)
-        elif level_name == "critical":
-            _logger.critical(message)
-        elif level_name == "silent":
-            pass  # do nothing
-        else:
-            safe_log(f"[LOGGER ERROR] ❌ Unknown log level: {level!r}")
-    except Exception as e:  # noqa: BLE001
-        safe_log(f"[LOGGER FAILURE] {e}")
-
-
-# --- OLD -------------------------------------------------------------
-
-
-LEVEL_ORDER = [
-    "trace",
-    "debug",
-    "info",
-    "warning",
-    "error",
-    "critical",
-    "silent",  # disables all logging
-]
-
-_LOG_PREFIXES: dict[str, str | None] = {
-    "trace": "[TRACE] ",
-    "debug": "[DEBUG] ",
-    "info": None,
-    "warning": "⚠️ ",
-    "error": "❌ ",
-    "critical": "💥 ",
-}
-_LOG_PREFIXES_COLOR: dict[str, str | None] = {
-    "trace": YELLOW,
-    "debug": GREEN,
-    "info": None,
-    "warning": None,
-    "error": None,
-    "critical": None,
-}
-_LOG_MSG_COLOR: dict[str, str | None] = {
-    "trace": None,
-    "debug": None,
-    "info": None,
-    "warning": None,
-    "error": None,
-    "critical": None,
-}
+    return _logger
 
 
 def get_log_level() -> str:
-    """Return the current log level, or 'error' if undefined or invalid."""
+    """Return the current log level, or 'error' if undefined or invalid.
+
+    Note: Not for internal use to utils_logs functions."""
     level = cast("str | None", current_runtime.get("log_level"))  # type: ignore[redundant-cast]
     if level is None:
         safe_log("[LOGGER ERROR] ❌ Runtime does not specify log_level")
@@ -217,64 +162,34 @@ def get_log_level() -> str:
     return level
 
 
-# def _should_log(level: str, current: str) -> bool:
-#     """Return True if a message at `level` should be emitted under
-#     the current log level `current`. Never logs if either level is 'silent'.
-#     """
-#     if level == "silent" or current == "silent":
-#         return False
+def set_log_level(level: str) -> None:
+    """Set the logging level.
 
-#     if level not in LEVEL_ORDER:
-#         safe_log(f"[LOGGER ERROR] ❌ Unknown log level: {level!r}")
-#         return False
-
-#     return LEVEL_ORDER.index(level) >= LEVEL_ORDER.index(current)
+    Note: Not for internal use to utils_logs functions."""
+    current_runtime["log_level"] = level
+    _set_logger_level_from_runtime()
 
 
-# def _is_error_level(level: str) -> bool:
-#     """Return True if this log level represents a problem or warning."""
-#     return level in {"warning", "error", "critical"}
+@contextmanager
+def temporary_log_level(level: str) -> Generator[None, None, None]:
+    prev = current_runtime["log_level"]
+    current_runtime["log_level"] = level
+    _set_logger_level_from_runtime()
+    try:
+        yield
+    finally:
+        current_runtime["log_level"] = prev
+        _set_logger_level_from_runtime()
 
 
-# def _resolve_output_stream(level: str, file: TextIO | None) -> TextIO:
-#     """Decide whether to print to stdout or stderr, respecting BYPASS_CAPTURE."""
-#     if file is not None:
-#         return file
-
-#     if is_bypass_capture():
-#         return (
-#             getattr(sys, "__stderr__", sys.stderr)
-#             if _is_error_level(level)
-#             else getattr(sys, "__stdout__", sys.stdout)
-#         )
-#     return sys.stderr if _is_error_level(level) else sys.stdout
-
-
-# def _format_log_message(
-#     level: str,
-#     values: tuple[object, ...],
-#     sep: str,
-#     prefix: str | None,
-# ) -> str:
-#     """Apply prefix and color formatting to the log message."""
-#     prefix_color = _LOG_PREFIXES_COLOR.get(level)
-#     msg_color = _LOG_MSG_COLOR.get(level)
-
-#     # Safely coerce prefix
-#     actual_prefix = prefix if prefix is not None else (_LOG_PREFIXES.get(level) or "")
-
-#     # Helper lambdas to treat None/"" as unset
-#     def is_set(value: str | None) -> bool:
-#         return bool(value and value.strip())
-
-#     # If no whole-line color, apply prefix color
-#     if not is_set(msg_color) and is_set(prefix_color):
-#         actual_prefix = colorize(actual_prefix, cast("str", prefix_color))
-
-#     message = sep.join([actual_prefix] + [str(v) for v in values])
-#     if is_set(msg_color):
-#         message = colorize(message, cast("str", msg_color))
-#     return message
+def log_dynamic(level: str, message: str) -> None:
+    """Log a message at a dynamic level name (e.g. 'info', 'error', 'trace')."""
+    logger = get_logger()
+    method = getattr(logger, level.lower(), None)
+    if callable(method):
+        method(message)
+    else:
+        logger.error("Unknown log level: %r", level)
 
 
 def colorize(text: str, color: str, *, use_color: bool | None = None) -> str:

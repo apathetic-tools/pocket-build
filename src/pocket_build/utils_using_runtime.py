@@ -7,7 +7,7 @@ from fnmatch import fnmatch
 from pathlib import Path
 
 from .config_types import PathResolved
-from .utils_logs import log
+from .utils_logs import get_logger
 
 
 def is_excluded(path_entry: PathResolved, exclude_patterns: list[PathResolved]) -> bool:
@@ -32,12 +32,13 @@ def is_excluded_raw(  # noqa: PLR0911
     - If 'root' is a file, match directly.
     - Handles absolute or relative glob patterns.
     """
+    logger = get_logger()
     root = Path(root).resolve()
     path = Path(path)
 
     # the callee really should deal with this, otherwise we might spam
     if not Path(root).exists():
-        log("debug", f"Exclusion root does not exist: {root}")
+        logger.debug("Exclusion root does not exist: %s", root)
 
     # If the root itself is a file, treat that as a direct exclusion target.
     if root.is_file():
@@ -62,8 +63,7 @@ def is_excluded_raw(  # noqa: PLR0911
         pat = pattern.replace("\\", "/")
 
         if "**" in pat and sys.version_info < (3, 11):
-            log(
-                "trace",
+            logger.trace(
                 f"'**' behaves non-recursively on Python {sys.version_info[:2]}",
             )
 
@@ -105,6 +105,7 @@ def normalize_path_string(raw: str) -> str:
     Git, Node.js, and Python build tools.
     This function is purely lexical — it normalizes syntax, not filesystem state.
     """
+    logger = get_logger()
     if not raw:
         return ""
 
@@ -113,7 +114,7 @@ def normalize_path_string(raw: str) -> str:
     # Handle escaped spaces (common shell copy-paste)
     if "\\ " in path:
         fixed = path.replace("\\ ", " ")
-        log("warning", f"Normalizing escaped spaces in path: {path!r} → {fixed}")
+        logger.warning("Normalizing escaped spaces in path: %r → %s", path, fixed)
         path = fixed
 
     # Normalize all backslashes to forward slashes
@@ -122,7 +123,7 @@ def normalize_path_string(raw: str) -> str:
     # Collapse redundant slashes (keep protocol //)
     collapsed_slashes = re.sub(r"(?<!:)//+", "/", path)
     if collapsed_slashes != path:
-        log("trace", f"Collapsed redundant slashes: {path!r} → {collapsed_slashes!r}")
+        logger.trace("Collapsed redundant slashes: %r → %r", path, collapsed_slashes)
         path = collapsed_slashes
 
     return path

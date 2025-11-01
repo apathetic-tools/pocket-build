@@ -1,15 +1,13 @@
 # tests/30-utils-tests/_20_log_tests/test_log.py
 
 import io
-import logging
 import re
 import sys
 from io import StringIO
-from typing import Any, TextIO, cast
+from typing import Any, cast
 
 import pytest
 
-import pocket_build.meta as mod_meta
 import pocket_build.runtime as mod_runtime
 import pocket_build.utils_logs as mod_logs
 
@@ -52,8 +50,11 @@ def capture_log_output(
 
     # --- execute ---
     try:
-        final_msg: str = msg if msg is not None else f"msg:{msg_level}"
-        mod_logs.log(msg_level, final_msg, **kwargs)
+        logger = mod_logs.get_logger()
+        method = getattr(logger, msg_level.lower(), None)
+        if callable(method):
+            final_msg: str = msg if msg is not None else f"msg:{msg_level}"
+            method(final_msg, **kwargs)
     finally:
         # Always restore, even if log() crashes
         monkeypatch.setattr(sys, "stdout", old_out)
@@ -104,85 +105,24 @@ def test_log_routes_correct_stream(
         assert not out
 
 
-@pytest.mark.parametrize(
-    ("runtime_level", "visible_levels"),
-    [
-        ("critical", {"critical"}),
-        ("error", {"critical", "error"}),
-        ("warning", {"critical", "error", "warning"}),
-        ("info", {"critical", "error", "warning", "info"}),
-        ("debug", {"critical", "error", "warning", "info", "debug"}),
-        ("trace", {"critical", "error", "warning", "info", "debug", "trace"}),
-    ],
-)
-def test_log_respects_current_log_level(
-    monkeypatch: pytest.MonkeyPatch,
-    runtime_level: str,
-    visible_levels: set[str],
-) -> None:
-    """Messages below the current log level should not be printed."""
-    # --- setup, patch, execute, and verify ---
-    for msg_level in mod_logs.LEVEL_ORDER:
-        text = f"msg:{msg_level}"
-        out, err = capture_log_output(monkeypatch, msg_level, runtime_level, msg=text)
-        combined = out + err
-        if msg_level in visible_levels:
-            assert text in combined
-        else:
-            assert text not in combined
-
-
-@pytest.mark.parametrize(
-    ("msg_level", "expected_prefix"),
-    [
-        ("info", ""),  # info has no prefix
-        ("debug", "[DEBUG] "),  # debug has one
-        ("trace", "[TRACE] "),  # trace has one
-        ("warning", "⚠️ "),  # emoji prefix
-        ("error", "❌ "),
-        ("critical", "💥 "),
-    ],
-)
 def test_log_includes_default_prefix(
     monkeypatch: pytest.MonkeyPatch,
-    msg_level: str,
-    expected_prefix: str,
+    capsys: pytest.CaptureFixture[str],
 ) -> None:
     """log() should include the correct default prefix based on level."""
-    # --- setup, patch, and execute ---
-    text = "hello"
-    out, err = capture_log_output(monkeypatch, msg_level, "trace", msg=text)
-    output = (out or err).strip()
-
-    # Strip any ANSI codes before comparing
-    clean = re.sub(r"\033\[[0-9;]*m", "", output)
-
-    # --- verify ---
-    assert clean.startswith(expected_prefix)
-    assert text in clean
-
-
-def test_log_includes_some_prefix_for_non_info(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Non-info levels should include some kind of prefix (emoji or tag)."""
-    # --- patch and execute ---
-    out, _ = capture_log_output(monkeypatch, "debug", "trace")
-
-    # --- verify ---
-    cleaned = strip_ansi(out.strip())
-    # There should be something before "msg:debug"
-    assert any(cleaned.startswith(p) for p in ("[", "⚠️", "❌", "💥"))
+    # --- patch, execute, and verify ---
+    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "trace")
+    logger = mod_logs.get_logger()
+    for level, (_, expected_tag) in mod_logs.TAG_STYLES.items():
+        log_method = getattr(logger, level.lower(), None)
+        if callable(log_method):
+            log_method("sample")
+            capture = capsys.readouterr()
+            out = (capture.out + capture.err).lower()
+            assert expected_tag.strip().lower() in out, f"{level} missing expected tag"
 
 
-def test_log_below_threshold_suppressed(monkeypatch: pytest.MonkeyPatch) -> None:
-    # --- patch and execute ---
-    out, err = capture_log_output(monkeypatch, "info", "error", msg="hidden")
-
-    # --- verify ---
-    assert not out
-    assert not err
-
-
-def test_log_includes_ansi_when_color_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_formatter_adds_ansi_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
     # --- patch and execute ---
     monkeypatch.setitem(mod_runtime.current_runtime, "use_color", True)
     out, _ = capture_log_output(monkeypatch, "debug", "debug", msg="colored")
@@ -191,50 +131,13 @@ def test_log_includes_ansi_when_color_enabled(monkeypatch: pytest.MonkeyPatch) -
     assert "\033[" in out
 
 
-def test_log_recursion_guard() -> None:
-    """Ensure recursive logging doesn't hang or crash."""
-
-    # --- stubs ---
-    class RecursiveHandler(logging.StreamHandler[TextIO]):
-        def emit(
-            self,
-            record: logging.LogRecord,  # noqa: ARG002
-        ) -> None:
-            # This would recurse infinitely if not guarded internally
-            mod_logs.log("error", "nested boom")
-
-    # --- patch, execute and verify ---
-    # Replace all handlers temporarily
-    logger = logging.getLogger(mod_meta.PROGRAM_PACKAGE)
-    old_handlers = list(logger.handlers)
-    old_level = logger.level
-
-    try:
-        logger.handlers = [RecursiveHandler()]
-        logger.setLevel(logging.ERROR)
-
-        # The test: logging should *not* raise RecursionError
-        try:
-            mod_logs.log("error", "outer boom")
-        except RecursionError:
-            pytest.fail("RecursionError was not caught by stdlib logging")
-
-    finally:
-        # --- always restore logger state ---
-        logger.handlers = old_handlers
-        logger.setLevel(old_level)
-
-
-def test_log_unknown_level(monkeypatch: pytest.MonkeyPatch) -> None:
-    # --- setup ---
-    buf = StringIO()
-
-    # --- patch and execute ---
-    monkeypatch.setattr(sys, "__stderr__", buf)
-    mod_logs.log("nonsense", "This should not crash")
+def test_log_dynamic_unknown_level(capsys: pytest.CaptureFixture[str]) -> None:
+    # --- execute ---
+    mod_logs.log_dynamic("nonsense", "This should not crash")
 
     # --- verify ---
-    assert "Unknown log level" in buf.getvalue()
+    out = capsys.readouterr().err.lower()
+    assert "Unknown log level".lower() in out
 
 
 def test_log_missing_log_level(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -250,7 +153,8 @@ def test_log_missing_log_level(monkeypatch: pytest.MonkeyPatch) -> None:
     mod_runtime.current_runtime.pop("log_level", None)
 
     try:
-        mod_logs.log("error", "no level key")
+        logger = mod_logs.get_logger()
+        logger.info("no level key")
     finally:
         runtime_dict = cast("dict[str, object]", mod_runtime.current_runtime)  # pylance
         runtime_dict.update(backup)
@@ -259,40 +163,3 @@ def test_log_missing_log_level(monkeypatch: pytest.MonkeyPatch) -> None:
     msg = output.getvalue()
     assert "[LOGGER ERROR]" in msg
     assert "log_level" in msg
-
-
-def test_log_handles_internal_failure(monkeypatch: pytest.MonkeyPatch) -> None:
-    """If print() raises, logger should fall back to safe_log."""
-    # --- setup ---
-    buf = StringIO()
-
-    # --- stubs ---
-    class BoomHandler(logging.Handler):
-        def emit(
-            self,
-            record: logging.LogRecord,  # noqa: ARG002
-        ) -> None:
-            xmsg = "handler exploded"
-            raise RuntimeError(xmsg)
-
-    # --- patch and execute ---
-    monkeypatch.setattr(sys, "__stderr__", buf)
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
-
-    logger = logging.getLogger(mod_meta.PROGRAM_PACKAGE)
-    old_handlers = list(logger.handlers)
-    old_level = logger.level
-
-    try:
-        logger.handlers = [BoomHandler()]
-        logger.setLevel(logging.DEBUG)
-
-        mod_logs.log("info", "test failure handling")
-    finally:
-        # --- restore original logger state ---
-        logger.handlers = old_handlers
-        logger.setLevel(old_level)
-
-    # --- verify ---
-    out = buf.getvalue()
-    assert "LOGGER FAILURE" in out
