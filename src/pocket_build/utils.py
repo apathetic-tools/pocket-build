@@ -1,6 +1,7 @@
 # src/pocket_build/utils.py
 
 
+import argparse
 import json
 import os
 import re
@@ -15,6 +16,10 @@ from typing import (
     TextIO,
     cast,
 )
+
+from .constants import DEFAULT_LOG_LEVEL
+from .meta import PROGRAM_ENV
+from .utils_types import cast_hint
 
 
 # --- types --------------------------------------------------------------------
@@ -42,6 +47,28 @@ class CapturedOutput:
 
 
 # --- utils --------------------------------------------------------------------
+
+
+def determine_log_level(
+    args: argparse.Namespace,
+    root_log_level: str | None = None,
+    build_log_level: str | None = None,
+) -> str:
+    """Resolve log level from CLI → env → build config → root config → default."""
+    if getattr(args, "log_level", None):
+        return cast_hint(str, args.log_level)
+
+    env_log_level = os.getenv(f"{PROGRAM_ENV}_LOG_LEVEL") or os.getenv("LOG_LEVEL")
+    if env_log_level:
+        return env_log_level
+
+    if build_log_level:
+        return build_log_level
+
+    if root_log_level:
+        return root_log_level
+
+    return DEFAULT_LOG_LEVEL
 
 
 def should_use_color() -> bool:

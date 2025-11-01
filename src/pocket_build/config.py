@@ -2,7 +2,6 @@
 
 
 import argparse
-import os
 import sys
 import traceback
 from pathlib import Path
@@ -13,15 +12,11 @@ from .config_types import (
     RootConfig,
 )
 from .config_validate import validate_config
-from .constants import (
-    DEFAULT_LOG_LEVEL,
-)
 from .meta import (
-    PROGRAM_ENV,
     PROGRAM_SCRIPT,
 )
 from .runtime import current_runtime
-from .utils import load_jsonc, plural, remove_path_in_error_message
+from .utils import determine_log_level, load_jsonc, plural, remove_path_in_error_message
 from .utils_schema import ValidationSummary
 from .utils_types import cast_hint, schema_from_typeddict
 from .utils_using_runtime import log
@@ -41,28 +36,6 @@ def can_run_configless(args: argparse.Namespace) -> bool:
         or getattr(args, "positional_include", None)
         or getattr(args, "positional_out", None),
     )
-
-
-def determine_log_level(
-    args: argparse.Namespace,
-    root_log_level: str | None = None,
-    build_log_level: str | None = None,
-) -> str:
-    """Resolve log level from CLI → env → build config → root config → default."""
-    if getattr(args, "log_level", None):
-        return cast_hint(str, args.log_level)
-
-    env_log_level = os.getenv(f"{PROGRAM_ENV}_LOG_LEVEL") or os.getenv("LOG_LEVEL")
-    if env_log_level:
-        return env_log_level
-
-    if build_log_level:
-        return build_log_level
-
-    if root_log_level:
-        return root_log_level
-
-    return DEFAULT_LOG_LEVEL
 
 
 def find_config(
@@ -440,9 +413,6 @@ def load_and_validate_config(
         or None if no config was found.
 
     """
-    # --- initialize logging wihtout config ---
-    current_runtime["log_level"] = determine_log_level(args)
-
     # warn if cwd doesn't exist, edge case. We might still be able to run
     cwd = Path.cwd().resolve()
     if not cwd.exists():

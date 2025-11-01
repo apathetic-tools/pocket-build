@@ -32,7 +32,6 @@ def test_validate_scalar_value_returns_bool() -> None:
 def test_validate_scalar_value_accepts_correct_type() -> None:
     # --- setup ---
     summary = make_summary()
-    print(summary)
 
     # --- patch and execute ---
     ok = mod_utils_schema._validate_scalar_value(

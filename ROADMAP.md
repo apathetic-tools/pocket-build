@@ -39,7 +39,6 @@ API
 
 utils
   - [ ] log(): I didn't know about Python.logging or logging.Logger.
-  - [ ] log(): should it respect the env outside of runtime? atm CLI trumps env but it could set it too.
   - [ ] log(): why does LOG_LEVEL=silent not work in tests?
   - [ ] do things that call is_excluded need to check if root exists?
 

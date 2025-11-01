@@ -23,7 +23,7 @@ from .meta import (
     PROGRAM_SCRIPT,
 )
 from .runtime import current_runtime
-from .utils import safe_log, should_use_color
+from .utils import determine_log_level, safe_log, should_use_color
 from .utils_types import cast_hint
 from .utils_using_runtime import LEVEL_ORDER, log
 
@@ -205,9 +205,15 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
         parser = _setup_parser()
         args = parser.parse_args(argv)
 
-        # --- Color detection ---
-        use_color = getattr(args, "use_color", should_use_color())
-        current_runtime["use_color"] = use_color
+        # --- Early runtime init (use CLI + env) ---
+        current_runtime.update(
+            {
+                "log_level": determine_log_level(args),
+                "use_color": getattr(args, "use_color", should_use_color()),
+            }
+        )
+
+        # You can now safely use log() anywhere below this line.
 
         # --- Version flag ---
         if getattr(args, "version", None):
@@ -215,15 +221,15 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
             standalone = (
                 " [standalone]" if globals().get("__STANDALONE__", False) else ""
             )
-            print(f"{PROGRAM_DISPLAY} {meta.version} ({meta.commit}){standalone}")  # noqa: T201
+            log("info", f"{PROGRAM_DISPLAY} {meta.version} ({meta.commit}){standalone}")
             return 0
 
         # --- Python version check ---
         if sys.version_info < (3, 10):  # noqa: UP036
             # error before log-level exists
-            print(  # noqa: T201
-                f"❌  {PROGRAM_DISPLAY} requires Python 3.10 or newer.",
-                file=sys.stderr,
+            log(
+                "error",
+                f"{PROGRAM_DISPLAY} requires Python 3.10 or newer.",
             )
             return 1
 
@@ -234,7 +240,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
         if config_result is not None:
             config_path, root_cfg = config_result
 
-        # NOTE: log() from now on, we have log-level
+        # NOTE: log-level now fully set from config file
 
         # --- Self-test mode ---
         if getattr(args, "selftest", None):
