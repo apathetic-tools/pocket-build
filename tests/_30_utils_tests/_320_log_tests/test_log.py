@@ -1,10 +1,11 @@
 # tests/30-utils-tests/_20_log_tests/test_log.py
 
 import io
+import logging
 import re
 import sys
 from io import StringIO
-from typing import Any, cast
+from typing import Any, TextIO, cast
 
 import pytest
 
@@ -131,34 +132,6 @@ def test_log_respects_current_log_level(
             assert text not in combined
 
 
-def test_log_bypass_capture_env(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """When *_BYPASS_CAPTURE=1, log() should write to __stdout__/__stderr__."""
-    # --- setup, patch, and execute ---
-    # Sneaky program tries to escape our capture,
-    #   we are sneakier and capture it anyways!
-    #   What are you going to do now program?
-    fake_stdout, fake_stderr = io.StringIO(), io.StringIO()
-    monkeypatch.setattr(sys, "__stdout__", fake_stdout)
-    monkeypatch.setattr(sys, "__stderr__", fake_stderr)
-
-    # Mock the environment variable so utils re-evaluates
-    monkeypatch.setenv(f"{mod_meta.PROGRAM_ENV}_BYPASS_CAPTURE", "1")
-    monkeypatch.setenv("BYPASS_CAPTURE", "1")
-
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
-
-    # Info should go to stdout
-    mod_logs.log("info", "out-msg")
-    # Error should go to stderr
-    mod_logs.log("error", "err-msg")
-
-    # --- verify ---
-    assert "out-msg" in fake_stdout.getvalue()
-    assert "err-msg" in fake_stderr.getvalue()
-
-
 @pytest.mark.parametrize(
     ("msg_level", "expected_prefix"),
     [
@@ -187,25 +160,6 @@ def test_log_includes_default_prefix(
     # --- verify ---
     assert clean.startswith(expected_prefix)
     assert text in clean
-
-
-def test_log_allows_custom_prefix(monkeypatch: pytest.MonkeyPatch) -> None:
-    """Explicit prefix argument should override default prefix entirely."""
-    # --- patch and execute ---
-    out, _ = capture_log_output(
-        monkeypatch,
-        "debug",
-        "debug",
-        msg="world",
-        prefix="[CUSTOM] ",
-    )
-    clean = strip_ansi(out.strip())
-
-    # --- verify ---
-    assert clean.startswith("[CUSTOM] ")
-    assert "world" in clean
-    # Ensure default prefix does not appear
-    assert "[DEBUG]" not in clean
 
 
 def test_log_includes_some_prefix_for_non_info(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -237,23 +191,38 @@ def test_log_includes_ansi_when_color_enabled(monkeypatch: pytest.MonkeyPatch) -
     assert "\033[" in out
 
 
-def test_log_recursion_guard(monkeypatch: pytest.MonkeyPatch) -> None:
-    # --- setup ---
-    output = StringIO()
-    monkeypatch.setattr(sys, "__stderr__", output)
+def test_log_recursion_guard() -> None:
+    """Ensure recursive logging doesn't hang or crash."""
 
     # --- stubs ---
-    # Force recursion
-    def evil_print(*_a: object, **_k: object) -> None:  # triggers another log
-        mod_logs.log("error", "nested boom")
+    class RecursiveHandler(logging.StreamHandler[TextIO]):
+        def emit(
+            self,
+            record: logging.LogRecord,  # noqa: ARG002
+        ) -> None:
+            # This would recurse infinitely if not guarded internally
+            mod_logs.log("error", "nested boom")
 
-    # --- patch and execute ---
-    monkeypatch.setattr("builtins.print", evil_print)
-    mod_logs.log("error", "test")
+    # --- patch, execute and verify ---
+    # Replace all handlers temporarily
+    logger = logging.getLogger(mod_meta.PROGRAM_PACKAGE)
+    old_handlers = list(logger.handlers)
+    old_level = logger.level
 
-    # --- verify ---
-    out = output.getvalue()
-    assert "Recursive log call suppressed" in out
+    try:
+        logger.handlers = [RecursiveHandler()]
+        logger.setLevel(logging.ERROR)
+
+        # The test: logging should *not* raise RecursionError
+        try:
+            mod_logs.log("error", "outer boom")
+        except RecursionError:
+            pytest.fail("RecursionError was not caught by stdlib logging")
+
+    finally:
+        # --- always restore logger state ---
+        logger.handlers = old_handlers
+        logger.setLevel(old_level)
 
 
 def test_log_unknown_level(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -298,15 +267,32 @@ def test_log_handles_internal_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     buf = StringIO()
 
     # --- stubs ---
-    def bad_print(*_a: object, **_k: object) -> None:
-        xmsg = "printer is broken"
-        raise OSError(xmsg)
+    class BoomHandler(logging.Handler):
+        def emit(
+            self,
+            record: logging.LogRecord,  # noqa: ARG002
+        ) -> None:
+            xmsg = "handler exploded"
+            raise RuntimeError(xmsg)
 
     # --- patch and execute ---
     monkeypatch.setattr(sys, "__stderr__", buf)
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
-    monkeypatch.setattr("builtins.print", bad_print)
-    mod_logs.log("info", "test")
+
+    logger = logging.getLogger(mod_meta.PROGRAM_PACKAGE)
+    old_handlers = list(logger.handlers)
+    old_level = logger.level
+
+    try:
+        logger.handlers = [BoomHandler()]
+        logger.setLevel(logging.DEBUG)
+
+        mod_logs.log("info", "test failure handling")
+    finally:
+        # --- restore original logger state ---
+        logger.handlers = old_handlers
+        logger.setLevel(old_level)
 
     # --- verify ---
-    assert "LOGGER FAILURE" in buf.getvalue()
+    out = buf.getvalue()
+    assert "LOGGER FAILURE" in out

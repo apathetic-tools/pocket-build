@@ -74,7 +74,6 @@ from .utils_logs import (
     LEVEL_ORDER,
     RESET,
     colorize,
-    is_bypass_capture,
     log,
 )
 from .utils_types import (
@@ -136,7 +135,6 @@ __all__ = [  # noqa: RUF022
     "colorize",
     "get_glob_root",
     "has_glob_chars",
-    "is_bypass_capture",
     "is_excluded_raw",
     "is_excluded",
     "load_jsonc",
