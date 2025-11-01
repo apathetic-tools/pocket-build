@@ -9,9 +9,9 @@ from fnmatch import fnmatch
 from pathlib import Path
 from typing import TextIO, cast
 
+from .config_types import PathResolved
 from .meta import PROGRAM_ENV
 from .runtime import current_runtime
-from .types import PathResolved
 from .utils import safe_log
 
 

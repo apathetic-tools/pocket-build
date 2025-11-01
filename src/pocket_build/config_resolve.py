@@ -7,15 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from .config import determine_log_level
-from .constants import (
-    DEFAULT_ENV_LOG_LEVEL,
-    DEFAULT_ENV_WATCH_INTERVAL,
-    DEFAULT_OUT_DIR,
-    DEFAULT_RESPECT_GITIGNORE,
-    DEFAULT_WATCH_INTERVAL,
-)
-from .runtime import current_runtime
-from .types import (
+from .config_types import (
     BuildConfig,
     BuildConfigResolved,
     IncludeResolved,
@@ -25,6 +17,14 @@ from .types import (
     RootConfig,
     RootConfigResolved,
 )
+from .constants import (
+    DEFAULT_ENV_LOG_LEVEL,
+    DEFAULT_ENV_WATCH_INTERVAL,
+    DEFAULT_OUT_DIR,
+    DEFAULT_RESPECT_GITIGNORE,
+    DEFAULT_WATCH_INTERVAL,
+)
+from .runtime import current_runtime
 from .utils_types import cast_hint, make_includeresolved, make_pathresolved
 from .utils_using_runtime import has_glob_chars, log
 

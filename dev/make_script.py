@@ -33,7 +33,7 @@ PYPROJECT = ROOT / "pyproject.toml"
 ORDER_NAMES: list[str] = [
     "constants",
     "meta",
-    "types",
+    "config_types",  # needed before utils.py
     "utils",  # needed before runtime.py
     "utils_types",
     "utils_schema",

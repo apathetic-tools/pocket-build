@@ -4,7 +4,7 @@
 from pathlib import Path
 from typing import cast
 
-import pocket_build.types as mod_types
+import pocket_build.config_types as mod_types
 
 
 # ---------------------------------------------------------------------------

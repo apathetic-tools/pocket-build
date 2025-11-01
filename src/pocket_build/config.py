@@ -8,6 +8,10 @@ import traceback
 from pathlib import Path
 from typing import Any, cast
 
+from .config_types import (
+    BuildConfig,
+    RootConfig,
+)
 from .config_validate import validate_config
 from .constants import (
     DEFAULT_LOG_LEVEL,
@@ -17,10 +21,6 @@ from .meta import (
     PROGRAM_SCRIPT,
 )
 from .runtime import current_runtime
-from .types import (
-    BuildConfig,
-    RootConfig,
-)
 from .utils import load_jsonc, plural, remove_path_in_error_message
 from .utils_schema import ValidationSummary
 from .utils_types import cast_hint, schema_from_typeddict

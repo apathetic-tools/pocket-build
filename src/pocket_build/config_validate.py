@@ -3,8 +3,8 @@
 
 from typing import Any
 
+from .config_types import BuildConfig, RootConfig
 from .constants import DEFAULT_STRICT_CONFIG
-from .types import BuildConfig, RootConfig
 from .utils_schema import (
     SchemaErrorAggregator,
     ValidationSummary,

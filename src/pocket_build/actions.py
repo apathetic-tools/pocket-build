@@ -9,9 +9,9 @@ from contextlib import suppress
 from pathlib import Path
 
 from .build import run_build
+from .config_types import BuildConfigResolved
 from .constants import DEFAULT_WATCH_INTERVAL
 from .meta import PROGRAM_DISPLAY, PROGRAM_SCRIPT, Metadata
-from .types import BuildConfigResolved
 from .utils_types import make_includeresolved, make_pathresolved
 from .utils_using_runtime import log
 

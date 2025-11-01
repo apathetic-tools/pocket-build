@@ -79,8 +79,3 @@ class RootConfigResolved(TypedDict):
     log_level: str
     strict_config: bool
     watch_interval: float
-
-
-class Runtime(TypedDict):
-    log_level: str
-    use_color: bool

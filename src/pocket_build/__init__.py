@@ -37,6 +37,16 @@ from .config import (
     parse_config,
 )
 from .config_resolve import resolve_build_config, resolve_config
+from .config_types import (
+    BuildConfig,
+    BuildConfigResolved,
+    IncludeResolved,
+    MetaBuildConfigResolved,
+    OriginType,
+    PathResolved,
+    RootConfig,
+    RootConfigResolved,
+)
 from .config_validate import validate_config
 from .constants import (
     DEFAULT_ENV_LOG_LEVEL,
@@ -55,18 +65,7 @@ from .meta import (
     PROGRAM_SCRIPT,
     Metadata,
 )
-from .runtime import current_runtime
-from .types import (
-    BuildConfig,
-    BuildConfigResolved,
-    IncludeResolved,
-    MetaBuildConfigResolved,
-    OriginType,
-    PathResolved,
-    RootConfig,
-    RootConfigResolved,
-    Runtime,
-)
+from .runtime import Runtime, current_runtime
 from .utils import (
     load_jsonc,
     should_use_color,

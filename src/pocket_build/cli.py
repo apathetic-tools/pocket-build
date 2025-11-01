@@ -12,6 +12,9 @@ from .config import (
     load_and_validate_config,
 )
 from .config_resolve import resolve_config
+from .config_types import (
+    RootConfig,
+)
 from .constants import (
     DEFAULT_WATCH_INTERVAL,
 )
@@ -20,9 +23,6 @@ from .meta import (
     PROGRAM_SCRIPT,
 )
 from .runtime import current_runtime
-from .types import (
-    RootConfig,
-)
 from .utils import safe_log, should_use_color
 from .utils_types import cast_hint
 from .utils_using_runtime import LEVEL_ORDER, log

@@ -5,8 +5,8 @@ import re
 import shutil
 from pathlib import Path
 
+from .config_types import BuildConfigResolved, IncludeResolved, PathResolved
 from .runtime import current_runtime
-from .types import BuildConfigResolved, IncludeResolved, PathResolved
 from .utils_types import make_pathresolved
 from .utils_using_runtime import (
     has_glob_chars,

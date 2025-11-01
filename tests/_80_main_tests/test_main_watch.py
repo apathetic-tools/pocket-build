@@ -9,9 +9,9 @@ import pytest
 
 import pocket_build.actions as mod_actions
 import pocket_build.cli as mod_cli
+import pocket_build.config_types as mod_types
 import pocket_build.constants as mod_constants
 import pocket_build.meta as mod_meta
-import pocket_build.types as mod_types
 from tests.utils import (
     patch_everywhere,
 )

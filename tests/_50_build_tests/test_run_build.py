@@ -6,8 +6,8 @@ from pathlib import Path
 import pytest
 
 import pocket_build.build as mod_build
+import pocket_build.config_types as mod_types
 import pocket_build.runtime as mod_runtime
-import pocket_build.types as mod_types
 from tests.utils import make_build_cfg, make_include_resolved
 
 

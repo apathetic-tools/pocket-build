@@ -14,7 +14,7 @@ from typing import (
     get_type_hints,
 )
 
-from .types import IncludeResolved, OriginType, PathResolved
+from .config_types import IncludeResolved, OriginType, PathResolved
 
 
 T = TypeVar("T")

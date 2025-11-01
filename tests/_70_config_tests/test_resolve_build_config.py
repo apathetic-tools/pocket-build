@@ -9,8 +9,8 @@ from pathlib import Path
 import pytest
 
 import pocket_build.config_resolve as mod_resolve
+import pocket_build.config_types as mod_types
 import pocket_build.runtime as mod_runtime
-import pocket_build.types as mod_types
 import pocket_build.utils_using_runtime as mod_utils_runtime
 from tests.utils import make_build_input, patch_everywhere
 
