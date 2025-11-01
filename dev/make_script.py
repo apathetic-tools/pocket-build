@@ -38,6 +38,7 @@ ORDER_NAMES: list[str] = [
     "utils_types",
     "utils_schema",
     "runtime",
+    "utils_logs",
     "utils_using_runtime",
     "config",
     "config_resolve",

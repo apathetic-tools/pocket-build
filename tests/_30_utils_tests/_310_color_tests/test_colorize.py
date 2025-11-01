@@ -4,7 +4,7 @@
 import pytest
 
 import pocket_build.runtime as mod_runtime
-import pocket_build.utils_using_runtime as mod_utils_runtime
+import pocket_build.utils_logs as mod_logs
 
 
 # ---------------------------------------------------------------------------
@@ -32,12 +32,12 @@ def test_colorize_explicit_true_false() -> None:
 
     # --- execute and verify ---
     assert (
-        mod_utils_runtime.colorize(test_string, mod_utils_runtime.GREEN, use_color=True)
-    ) == f"{mod_utils_runtime.GREEN}{test_string}{mod_utils_runtime.RESET}"
+        mod_logs.colorize(test_string, mod_logs.GREEN, use_color=True)
+    ) == f"{mod_logs.GREEN}{test_string}{mod_logs.RESET}"
     assert (
-        mod_utils_runtime.colorize(
+        mod_logs.colorize(
             test_string,
-            mod_utils_runtime.GREEN,
+            mod_logs.GREEN,
             use_color=False,
         )
     ) == test_string
@@ -54,7 +54,7 @@ def test_colorize_respects_reset(
 
     # Force color disabled at runtime
     monkeypatch.setitem(mod_runtime.current_runtime, "use_color", False)
-    result = mod_utils_runtime.colorize(test_string, mod_utils_runtime.GREEN)
+    result = mod_logs.colorize(test_string, mod_logs.GREEN)
 
     # --- verify ---
     assert result == test_string
@@ -68,10 +68,10 @@ def test_colorize_respects_runtime_flag(monkeypatch: pytest.MonkeyPatch) -> None
     # --- patch, execute and verify ---
     # Force runtime to enable color
     monkeypatch.setitem(mod_runtime.current_runtime, "use_color", True)
-    result = mod_utils_runtime.colorize(text, mod_utils_runtime.GREEN)
-    assert result == f"{mod_utils_runtime.GREEN}{text}{mod_utils_runtime.RESET}"
+    result = mod_logs.colorize(text, mod_logs.GREEN)
+    assert result == f"{mod_logs.GREEN}{text}{mod_logs.RESET}"
 
     # Force runtime to disable color
     monkeypatch.setitem(mod_runtime.current_runtime, "use_color", False)
-    result = mod_utils_runtime.colorize(text, mod_utils_runtime.GREEN)
+    result = mod_logs.colorize(text, mod_logs.GREEN)
     assert result == text

@@ -38,8 +38,6 @@ API
   - [ ] do we want a way to dump the schema for documentation purposes?
 
 utils
-  - [ ] log(): I didn't know about Python.logging or logging.Logger.
-  - [ ] log(): why does LOG_LEVEL=silent not work in tests?
   - [ ] do things that call is_excluded need to check if root exists?
 
 config_validate

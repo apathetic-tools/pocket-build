@@ -70,6 +70,13 @@ from .utils import (
     load_jsonc,
     should_use_color,
 )
+from .utils_logs import (
+    LEVEL_ORDER,
+    RESET,
+    colorize,
+    is_bypass_capture,
+    log,
+)
 from .utils_types import (
     make_includeresolved,
     make_pathresolved,
@@ -77,15 +84,10 @@ from .utils_types import (
     schema_from_typeddict,
 )
 from .utils_using_runtime import (
-    LEVEL_ORDER,
-    RESET,
-    colorize,
     get_glob_root,
     has_glob_chars,
-    is_bypass_capture,
     is_excluded,
     is_excluded_raw,
-    log,
 )
 
 

@@ -25,8 +25,9 @@ from .constants import (
 )
 from .runtime import current_runtime
 from .utils import determine_log_level
+from .utils_logs import log
 from .utils_types import cast_hint, make_includeresolved, make_pathresolved
-from .utils_using_runtime import has_glob_chars, log
+from .utils_using_runtime import has_glob_chars
 
 
 # --------------------------------------------------------------------------- #

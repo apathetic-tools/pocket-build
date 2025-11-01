@@ -12,8 +12,8 @@ from .build import run_build
 from .config_types import BuildConfigResolved
 from .constants import DEFAULT_WATCH_INTERVAL
 from .meta import PROGRAM_DISPLAY, PROGRAM_SCRIPT, Metadata
+from .utils_logs import log
 from .utils_types import make_includeresolved, make_pathresolved
-from .utils_using_runtime import log
 
 
 def _collect_included_files(resolved_builds: list[BuildConfigResolved]) -> list[Path]:

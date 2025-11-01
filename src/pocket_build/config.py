@@ -17,9 +17,9 @@ from .meta import (
 )
 from .runtime import current_runtime
 from .utils import determine_log_level, load_jsonc, plural, remove_path_in_error_message
+from .utils_logs import log
 from .utils_schema import ValidationSummary
 from .utils_types import cast_hint, schema_from_typeddict
-from .utils_using_runtime import log
 
 
 def can_run_configless(args: argparse.Namespace) -> bool:

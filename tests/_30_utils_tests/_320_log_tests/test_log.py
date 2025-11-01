@@ -10,7 +10,7 @@ import pytest
 
 import pocket_build.meta as mod_meta
 import pocket_build.runtime as mod_runtime
-import pocket_build.utils_using_runtime as mod_utils_runtime
+import pocket_build.utils_logs as mod_logs
 
 
 # ---------------------------------------------------------------------------
@@ -52,7 +52,7 @@ def capture_log_output(
     # --- execute ---
     try:
         final_msg: str = msg if msg is not None else f"msg:{msg_level}"
-        mod_utils_runtime.log(msg_level, final_msg, **kwargs)
+        mod_logs.log(msg_level, final_msg, **kwargs)
     finally:
         # Always restore, even if log() crashes
         monkeypatch.setattr(sys, "stdout", old_out)
@@ -121,7 +121,7 @@ def test_log_respects_current_log_level(
 ) -> None:
     """Messages below the current log level should not be printed."""
     # --- setup, patch, execute, and verify ---
-    for msg_level in mod_utils_runtime.LEVEL_ORDER:
+    for msg_level in mod_logs.LEVEL_ORDER:
         text = f"msg:{msg_level}"
         out, err = capture_log_output(monkeypatch, msg_level, runtime_level, msg=text)
         combined = out + err
@@ -150,9 +150,9 @@ def test_log_bypass_capture_env(
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
 
     # Info should go to stdout
-    mod_utils_runtime.log("info", "out-msg")
+    mod_logs.log("info", "out-msg")
     # Error should go to stderr
-    mod_utils_runtime.log("error", "err-msg")
+    mod_logs.log("error", "err-msg")
 
     # --- verify ---
     assert "out-msg" in fake_stdout.getvalue()
@@ -245,11 +245,11 @@ def test_log_recursion_guard(monkeypatch: pytest.MonkeyPatch) -> None:
     # --- stubs ---
     # Force recursion
     def evil_print(*_a: object, **_k: object) -> None:  # triggers another log
-        mod_utils_runtime.log("error", "nested boom")
+        mod_logs.log("error", "nested boom")
 
     # --- patch and execute ---
     monkeypatch.setattr("builtins.print", evil_print)
-    mod_utils_runtime.log("error", "test")
+    mod_logs.log("error", "test")
 
     # --- verify ---
     out = output.getvalue()
@@ -262,7 +262,7 @@ def test_log_unknown_level(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # --- patch and execute ---
     monkeypatch.setattr(sys, "__stderr__", buf)
-    mod_utils_runtime.log("nonsense", "This should not crash")
+    mod_logs.log("nonsense", "This should not crash")
 
     # --- verify ---
     assert "Unknown log level" in buf.getvalue()
@@ -281,7 +281,7 @@ def test_log_missing_log_level(monkeypatch: pytest.MonkeyPatch) -> None:
     mod_runtime.current_runtime.pop("log_level", None)
 
     try:
-        mod_utils_runtime.log("error", "no level key")
+        mod_logs.log("error", "no level key")
     finally:
         runtime_dict = cast("dict[str, object]", mod_runtime.current_runtime)  # pylance
         runtime_dict.update(backup)
@@ -306,7 +306,7 @@ def test_log_handles_internal_failure(monkeypatch: pytest.MonkeyPatch) -> None:
     monkeypatch.setattr(sys, "__stderr__", buf)
     monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
     monkeypatch.setattr("builtins.print", bad_print)
-    mod_utils_runtime.log("info", "test")
+    mod_logs.log("info", "test")
 
     # --- verify ---
     assert "LOGGER FAILURE" in buf.getvalue()

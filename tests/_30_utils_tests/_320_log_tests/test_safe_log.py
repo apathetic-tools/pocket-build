@@ -6,7 +6,7 @@ from io import StringIO
 
 import pytest
 
-import pocket_build.utils_using_runtime as mod_utils_runtime
+import pocket_build.utils as mod_utils
 
 
 def test_safe_log_writes_to_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -16,7 +16,7 @@ def test_safe_log_writes_to_stderr(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # --- patch and execute ---
     monkeypatch.setattr(sys, "__stderr__", buf)
-    mod_utils_runtime.safe_log("hello safe")
+    mod_utils.safe_log("hello safe")
 
     # --- verify ---
     assert "hello safe" in buf.getvalue()
@@ -27,7 +27,7 @@ def test_safe_log_fallback(monkeypatch: pytest.MonkeyPatch) -> None:
     # --- patch and execute ---
     monkeypatch.setattr(sys, "__stderr__", None)
     # Should not raise
-    mod_utils_runtime.safe_log("fallback works")
+    mod_utils.safe_log("fallback works")
 
 
 def test_safe_log_handles_print_failure(monkeypatch: pytest.MonkeyPatch) -> None:
@@ -43,7 +43,7 @@ def test_safe_log_handles_print_failure(monkeypatch: pytest.MonkeyPatch) -> None
     # --- patch and execute ---
     monkeypatch.setattr(sys, "__stderr__", buf)
     monkeypatch.setattr("builtins.print", bad_print)
-    mod_utils_runtime.safe_log("broken print test")
+    mod_utils.safe_log("broken print test")
 
     # --- verify ---
     # Fallback write should prefix with [INTERNAL]

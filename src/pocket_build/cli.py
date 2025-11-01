@@ -24,8 +24,8 @@ from .meta import (
 )
 from .runtime import current_runtime
 from .utils import determine_log_level, safe_log, should_use_color
+from .utils_logs import LEVEL_ORDER, log
 from .utils_types import cast_hint
-from .utils_using_runtime import LEVEL_ORDER, log
 
 
 # --------------------------------------------------------------------------- #
@@ -212,6 +212,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
                 "use_color": getattr(args, "use_color", should_use_color()),
             }
         )
+        log("trace", f"[BOOT] Runtime initialized: {current_runtime}")
 
         # You can now safely use log() anywhere below this line.
 
@@ -241,6 +242,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
             config_path, root_cfg = config_result
 
         # NOTE: log-level now fully set from config file
+        log("trace", f"[CONFIG] Runtime re-resolved from config: {current_runtime}")
 
         # --- Self-test mode ---
         if getattr(args, "selftest", None):
