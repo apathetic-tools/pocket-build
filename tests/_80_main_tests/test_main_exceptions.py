@@ -6,8 +6,8 @@ import logging
 import pytest
 
 import pocket_build.cli as mod_cli
-import pocket_build.utils as mod_utils
-import pocket_build.utils_logs as mod_logs
+import pocket_build.logs as mod_logs
+import pocket_build.utils_logs as mod_utils_logs
 from tests.utils import patch_everywhere
 
 
@@ -54,7 +54,9 @@ def test_main_handles_unexpected_exception(
     assert "Unexpected internal error".lower() in out
 
 
-def test_main_fallbacks_to_safe_log(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_main_fallbacks_to_safe_log(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """If log() itself fails, safe_log() should be called instead of recursion."""
     # --- setup ---
     called: dict[str, str] = {}
@@ -75,7 +77,7 @@ def test_main_fallbacks_to_safe_log(monkeypatch: pytest.MonkeyPatch) -> None:
 
     # --- patch and execute ---
     patch_everywhere(monkeypatch, mod_cli, "_setup_parser", fake_parser)
-    patch_everywhere(monkeypatch, mod_utils, "safe_log", fake_safe_log)
+    patch_everywhere(monkeypatch, mod_utils_logs, "safe_log", fake_safe_log)
 
     # Backup logger state
     logger = mod_logs.get_logger()
@@ -83,14 +85,17 @@ def test_main_fallbacks_to_safe_log(monkeypatch: pytest.MonkeyPatch) -> None:
     old_level = logger.level
 
     try:
+        # initialize hanlders so we have something to replace
+        logger.ensure_handlers()
+
         # Replace handlers with the exploding one
         logger.handlers = [BoomHandler()]
         logger.setLevel(logging.DEBUG)
-
         code = mod_cli.main([])
     finally:
         # Always restore to avoid affecting other tests
         logger.handlers = old_handlers
+        logger.ensure_handlers()
         logger.setLevel(old_level)
 
     # --- verify ---

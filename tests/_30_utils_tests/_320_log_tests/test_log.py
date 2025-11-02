@@ -3,13 +3,12 @@
 import io
 import re
 import sys
-from io import StringIO
-from typing import Any, cast
+from typing import Any
 
 import pytest
 
-import pocket_build.runtime as mod_runtime
-import pocket_build.utils_logs as mod_logs
+import pocket_build.logs as mod_logs
+import pocket_build.utils_logs as mod_utils_logs
 
 
 # ---------------------------------------------------------------------------
@@ -26,10 +25,12 @@ def strip_ansi(s: str) -> str:
 
 def capture_log_output(
     monkeypatch: pytest.MonkeyPatch,
+    logger: mod_logs.AppLogger,
     msg_level: str,
-    runtime_level: str = "debug",
     *,
     msg: str | None = None,
+    enable_color: bool = False,
+    log_level: str = "TRACE",
     **kwargs: Any,
 ) -> tuple[str, str]:
     """Temporarily capture stdout/stderr during a log() call.
@@ -37,8 +38,8 @@ def capture_log_output(
     Returns (stdout_text, stderr_text) as plain strings.
     Automatically restores sys.stdout/sys.stderr afterwards.
     """
-    # --- configure runtime ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", runtime_level)
+    logger.enable_color = enable_color
+    logger.setLevel(log_level.upper())
 
     # Preserve original streams for proper restoration
     old_out, old_err = sys.stdout, sys.stderr
@@ -50,10 +51,9 @@ def capture_log_output(
 
     # --- execute ---
     try:
-        logger = mod_logs.get_logger()
         method = getattr(logger, msg_level.lower(), None)
         if callable(method):
-            final_msg: str = msg if msg is not None else f"msg:{msg_level}"
+            final_msg: str = msg or f"msg:{msg_level}"
             method(final_msg, **kwargs)
     finally:
         # Always restore, even if log() crashes
@@ -84,13 +84,12 @@ def test_log_routes_correct_stream(
     monkeypatch: pytest.MonkeyPatch,
     msg_level: str,
     expected_stream: str,
+    direct_logger: mod_logs.AppLogger,
 ) -> None:
-    """Ensure log() routes to the correct stream and message appears,
-    ignoring prefixes/colors.
-    """
+    """Ensure messages go to the correct stream based on severity."""
     # --- setup, patch, and execute ---
     text = f"msg:{msg_level}"
-    out, err = capture_log_output(monkeypatch, msg_level, "trace", msg=text)
+    out, err = capture_log_output(monkeypatch, direct_logger, msg_level, msg=text)
     out, err = strip_ansi(out.strip()), strip_ansi(err.strip())
 
     # --- verify ---
@@ -105,61 +104,75 @@ def test_log_routes_correct_stream(
         assert not out
 
 
-def test_log_includes_default_prefix(
-    monkeypatch: pytest.MonkeyPatch,
+def test_formatter_includes_expected_tags(
     capsys: pytest.CaptureFixture[str],
+    direct_logger: mod_logs.AppLogger,
 ) -> None:
-    """log() should include the correct default prefix based on level."""
-    # --- patch, execute, and verify ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "trace")
-    logger = mod_logs.get_logger()
-    for level, (_, expected_tag) in mod_logs.TAG_STYLES.items():
-        log_method = getattr(logger, level.lower(), None)
-        if callable(log_method):
-            log_method("sample")
+    """Each log level should include its corresponding prefix/tag."""
+    # --- setup ---
+    direct_logger.setLevel("trace")
+
+    # --- execute, and verify ---
+    for level_name, (_, expected_tag) in mod_utils_logs.TAG_STYLES.items():
+        method = getattr(direct_logger, level_name.lower(), None)
+        if callable(method):
+            method("sample")
             capture = capsys.readouterr()
             out = (capture.out + capture.err).lower()
-            assert expected_tag.strip().lower() in out, f"{level} missing expected tag"
+            assert expected_tag.strip().lower() in out, (
+                f"{level_name} missing expected tag"
+            )
 
 
-def test_formatter_adds_ansi_when_enabled(monkeypatch: pytest.MonkeyPatch) -> None:
+def test_formatter_adds_ansi_when_color_enabled(
+    monkeypatch: pytest.MonkeyPatch,
+    direct_logger: mod_logs.AppLogger,
+) -> None:
+    """When color is enabled, ANSI codes should appear in output."""
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "use_color", True)
-    out, _ = capture_log_output(monkeypatch, "debug", "debug", msg="colored")
+    out, _ = capture_log_output(
+        monkeypatch, direct_logger, "debug", enable_color=True, msg="colored"
+    )
 
     # --- verify ---
     assert "\033[" in out
 
 
-def test_log_dynamic_unknown_level(capsys: pytest.CaptureFixture[str]) -> None:
+def test_log_dynamic_unknown_level(
+    capsys: pytest.CaptureFixture[str],
+    direct_logger: mod_logs.AppLogger,
+) -> None:
+    """Unknown string levels are handled gracefully."""
     # --- execute ---
-    mod_logs.log_dynamic("nonsense", "This should not crash")
+    direct_logger.log_dynamic("nonsense", "This should not crash")
 
     # --- verify ---
     out = capsys.readouterr().err.lower()
     assert "Unknown log level".lower() in out
 
 
-def test_log_missing_log_level(monkeypatch: pytest.MonkeyPatch) -> None:
-    """If current_runtime has no 'log_level', logger should fallback safely."""
+def test_use_level_context_manager_changes_temporarily(
+    direct_logger: mod_logs.AppLogger,
+) -> None:
+    """use_level() should temporarily change the logger level."""
     # --- setup ---
-    output = StringIO()
+    orig_level = direct_logger.level
 
-    # --- patch and execute ---
-    monkeypatch.setattr(sys, "__stderr__", output)
+    # --- execute and verify ---
+    with direct_logger.use_level("error"):
+        assert direct_logger.level_name == "ERROR"
+    assert direct_logger.level == orig_level
 
-    # Remove key temporarily
-    backup = dict(mod_runtime.current_runtime)
-    mod_runtime.current_runtime.pop("log_level", None)
 
-    try:
-        logger = mod_logs.get_logger()
-        logger.info("no level key")
-    finally:
-        runtime_dict = cast("dict[str, object]", mod_runtime.current_runtime)  # pylance
-        runtime_dict.update(backup)
+def test_log_dynamic_accepts_numeric_level(
+    capsys: pytest.CaptureFixture[str],
+    direct_logger: mod_logs.AppLogger,
+) -> None:
+    """log_dynamic() should work with int levels too."""
+    # --- execute ---
+    direct_logger.log_dynamic(mod_utils_logs.TRACE_LEVEL, "Numeric trace log works")
 
     # --- verify ---
-    msg = output.getvalue()
-    assert "[LOGGER ERROR]" in msg
-    assert "log_level" in msg
+    captured = capsys.readouterr()
+    combined = (captured.out + captured.err).lower()
+    assert "Numeric trace log works".lower() in combined

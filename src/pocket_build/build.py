@@ -7,12 +7,13 @@ import shutil
 from pathlib import Path
 
 from .config_types import BuildConfigResolved, IncludeResolved, PathResolved
-from .utils_logs import get_log_level, get_logger, temporary_log_level
-from .utils_types import cast_hint, make_pathresolved
-from .utils_using_runtime import (
+from .logs import get_logger
+from .utils import (
     has_glob_chars,
     is_excluded_raw,
 )
+from .utils_logs import TEST_TRACE
+from .utils_types import cast_hint, make_pathresolved
 
 
 # --------------------------------------------------------------------------- #
@@ -99,6 +100,12 @@ def copy_file(
     dry_run: bool,
 ) -> None:
     logger = get_logger()
+    TEST_TRACE(
+        "enter copy_file",
+        f"id={id(logger)}",
+        f"level={logger.level_name}",
+        f"handlers={[type(h).__name__ for h in logger.handlers]}",
+    )
     src = Path(src)
     dest = Path(dest)
     src_root = Path(src_root)
@@ -134,6 +141,12 @@ def copy_directory(
     Exclude patterns ending with '/' are treated as directory-wide excludes.
     """
     logger = get_logger()
+    TEST_TRACE(
+        "enter copy_directory",
+        f"id={id(logger)}",
+        f"level={logger.level_name}",
+        f"handlers={[type(h).__name__ for h in logger.handlers]}",
+    )
     src = Path(src)
     src_root = Path(src_root).resolve()
     src = (src_root / src).resolve() if not src.is_absolute() else src.resolve()
@@ -403,7 +416,7 @@ def run_all_builds(
     dry_run: bool,
 ) -> None:
     logger = get_logger()
-    root_level = get_log_level()
+    root_level = logger.level_name
     logger.trace(f"[run_all_builds] Resolved build: {resolved_builds}")
 
     for i, build_cfg in enumerate(resolved_builds, 1):
@@ -414,7 +427,7 @@ def run_all_builds(
         # apply build-specific log level temporarily
         needs_override = build_log_level and build_log_level != root_level
         context = (
-            temporary_log_level(cast_hint(str, build_log_level))
+            logger.use_level(cast_hint(str, build_log_level))
             if needs_override
             else contextlib.nullcontext()
         )

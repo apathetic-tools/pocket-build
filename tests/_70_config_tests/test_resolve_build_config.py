@@ -10,7 +10,7 @@ import pytest
 
 import pocket_build.config_resolve as mod_resolve
 import pocket_build.config_types as mod_types
-import pocket_build.runtime as mod_runtime
+import pocket_build.logs as mod_logs
 from tests.utils import make_build_input
 
 
@@ -46,7 +46,7 @@ def _args(**kwargs: object) -> argparse.Namespace:
 
 def test_resolve_build_config_from_config_paths(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Ensure config-based include/out/exclude resolve relative to config_dir."""
     # --- setup ---
@@ -54,8 +54,8 @@ def test_resolve_build_config_from_config_paths(
     args = _args()
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+    with module_logger.use_level("info"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
     inc = resolved["include"][0]
@@ -65,7 +65,7 @@ def test_resolve_build_config_from_config_paths(
     assert inc["root"] == tmp_path
     assert exc["root"] == tmp_path
     assert out["root"] == tmp_path
-    assert resolved["log_level"] == "info"
+    assert resolved["log_level"].lower() == "info"
     assert resolved["respect_gitignore"] is True
     assert resolved["__meta__"]["config_root"] == tmp_path
     assert resolved["__meta__"]["cli_root"] == tmp_path
@@ -73,7 +73,7 @@ def test_resolve_build_config_from_config_paths(
 
 def test_resolve_build_config_cli_overrides_include_and_out(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """CLI --include and --out should override config include/out."""
     # --- setup ---
@@ -81,8 +81,8 @@ def test_resolve_build_config_cli_overrides_include_and_out(
     args = _args(include=["cli_src/**"], out="cli_dist")
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+    with module_logger.use_level("info"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
     inc = resolved["include"][0]
@@ -96,7 +96,7 @@ def test_resolve_build_config_cli_overrides_include_and_out(
 
 def test_resolve_build_config_add_include_extends(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """--add-include should append to config includes, not override."""
     # --- setup ---
@@ -104,8 +104,8 @@ def test_resolve_build_config_add_include_extends(
     args = _args(add_include=["extra/**"])
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+    with module_logger.use_level("info"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
     paths = [i["path"] for i in resolved["include"]]
@@ -118,7 +118,7 @@ def test_resolve_build_config_add_include_extends(
 
 def test_resolve_build_config_gitignore_patterns_added(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """When .gitignore exists, its patterns should be appended as gitignore excludes."""
     # --- setup ---
@@ -128,8 +128,8 @@ def test_resolve_build_config_gitignore_patterns_added(
     args = _args()
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
-    resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+    with module_logger.use_level("debug"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
     git_excludes = [e for e in resolved["exclude"] if e["origin"] == "gitignore"]
@@ -140,7 +140,7 @@ def test_resolve_build_config_gitignore_patterns_added(
 
 def test_resolve_build_config_respects_cli_exclude_override(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """CLI --exclude should override config excludes."""
     # --- setup ---
@@ -148,8 +148,8 @@ def test_resolve_build_config_respects_cli_exclude_override(
     args = _args(exclude=["*.bak"])
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+    with module_logger.use_level("info"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
     excl = [str(e["path"]) for e in resolved["exclude"]]
@@ -159,7 +159,7 @@ def test_resolve_build_config_respects_cli_exclude_override(
 
 def test_resolve_build_config_respects_dest_override(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """IncludeResolved with explicit dest should survive resolution unchanged."""
     # --- setup ---
@@ -167,8 +167,8 @@ def test_resolve_build_config_respects_dest_override(
     args = _args()
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+    with module_logger.use_level("info"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
     out = resolved["out"]
@@ -179,7 +179,7 @@ def test_resolve_build_config_respects_dest_override(
 
 def test_resolve_build_config_respect_gitignore_false(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """If --no-gitignore is passed, .gitignore patterns are not loaded."""
     # --- setup ---
@@ -189,8 +189,8 @@ def test_resolve_build_config_respect_gitignore_false(
     args = _args(respect_gitignore=False)
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+    with module_logger.use_level("info"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
     assert all(e["origin"] != "gitignore" for e in resolved["exclude"])
@@ -199,15 +199,15 @@ def test_resolve_build_config_respect_gitignore_false(
 
 def test_resolve_build_config_add_exclude_extends(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     # --- setup ---
     raw = make_build_input(exclude=["*.tmp"], include=["src/**"])
     args = _args(add_exclude=["*.log"])
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+    with module_logger.use_level("info"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
     patterns = [str(e["path"]) for e in resolved["exclude"]]
@@ -275,7 +275,7 @@ def test_resolve_build_config_preserves_trailing_slash(tmp_path: Path) -> None:
 
 def test_resolve_build_config_warns_for_missing_include_root(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Warn if include root directory does not exist and pattern is not a glob."""
@@ -285,8 +285,8 @@ def test_resolve_build_config_warns_for_missing_include_root(
     args = _args()
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+    with module_logger.use_level("info"):
+        mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
     out = capsys.readouterr().err.lower()
@@ -295,7 +295,7 @@ def test_resolve_build_config_warns_for_missing_include_root(
 
 def test_resolve_build_config_warns_for_missing_absolute_include(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Warn if absolute include path does not exist and pattern is not a glob."""
@@ -305,8 +305,8 @@ def test_resolve_build_config_warns_for_missing_absolute_include(
     args = _args()
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+    with module_logger.use_level("info"):
+        mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
 
     # --- validate ---
     out = capsys.readouterr().err.lower()
@@ -315,7 +315,7 @@ def test_resolve_build_config_warns_for_missing_absolute_include(
 
 def test_resolve_build_config_warns_for_missing_relative_include(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
     capsys: pytest.CaptureFixture[str],
 ) -> None:
     """Warn if relative include path does not exist under an existing root."""
@@ -325,8 +325,8 @@ def test_resolve_build_config_warns_for_missing_relative_include(
     args = _args()
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_resolve.resolve_build_config(raw, args, existing_root, tmp_path)
+    with module_logger.use_level("info"):
+        mod_resolve.resolve_build_config(raw, args, existing_root, tmp_path)
 
     # --- validate ---
     out = capsys.readouterr().err.lower()

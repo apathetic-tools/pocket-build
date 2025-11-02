@@ -1,4 +1,4 @@
-# tests/test_build_filesystem.py
+# tests/test_copy_file.py.py
 """Tests for package.build (package and standalone versions)."""
 
 from pathlib import Path
@@ -6,13 +6,13 @@ from pathlib import Path
 import pytest
 
 import pocket_build.build as mod_build
-import pocket_build.runtime as mod_runtime
+import pocket_build.logs as mod_logs
 
 
 def test_copy_file_creates_and_copies(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Ensure copy_file creates directories and copies file content."""
     # --- setup ---
@@ -21,8 +21,8 @@ def test_copy_file_creates_and_copies(
     dest = tmp_path / "out" / "a.txt"
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
-    mod_build.copy_file(src, dest, src_root=tmp_path, dry_run=False)
+    with module_logger.use_level("debug"):
+        mod_build.copy_file(src, dest, src_root=tmp_path, dry_run=False)
 
     # --- verify ---
     assert dest.read_text() == "hi"
@@ -32,7 +32,7 @@ def test_copy_file_creates_and_copies(
 
 def test_copy_file_overwrites_existing(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """copy_file should overwrite existing destination content."""
     # --- setup ---
@@ -43,14 +43,17 @@ def test_copy_file_overwrites_existing(
     dest.write_text("old")
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "error")
-    mod_build.copy_file(src, dest, src_root=tmp_path, dry_run=False)
+    with module_logger.use_level("error"):
+        mod_build.copy_file(src, dest, src_root=tmp_path, dry_run=False)
 
     # --- verify ---
     assert dest.read_text() == "new"
 
 
-def test_copy_file_symlink(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+def test_copy_file_symlink(
+    tmp_path: Path,
+    module_logger: mod_logs.AppLogger,
+) -> None:
     # --- setup ---
     target = tmp_path / "target.txt"
     target.write_text("hi")
@@ -59,8 +62,8 @@ def test_copy_file_symlink(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> N
     dest = tmp_path / "out" / "link.txt"
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
-    mod_build.copy_file(link, dest, src_root=tmp_path, dry_run=False)
+    with module_logger.use_level("debug"):
+        mod_build.copy_file(link, dest, src_root=tmp_path, dry_run=False)
 
     # --- verify ---
     assert dest.read_text() == "hi"

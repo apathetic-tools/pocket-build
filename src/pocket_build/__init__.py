@@ -58,6 +58,9 @@ from .constants import (
     DEFAULT_STRICT_CONFIG,
     DEFAULT_WATCH_INTERVAL,
 )
+from .logs import (
+    get_logger,
+)
 from .meta import (
     PROGRAM_DISPLAY,
     PROGRAM_ENV,
@@ -65,27 +68,22 @@ from .meta import (
     PROGRAM_SCRIPT,
     Metadata,
 )
-from .runtime import Runtime, current_runtime
 from .utils import (
+    get_glob_root,
+    has_glob_chars,
+    is_excluded,
+    is_excluded_raw,
     load_jsonc,
-    should_use_color,
 )
 from .utils_logs import (
     LEVEL_ORDER,
     RESET,
-    colorize,
 )
 from .utils_types import (
     make_includeresolved,
     make_pathresolved,
     safe_isinstance,
     schema_from_typeddict,
-)
-from .utils_using_runtime import (
-    get_glob_root,
-    has_glob_chars,
-    is_excluded,
-    is_excluded_raw,
 )
 
 
@@ -126,12 +124,13 @@ __all__ = [  # noqa: RUF022
     "PROGRAM_ENV",
     "PROGRAM_PACKAGE",
     "PROGRAM_SCRIPT",
-    "current_runtime",
     #
-    # --- utils ---
+    # --- logs ---
     "LEVEL_ORDER",
     "RESET",
-    "colorize",
+    "get_logger",
+    #
+    # --- utils ---
     "get_glob_root",
     "has_glob_chars",
     "is_excluded_raw",
@@ -141,7 +140,6 @@ __all__ = [  # noqa: RUF022
     "make_pathresolved",
     "safe_isinstance",
     "schema_from_typeddict",
-    "should_use_color",
     #
     # --- Types ---
     "BuildConfig",
@@ -152,5 +150,4 @@ __all__ = [  # noqa: RUF022
     "PathResolved",
     "RootConfig",
     "RootConfigResolved",
-    "Runtime",
 ]

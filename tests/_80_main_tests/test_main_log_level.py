@@ -7,8 +7,8 @@ from pathlib import Path
 import pytest
 
 import pocket_build.cli as mod_cli
+import pocket_build.logs as mod_logs
 import pocket_build.meta as mod_meta
-import pocket_build.runtime as mod_runtime
 
 
 # --- constants --------------------------------------------------------------------
@@ -72,7 +72,8 @@ def test_verbose_flag(
     assert "Build completed" in out
     assert "All builds complete" in out
 
-    assert mod_runtime.current_runtime["log_level"] == "debug"
+    level = mod_logs.get_logger().level_name.lower()
+    assert level == "debug"
 
 
 def test_verbose_and_quiet_mutually_exclusive(
@@ -123,7 +124,8 @@ def test_log_level_flag_sets_runtime(
     assert code == 0
     assert "Build completed" in out
     # Verify that runtime log level is set correctly
-    assert mod_runtime.current_runtime["log_level"] == "debug"
+    level = mod_logs.get_logger().level_name.lower()
+    assert level == "debug"
 
 
 def test_log_level_from_env_var(
@@ -143,7 +145,8 @@ def test_log_level_from_env_var(
     code = mod_cli.main([])
 
     assert code == 0
-    assert mod_runtime.current_runtime["log_level"] == "warning"
+    level = mod_logs.get_logger().level_name.lower()
+    assert level == "warning"
 
     # 2️⃣ Generic LOG_LEVEL fallback works
     monkeypatch.delenv(f"{mod_meta.PROGRAM_ENV}_LOG_LEVEL")
@@ -151,7 +154,8 @@ def test_log_level_from_env_var(
     code = mod_cli.main([])
 
     assert code == 0
-    assert mod_runtime.current_runtime["log_level"] == "error"
+    level = mod_logs.get_logger().level_name.lower()
+    assert level == "error"
 
     monkeypatch.delenv("LOG_LEVEL", raising=False)
 
@@ -194,4 +198,5 @@ def test_per_build_log_level_override(
     assert "[DEBUG" in out or "Overriding log level" in out
 
     # After all builds complete, runtime should be restored to root level
-    assert mod_runtime.current_runtime["log_level"] == "info"
+    level = mod_logs.get_logger().level_name.lower()
+    assert level == "info"

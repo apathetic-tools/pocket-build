@@ -14,8 +14,8 @@ Checklist:
 
 from pathlib import Path
 
+import pocket_build.utils as mod_utils
 import pocket_build.utils_types as mod_utils_types
-import pocket_build.utils_using_runtime as mod_utils_runtime
 
 
 def test_is_excluded_wrapper_delegates(tmp_path: Path) -> None:
@@ -37,4 +37,4 @@ def test_is_excluded_wrapper_delegates(tmp_path: Path) -> None:
     excludes = [mod_utils_types.make_pathresolved("*.txt", root, "config")]
 
     # --- execute + verify ---
-    assert mod_utils_runtime.is_excluded(entry, excludes)
+    assert mod_utils.is_excluded(entry, excludes)

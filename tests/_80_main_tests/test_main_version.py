@@ -8,7 +8,6 @@ import pytest
 
 import pocket_build.cli as mod_cli
 import pocket_build.meta as mod_meta
-from tests.utils import TRACE
 
 
 def test_version_flag(
@@ -20,7 +19,6 @@ def test_version_flag(
     out = capsys.readouterr().out
 
     # --- verify ---
-    TRACE(out)
     assert code == 0
     assert mod_meta.PROGRAM_DISPLAY in out
     assert re.search(r"\d+\.\d+\.\d+", out)

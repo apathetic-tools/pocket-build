@@ -3,7 +3,7 @@
 
 import pytest
 
-import pocket_build.utils_using_runtime as mod_utils_runtime
+import pocket_build.utils as mod_utils
 
 
 @pytest.mark.parametrize(
@@ -40,7 +40,7 @@ def test_normalize_path_string_behavior(
 ) -> None:
     """normalize_path_string() should produce normalized cross-platform paths."""
     # --- execute ---
-    result = mod_utils_runtime.normalize_path_string(raw)
+    result = mod_utils.normalize_path_string(raw)
 
     # --- verify ---
     # normalization

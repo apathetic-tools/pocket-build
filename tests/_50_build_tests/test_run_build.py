@@ -7,13 +7,13 @@ import pytest
 
 import pocket_build.build as mod_build
 import pocket_build.config_types as mod_types
-import pocket_build.runtime as mod_runtime
+import pocket_build.logs as mod_logs
 from tests.utils import make_build_cfg, make_include_resolved
 
 
 def test_run_build_includes_directory_itself(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Including 'src' should copy directory itself → dist/src/..."""
     # --- setup ---
@@ -24,8 +24,8 @@ def test_run_build_includes_directory_itself(
     cfg = make_build_cfg(tmp_path, [make_include_resolved("src", tmp_path)])
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("info"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     dist = tmp_path / "dist"
@@ -34,7 +34,7 @@ def test_run_build_includes_directory_itself(
 
 def test_run_build_includes_directory_contents_slash(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Including 'src/' should copy contents only → dist/..."""
     # --- setup ---
@@ -45,8 +45,8 @@ def test_run_build_includes_directory_contents_slash(
     cfg = make_build_cfg(tmp_path, [make_include_resolved("src/**", tmp_path)])
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("info"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     dist = tmp_path / "dist"
@@ -57,6 +57,7 @@ def test_run_build_includes_directory_contents_slash(
 def test_run_build_includes_directory_contents_single_star(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Including 'src/*' should copy non-hidden immediate contents → dist/...
     Also ensures that the original pattern is stored in PathResolved entries.
@@ -88,9 +89,9 @@ def test_run_build_includes_directory_contents_single_star(
         return real_copy_item(src_entry, dest_entry, exclude_patterns, dry_run=dry_run)
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    monkeypatch.setattr(mod_build, "copy_item", fake_copy_item)
-    mod_build.run_build(cfg)
+    with module_logger.use_level("info"):
+        monkeypatch.setattr(mod_build, "copy_item", fake_copy_item)
+        mod_build.run_build(cfg)
 
     # --- verify ---
     dist = tmp_path / "dist"
@@ -107,7 +108,7 @@ def test_run_build_includes_directory_contents_single_star(
 
 def test_run_build_includes_directory_contents_double_star(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Including 'src/**' should copy recursive contents → dist/..."""
     # --- setup ---
@@ -119,8 +120,8 @@ def test_run_build_includes_directory_contents_double_star(
     cfg = make_build_cfg(tmp_path, [make_include_resolved("src/**", tmp_path)])
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("info"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     dist = tmp_path / "dist"
@@ -130,7 +131,7 @@ def test_run_build_includes_directory_contents_double_star(
 
 def test_run_build_includes_single_file(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Including a single file should copy it directly to out."""
     # --- setup ---
@@ -140,8 +141,8 @@ def test_run_build_includes_single_file(
     cfg = make_build_cfg(tmp_path, [make_include_resolved(file, tmp_path)])
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("info"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     dist = tmp_path / "dist"
@@ -150,7 +151,7 @@ def test_run_build_includes_single_file(
 
 def test_run_build_includes_nested_subdir_glob(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Including 'src/utils/**' should copy contents of utils only → dist/..."""
     # --- setup ---
@@ -161,8 +162,8 @@ def test_run_build_includes_nested_subdir_glob(
     cfg = make_build_cfg(tmp_path, [make_include_resolved("src/utils/**", tmp_path)])
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("info"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     dist = tmp_path / "dist"
@@ -172,7 +173,7 @@ def test_run_build_includes_nested_subdir_glob(
 
 def test_run_build_includes_multiple_glob_patterns(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Including both 'src/*' and 'lib/**' should merge multiple roots cleanly."""
     # --- setup ---
@@ -192,8 +193,8 @@ def test_run_build_includes_multiple_glob_patterns(
     )
 
     # --- execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("info"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     dist = tmp_path / "dist"
@@ -203,7 +204,7 @@ def test_run_build_includes_multiple_glob_patterns(
 
 def test_run_build_includes_top_level_glob_only(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Including '*.txt' should copy all top-level files only → dist/..."""
     # --- setup ---
@@ -216,8 +217,8 @@ def test_run_build_includes_top_level_glob_only(
     cfg = make_build_cfg(tmp_path, [make_include_resolved("*.txt", tmp_path)])
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("info"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     dist = tmp_path / "dist"
@@ -228,15 +229,15 @@ def test_run_build_includes_top_level_glob_only(
 
 def test_run_build_skips_missing_matches(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Missing include pattern should not raise or create anything."""
     # --- setup ---
     cfg = make_build_cfg(tmp_path, [make_include_resolved("doesnotexist/**", tmp_path)])
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("debug"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     assert not any((tmp_path / "dist").iterdir())
@@ -244,7 +245,7 @@ def test_run_build_skips_missing_matches(
 
 def test_run_build_respects_dest_override(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """IncludeResolved with explicit dest should place inside that subfolder."""
     # --- setup ---
@@ -258,8 +259,8 @@ def test_run_build_respects_dest_override(
     )
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("info"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     dist = tmp_path / "dist"
@@ -269,7 +270,7 @@ def test_run_build_respects_dest_override(
 
 def test_run_build_dry_run_does_not_write(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Dry-run mode should not create dist folder or copy files."""
     # --- setup ---
@@ -284,8 +285,8 @@ def test_run_build_dry_run_does_not_write(
     )
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("debug"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     dist = tmp_path / "dist"
@@ -294,7 +295,7 @@ def test_run_build_dry_run_does_not_write(
 
 def test_run_build_dry_run_does_not_delete_existing_out(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Existing out_dir should not be deleted or modified during dry-run builds."""
     # --- setup ---
@@ -314,8 +315,8 @@ def test_run_build_dry_run_does_not_delete_existing_out(
     )
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("debug"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     # The existing out_dir and its files should remain intact
@@ -327,14 +328,14 @@ def test_run_build_dry_run_does_not_delete_existing_out(
 
 def test_run_build_no_includes_warns(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     # --- setup ---
     cfg = make_build_cfg(tmp_path, [])
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("info"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     assert (tmp_path / "dist").exists()
@@ -344,6 +345,7 @@ def test_run_build_no_includes_warns(
 def test_run_build_preserves_pattern_and_shallow_behavior(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Each PathResolved should preserve its original pattern,
     and shallow globs ('*') should not recurse.
@@ -376,9 +378,9 @@ def test_run_build_preserves_pattern_and_shallow_behavior(
         return real_copy_item(src_entry, dest_entry, exclude_patterns, dry_run=dry_run)
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "debug")
-    monkeypatch.setattr(mod_build, "copy_item", fake_copy_item)
-    mod_build.run_build(cfg)
+    with module_logger.use_level("debug"):
+        monkeypatch.setattr(mod_build, "copy_item", fake_copy_item)
+        mod_build.run_build(cfg)
 
     # --- verify ---
     assert called, "expected copy_item to be called at least once"
@@ -396,7 +398,7 @@ def test_run_build_preserves_pattern_and_shallow_behavior(
 
 def test_run_build_includes_directory_contents_trailing_slash(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Including 'src/' should copy the contents only (rsync/git-style) → dist/..."""
     # --- setup ---
@@ -407,8 +409,8 @@ def test_run_build_includes_directory_contents_trailing_slash(
     cfg = make_build_cfg(tmp_path, [make_include_resolved("src/", tmp_path)])
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_build.run_build(cfg)
+    with module_logger.use_level("info"):
+        mod_build.run_build(cfg)
 
     # --- verify ---
     dist = tmp_path / "dist"

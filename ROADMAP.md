@@ -78,6 +78,7 @@ CLI
 ## 💡 Ideas & Experiments
 Potential quality-of-life features:
 
+- [ ] our singlefile version no longer has de-duped imports, was this why we used isort? can ruff do it? it appears to do it in our src/ files?
 - [ ] split out and depend on a basic CLI module
 - [ ] split out and depend on (dev-only) a make_script CLI
 - [ ] split out and depend on (dev-only) a list-project CLI

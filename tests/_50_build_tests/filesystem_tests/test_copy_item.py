@@ -3,16 +3,14 @@
 
 from pathlib import Path
 
-import pytest
-
 import pocket_build.build as mod_build
-import pocket_build.runtime as mod_runtime
+import pocket_build.logs as mod_logs
 from tests.utils import make_resolved
 
 
 def test_copy_item_copies_single_file(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """copy_item should copy a single file to the resolved destination."""
     # --- setup ---
@@ -23,8 +21,8 @@ def test_copy_item_copies_single_file(
     dest_entry = make_resolved(tmp_path / "out" / "file.txt", tmp_path)
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_build.copy_item(src_entry, dest_entry, [], dry_run=False)
+    with module_logger.use_level("info"):
+        mod_build.copy_item(src_entry, dest_entry, [], dry_run=False)
 
     # --- verify ---
     assert (tmp_path / "out" / "file.txt").exists()
@@ -33,7 +31,7 @@ def test_copy_item_copies_single_file(
 
 def test_copy_item_handles_directory(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """copy_item should recursively copy directories."""
     # --- setup ---
@@ -45,8 +43,8 @@ def test_copy_item_handles_directory(
     dest_entry = make_resolved(tmp_path / "out", tmp_path)
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "critical")
-    mod_build.copy_item(src_entry, dest_entry, [], dry_run=False)
+    with module_logger.use_level("critical"):
+        mod_build.copy_item(src_entry, dest_entry, [], dry_run=False)
 
     # --- verify ---
     # copy_directory copies contents, not the folder itself
@@ -56,7 +54,7 @@ def test_copy_item_handles_directory(
 
 def test_copy_item_respects_excludes(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """copy_item should honor exclusion patterns."""
     # --- setup ---
@@ -71,8 +69,8 @@ def test_copy_item_respects_excludes(
     excludes = [make_resolved("**/skip.txt", tmp_path)]
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "critical")
-    mod_build.copy_item(src_entry, dest_entry, excludes, dry_run=False)
+    with module_logger.use_level("critical"):
+        mod_build.copy_item(src_entry, dest_entry, excludes, dry_run=False)
 
     # --- verify ---
     assert (tmp_path / "out" / "keep.txt").exists()
@@ -81,7 +79,7 @@ def test_copy_item_respects_excludes(
 
 def test_copy_item_respects_nested_excludes(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Deeply nested exclude patterns like **/skip.txt should be respected."""
     # --- setup ---
@@ -96,8 +94,8 @@ def test_copy_item_respects_nested_excludes(
     excludes = [make_resolved("**/skip.txt", tmp_path)]
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "critical")
-    mod_build.copy_item(src_entry, dest_entry, excludes, dry_run=False)
+    with module_logger.use_level("critical"):
+        mod_build.copy_item(src_entry, dest_entry, excludes, dry_run=False)
 
     # --- verify ---
     assert (tmp_path / "out" / "src" / "deep" / "keep.txt").exists()
@@ -106,7 +104,7 @@ def test_copy_item_respects_nested_excludes(
 
 def test_copy_item_respects_directory_excludes(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """Exclude pattern with trailing slash should skip entire directories."""
     # --- setup ---
@@ -121,8 +119,8 @@ def test_copy_item_respects_directory_excludes(
     excludes = [make_resolved("tmp/", tmp_path)]
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "critical")
-    mod_build.copy_item(src_entry, dest_entry, excludes, dry_run=False)
+    with module_logger.use_level("critical"):
+        mod_build.copy_item(src_entry, dest_entry, excludes, dry_run=False)
 
     # --- verify ---
     assert (tmp_path / "out" / "src" / "keep.txt").exists()
@@ -131,7 +129,7 @@ def test_copy_item_respects_directory_excludes(
 
 def test_copy_item_dry_run_skips_writing(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """copy_item with dry_run=True should not write anything to disk."""
     # --- setup ---
@@ -142,8 +140,8 @@ def test_copy_item_dry_run_skips_writing(
     dest_entry = make_resolved(tmp_path / "out" / "foo.txt", tmp_path)
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "info")
-    mod_build.copy_item(src_entry, dest_entry, [], dry_run=True)
+    with module_logger.use_level("info"):
+        mod_build.copy_item(src_entry, dest_entry, [], dry_run=True)
 
     # --- verify ---
     assert not (tmp_path / "out").exists()
@@ -151,7 +149,7 @@ def test_copy_item_dry_run_skips_writing(
 
 def test_copy_item_nested_relative_path(
     tmp_path: Path,
-    monkeypatch: pytest.MonkeyPatch,
+    module_logger: mod_logs.AppLogger,
 ) -> None:
     """copy_item should handle nested relative paths and preserve structure."""
     # --- setup ---
@@ -163,8 +161,8 @@ def test_copy_item_nested_relative_path(
     dest_entry = make_resolved(tmp_path / "out", tmp_path)
 
     # --- patch and execute ---
-    monkeypatch.setitem(mod_runtime.current_runtime, "log_level", "warning")
-    mod_build.copy_item(src_entry, dest_entry, [], dry_run=False)
+    with module_logger.use_level("warning"):
+        mod_build.copy_item(src_entry, dest_entry, [], dry_run=False)
 
     # --- verify ---
     assert (tmp_path / "out" / "nested" / "deep.txt").exists()

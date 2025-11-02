@@ -12,10 +12,20 @@ import os
 
 import pytest
 
-from tests.utils import make_trace, runtime_swap
+from tests.fixtures.log_fixtures import (
+    direct_logger,
+    module_logger,
+)
+from tests.utils import make_test_trace, runtime_swap
 
 
-TRACE = make_trace("⚡️")
+# These fixtures are intentionally re-exported so pytest can discover them.
+__all__ = [
+    "direct_logger",
+    "module_logger",
+]
+
+TEST_TRACE = make_test_trace("⚡️")
 
 # early jank hook
 runtime_swap()

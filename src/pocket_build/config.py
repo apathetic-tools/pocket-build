@@ -12,11 +12,11 @@ from .config_types import (
     RootConfig,
 )
 from .config_validate import validate_config
+from .logs import get_logger
 from .meta import (
     PROGRAM_SCRIPT,
 )
-from .utils import determine_log_level, load_jsonc, plural, remove_path_in_error_message
-from .utils_logs import get_logger, log_dynamic, set_log_level
+from .utils import load_jsonc, plural, remove_path_in_error_message
 from .utils_schema import ValidationSummary
 from .utils_types import cast_hint, schema_from_typeddict
 
@@ -57,6 +57,11 @@ def find_config(
     # NOTE: We only have early no-config Log-Level
     logger = get_logger()
 
+    level = logger.resolve_level_name(missing_level)
+    if level is None:
+        logger.error("Invalid log level name in find_config(): %s", missing_level)
+        missing_level = "error"
+
     # --- 1. Explicit config path ---
     if getattr(args, "config", None):
         config = Path(args.config).expanduser().resolve()
@@ -79,7 +84,7 @@ def find_config(
 
     if not found:
         # Expected absence — soft failure (continue)
-        log_dynamic(missing_level, f"No config file found in {cwd}")
+        logger.log_dynamic(missing_level, f"No config file found in {cwd}")
         return None
 
     # --- 3. Handle multiple matches ---
@@ -396,7 +401,7 @@ def _validation_summary(
         msg_summary = "\n  • ".join(summary.strict_warnings)
         logger.error("\nStrict warnings (treated as errors):\n  • %s", msg_summary)
     if summary.warnings:
-        msg_summary = "\n  • ".join(summary.strict_warnings)
+        msg_summary = "\n  • ".join(summary.warnings)
         logger.warning("\nWarnings (non-fatal):\n  • %s", msg_summary)
 
 
@@ -439,7 +444,9 @@ def load_and_validate_config(
     if isinstance(raw_config, dict):
         raw_log_level = raw_config.get("log_level")
         if isinstance(raw_log_level, str) and raw_log_level:
-            set_log_level(determine_log_level(args, raw_log_level))
+            logger.setLevel(
+                logger.determine_log_level(args=args, root_log_level=raw_log_level)
+            )
 
     # --- Parse structure into final form without types ---
     try:

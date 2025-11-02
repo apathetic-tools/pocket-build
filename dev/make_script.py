@@ -10,6 +10,7 @@ collected, deduplicated, and placed neatly at the top.
 
 import argparse
 import ast
+import graphlib
 import os
 import py_compile
 import re
@@ -34,12 +35,11 @@ ORDER_NAMES: list[str] = [
     "constants",
     "meta",
     "config_types",  # needed before utils.py
-    "utils",  # needed before runtime.py
+    "utils_logs",  # needed before logs.py
+    "logs",
+    "utils",
     "utils_types",
     "utils_schema",
-    "runtime",
-    "utils_logs",
-    "utils_using_runtime",
     "config",
     "config_resolve",
     "config_validate",
@@ -227,6 +227,99 @@ def verify_all_modules_listed() -> None:
         raise SystemExit(1)
 
 
+def detect_internal_import_order(package_name: str) -> None:
+    """Warn (or fail) if ORDER_NAMES violates internal import dependencies."""
+    deps: dict[str, set[str]] = {name: set() for name in ORDER_NAMES}
+
+    for name in ORDER_NAMES:
+        path = SRC_DIR / f"{name}.py"
+        if not path.exists():
+            continue
+
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError as e:
+            print(f"❌ Failed to parse {name}.py: {e}")
+            continue
+
+        for node in tree.body:
+            if isinstance(node, ast.ImportFrom):
+                mod = node.module or ""
+                if mod.startswith(package_name):
+                    dep = mod.split(".")[-1]
+                    if dep in deps and dep != name:
+                        deps[name].add(dep)
+
+    # detect circular imports first
+    try:
+        sorter = graphlib.TopologicalSorter(deps)
+        topo = list(sorter.static_order())
+    except graphlib.CycleError as e:
+        print(f"❌ Circular dependency detected: {e.args[1]}")
+        raise SystemExit(1) from e
+
+    # compare ORDER_NAMES to topological sort
+    mismatched = [
+        n for n in ORDER_NAMES if n in topo and topo.index(n) != ORDER_NAMES.index(n)
+    ]
+    if mismatched:
+        print("⚠️  Possible module misordering detected:")
+        for n in mismatched:
+            print(f"   - {n} appears before one of its dependencies")
+        print("💡 Suggested order:")
+        print("   " + ", ".join(topo))
+        print()
+
+
+def verify_no_broken_imports(final_text: str, package_name: str) -> None:
+    pattern = re.compile(rf"\bimport {package_name}\.(\w+)")
+    broken = {
+        m.group(1)
+        for m in pattern.finditer(final_text)
+        if f"# === {m.group(1)}.py ===" not in final_text
+    }
+    if broken:
+        print("❌ Unresolved internal imports remain:")
+        for mod in broken:
+            print(f"   - {package_name}.{mod}")
+        raise SystemExit(1)
+
+
+# def sanity_check_levels() -> None:
+#     if not hasattr(logging, "TRACE"):
+#         raise RuntimeError("TRACE level not registered before logs.py executed")
+
+
+def suggest_fixed_order(package_name: str) -> None:
+    """Print a suggested ORDER_NAMES sequence based on actual internal imports."""
+    deps: dict[str, set[str]] = {name: set() for name in ORDER_NAMES}
+
+    for name in ORDER_NAMES:
+        path = SRC_DIR / f"{name}.py"
+        if not path.exists():
+            continue
+
+        try:
+            tree = ast.parse(path.read_text(encoding="utf-8"))
+        except SyntaxError:
+            continue
+
+        for node in tree.body:
+            if isinstance(node, ast.ImportFrom):
+                mod = node.module or ""
+                if mod.startswith(package_name):
+                    dep = mod.split(".")[-1]
+                    if dep in deps and dep != name:
+                        deps[name].add(dep)
+
+    sorter = graphlib.TopologicalSorter(deps)
+    topo = list(sorter.static_order())
+
+    if topo != ORDER_NAMES:
+        print("💡 Suggested ORDER_NAMES based on internal imports:")
+        print("   " + ", ".join(topo))
+
+
 # ------------------------------------------------------------
 # Build process
 # ------------------------------------------------------------
@@ -237,7 +330,11 @@ def build_single_file(
     version = extract_version()
     commit = extract_commit()
 
+    # check if we missed any files in the module in our ORDER
     verify_all_modules_listed()
+
+    detect_internal_import_order(package_name)
+    suggest_fixed_order(package_name)
 
     build_date = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
 
@@ -324,6 +421,8 @@ def build_single_file(
         "    sys.exit(main(sys.argv[1:]))\n"
     )
 
+    verify_no_broken_imports(final_script, package_name)
+
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(final_script, encoding="utf-8")
     out_path.touch()
@@ -376,7 +475,6 @@ def main() -> None:
         else DEFAULT_OUT_FILE
     )
     build_single_file(out_path, package_name=args.package)
-
     verify_compiles(out_path)
 
     size = out_path.stat().st_size / 1024

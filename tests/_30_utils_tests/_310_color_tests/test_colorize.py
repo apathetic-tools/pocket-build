@@ -3,8 +3,8 @@
 
 import pytest
 
-import pocket_build.runtime as mod_runtime
-import pocket_build.utils_logs as mod_logs
+import pocket_build.logs as mod_logs
+import pocket_build.utils_logs as mod_utils_logs
 
 
 # ---------------------------------------------------------------------------
@@ -21,57 +21,62 @@ def clean_env(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 # ---------------------------------------------------------------------------
-# Tests
+# colorize() behavior
 # ---------------------------------------------------------------------------
 
 
-def test_colorize_explicit_true_false() -> None:
-    """Explicit use_color argument forces color on or off."""
+def test_colorize_explicit_true_false(direct_logger: mod_logs.AppLogger) -> None:
+    """Explicit enable_color argument forces color on or off."""
     # --- setup ---
-    test_string = "test string"
+    text = "test"
 
     # --- execute and verify ---
     assert (
-        mod_logs.colorize(test_string, mod_logs.GREEN, use_color=True)
-    ) == f"{mod_logs.GREEN}{test_string}{mod_logs.RESET}"
+        direct_logger.colorize(text, mod_utils_logs.GREEN, enable_color=True)
+    ) == f"{mod_utils_logs.GREEN}{text}{mod_utils_logs.RESET}"
     assert (
-        mod_logs.colorize(
-            test_string,
-            mod_logs.GREEN,
-            use_color=False,
+        direct_logger.colorize(
+            text,
+            mod_utils_logs.GREEN,
+            enable_color=False,
         )
-    ) == test_string
+    ) == text
 
 
-def test_colorize_respects_reset(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Recomputes cache if manually cleared."""
+def test_colorize_respects_instance_flag(direct_logger: mod_logs.AppLogger) -> None:
+    """colorize() should honor logger.enable_color."""
     # --- setup ---
-    test_string = "test string"
+    text = "abc"
 
-    # --- patch, execute and verify ---
+    # --- execute and verify ---
+    direct_logger.enable_color = True
+    assert (
+        direct_logger.colorize(text, mod_utils_logs.GREEN)
+        == f"{mod_utils_logs.GREEN}{text}{mod_utils_logs.RESET}"
+    )
 
-    # Force color disabled at runtime
-    monkeypatch.setitem(mod_runtime.current_runtime, "use_color", False)
-    result = mod_logs.colorize(test_string, mod_logs.GREEN)
-
-    # --- verify ---
-    assert result == test_string
+    direct_logger.enable_color = False
+    assert direct_logger.colorize(text, mod_utils_logs.GREEN) == text
 
 
-def test_colorize_respects_runtime_flag(monkeypatch: pytest.MonkeyPatch) -> None:
-    """colorize() should follow current_runtime['use_color'] exactly."""
-    # --- setup ---
-    text = "sample"
+def test_colorize_does_not_mutate_text(direct_logger: mod_logs.AppLogger) -> None:
+    """colorize() should not alter text content aside from color codes."""
+    text = "safe!"
+    direct_logger.enable_color = True
+    result = direct_logger.colorize(text, mod_utils_logs.GREEN)
+    assert text in result
+    assert result.startswith(mod_utils_logs.GREEN)
+    assert result.endswith(mod_utils_logs.RESET)
+    # ensure text object itself wasn't modified
+    assert text == "safe!"
 
-    # --- patch, execute and verify ---
-    # Force runtime to enable color
-    monkeypatch.setitem(mod_runtime.current_runtime, "use_color", True)
-    result = mod_logs.colorize(text, mod_logs.GREEN)
-    assert result == f"{mod_logs.GREEN}{text}{mod_logs.RESET}"
 
-    # Force runtime to disable color
-    monkeypatch.setitem(mod_runtime.current_runtime, "use_color", False)
-    result = mod_logs.colorize(text, mod_logs.GREEN)
-    assert result == text
+def test_colorize_empty_text(direct_logger: mod_logs.AppLogger) -> None:
+    """Empty strings should still produce proper output."""
+    direct_logger.enable_color = True
+    assert (
+        direct_logger.colorize("", mod_utils_logs.GREEN)
+        == f"{mod_utils_logs.GREEN}{mod_utils_logs.RESET}"
+    )
+    direct_logger.enable_color = False
+    assert direct_logger.colorize("", mod_utils_logs.GREEN) == ""

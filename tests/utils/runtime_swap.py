@@ -19,7 +19,7 @@ import pytest
 
 import pocket_build.meta as mod_meta
 
-from .trace import make_trace
+from .test_trace import make_test_trace
 
 
 if TYPE_CHECKING:
@@ -31,7 +31,7 @@ PROJ_ROOT = Path(__file__).resolve().parent.parent.parent
 
 # --- helpers --------------------------------------------------------------------
 
-TRACE = make_trace("🧬")
+TEST_TRACE = make_test_trace("🧬")
 
 
 def _mode() -> str:
@@ -104,7 +104,7 @@ def runtime_swap() -> bool:
         mod: ModuleType = importlib.util.module_from_spec(spec)
         sys.modules[mod_meta.PROGRAM_PACKAGE] = mod
         spec.loader.exec_module(mod)
-        TRACE(f"Loaded standalone module from {bin_path}")
+        TEST_TRACE(f"Loaded standalone module from {bin_path}")
     except Exception as e:
         # Fail fast with context; this is a config/runtime problem.
         xmsg = (
@@ -114,6 +114,6 @@ def runtime_swap() -> bool:
         )
         raise pytest.UsageError(xmsg) from e
 
-    TRACE(f"✅ Loaded standalone runtime early from {bin_path}")
+    TEST_TRACE(f"✅ Loaded standalone runtime early from {bin_path}")
 
     return True

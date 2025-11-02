@@ -7,7 +7,7 @@ from pathlib import Path
 
 import pytest
 
-import pocket_build.utils_using_runtime as mod_utils_runtime
+import pocket_build.utils as mod_utils
 
 
 @pytest.mark.parametrize(
@@ -43,7 +43,7 @@ def test_get_glob_root_extracts_static_prefix(
 ) -> None:
     """get_glob_root() should return the non-glob portion of a path pattern."""
     # --- execute --
-    result = mod_utils_runtime.get_glob_root(pattern)
+    result = mod_utils.get_glob_root(pattern)
 
     # --- verify ---
     assert result == expected, f"{pattern!r} → {result}, expected {expected}"

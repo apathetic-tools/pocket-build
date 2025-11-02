@@ -17,13 +17,12 @@ from .config_types import (
 from .constants import (
     DEFAULT_WATCH_INTERVAL,
 )
+from .logs import get_logger
 from .meta import (
     PROGRAM_DISPLAY,
     PROGRAM_SCRIPT,
 )
-from .runtime import current_runtime
-from .utils import determine_log_level, safe_log, should_use_color
-from .utils_logs import LEVEL_ORDER, get_logger
+from .utils_logs import LEVEL_ORDER, safe_log
 from .utils_types import cast_hint
 
 
@@ -200,20 +199,18 @@ def _normalize_positional_args(
 
 
 def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912, PLR0915
-    logger = get_logger()
+    logger = get_logger()  # init (use env + defaults)
 
     try:
         parser = _setup_parser()
         args = parser.parse_args(argv)
 
-        # --- Early runtime init (use CLI + env) ---
-        current_runtime.update(
-            {
-                "log_level": determine_log_level(args),
-                "use_color": getattr(args, "use_color", should_use_color()),
-            }
+        # --- Early runtime init (use CLI + env + defaults) ---
+        logger.setLevel(logger.determine_log_level(args=args))
+        logger.enable_color = getattr(
+            args, "enable_color", logger.determine_color_enabled()
         )
-        logger.trace(f"[BOOT] Runtime initialized: {current_runtime}")
+        logger.trace("[BOOT] log-level initialized: %s", logger.level_name)
 
         # You can now safely use log() anywhere below this line.
 
@@ -242,7 +239,9 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
             config_path, root_cfg = config_result
 
         # NOTE: log-level now fully set from config file
-        logger.trace(f"[CONFIG] Runtime re-resolved from config: {current_runtime}")
+        logger.trace(
+            "[CONFIG] log-level re-resolved from config: %s", logger.level_name
+        )
 
         # --- Self-test mode ---
         if getattr(args, "selftest", None):
@@ -328,7 +327,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
     except Exception as e:  # noqa: BLE001
         # unexpected internal error
         try:
-            if current_runtime.get("log_level") in {"debug", "trace"}:
+            if logger.level_name in {"DEBUG", "TRACE"}:  # how to get the name?
                 # Show traceback only in verbose/debug modes
                 logger.exception("Unexpected internal error:")
             else:

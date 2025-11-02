@@ -18,14 +18,14 @@ import pytest
 import pocket_build as app_package
 import pocket_build.meta as mod_meta
 import pocket_build.utils as mod_utils
-from tests.utils import make_trace
+from tests.utils import make_test_trace
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
 
-TRACE = make_trace("🪞")
+TEST_TRACE = make_test_trace("🪞")
 
 PROJ_ROOT = Path(__file__).resolve().parent.parent.parent
 SRC_ROOT = PROJ_ROOT / "src"
@@ -36,7 +36,7 @@ def list_important_modules() -> list[str]:
     """Return all importable submodules under the package, if available."""
     important: list[str] = []
     if not hasattr(app_package, "__path__"):
-        TRACE("pkgutil.walk_packages skipped — standalone runtime (no __path__)")
+        TEST_TRACE("pkgutil.walk_packages skipped — standalone runtime (no __path__)")
         important.append(app_package.__name__)
     else:
         for _, name, _ in pkgutil.walk_packages(
@@ -52,30 +52,30 @@ def dump_snapshot(*, include_full: bool = False) -> None:
     """Prints a summary of key modules and (optionally) a full sys.modules dump."""
     mode: str = os.getenv("RUNTIME_MODE", "installed")
 
-    TRACE("========== SNAPSHOT ===========")
-    TRACE(f"RUNTIME_MODE={mode}")
+    TEST_TRACE("========== SNAPSHOT ===========")
+    TEST_TRACE(f"RUNTIME_MODE={mode}")
 
     important_modules = list_important_modules()
 
     # Summary: the modules we care about most
-    TRACE("======= IMPORTANT MODULES =====")
+    TEST_TRACE("======= IMPORTANT MODULES =====")
     for name in important_modules:
         mod = sys.modules.get(name)
         if not mod:
             continue
         origin = getattr(mod, "__file__", None)
-        TRACE(f"  {name:<25} {origin}")
+        TEST_TRACE(f"  {name:<25} {origin}")
 
     if include_full:
         # Full origin dump
-        TRACE("======== OTHER MODULES ========")
+        TEST_TRACE("======== OTHER MODULES ========")
         for name, mod in sorted(sys.modules.items()):
             if name in important_modules:
                 continue
             origin = getattr(mod, "__file__", None)
-            TRACE(f"  {name:<38} {origin}")
+            TEST_TRACE(f"  {name:<38} {origin}")
 
-    TRACE("===============================")
+    TEST_TRACE("===============================")
 
 
 # ---------------------------------------------------------------------------
@@ -91,8 +91,8 @@ def test_pytest_runtime_cache_integrity() -> None:
     expected_script = BIN_ROOT / f"{mod_meta.PROGRAM_SCRIPT}.py"
 
     # --- execute ---
-    TRACE(f"RUNTIME_MODE={mode}")
-    TRACE(f"{mod_meta.PROGRAM_PACKAGE}.utils  → {utils_file}")
+    TEST_TRACE(f"RUNTIME_MODE={mode}")
+    TEST_TRACE(f"{mod_meta.PROGRAM_PACKAGE}.utils  → {utils_file}")
 
     if os.getenv("TRACE"):
         dump_snapshot()
@@ -112,11 +112,11 @@ def test_pytest_runtime_cache_integrity() -> None:
         )
 
         # troubleshooting info
-        TRACE(
+        TEST_TRACE(
             f"sys.modules['{mod_meta.PROGRAM_PACKAGE}']"
             f" = {sys.modules.get(mod_meta.PROGRAM_PACKAGE)}",
         )
-        TRACE(
+        TEST_TRACE(
             f"sys.modules['{mod_meta.PROGRAM_PACKAGE}.utils']"
             f" = {sys.modules.get(f'{mod_meta.PROGRAM_PACKAGE}.utils')}",
         )
@@ -157,7 +157,7 @@ def test_debug_dump_all_module_origins() -> None:
 
     # show total module count for quick glance
     count = sum(1 for name in sys.modules if name.startswith(mod_meta.PROGRAM_PACKAGE))
-    TRACE(f"Loaded {count} {mod_meta.PROGRAM_PACKAGE} modules total")
+    TEST_TRACE(f"Loaded {count} {mod_meta.PROGRAM_PACKAGE} modules total")
 
     # force visible failure for debugging runs
     xmsg = (

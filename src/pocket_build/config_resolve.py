@@ -23,10 +23,9 @@ from .constants import (
     DEFAULT_RESPECT_GITIGNORE,
     DEFAULT_WATCH_INTERVAL,
 )
-from .utils import determine_log_level
-from .utils_logs import get_logger, set_log_level
+from .logs import get_logger
+from .utils import has_glob_chars
 from .utils_types import cast_hint, make_includeresolved, make_pathresolved
-from .utils_using_runtime import has_glob_chars
 
 
 # --------------------------------------------------------------------------- #
@@ -245,6 +244,7 @@ def resolve_build_config(
     Applies CLI overrides, normalizes paths, merges gitignore behavior,
     and attaches provenance metadata.
     """
+    logger = get_logger()
     # Make a mutable copy
     resolved_cfg: dict[str, Any] = dict(build_cfg)
 
@@ -284,7 +284,9 @@ def resolve_build_config(
     # ------------------------------
     build_log = resolved_cfg.get("log_level")
     root_log = (root_cfg or {}).get("log_level")
-    resolved_cfg["log_level"] = determine_log_level(args, root_log, build_log)
+    resolved_cfg["log_level"] = logger.determine_log_level(
+        args=args, root_log_level=root_log, build_log_level=build_log
+    )
 
     # ------------------------------
     # Attach provenance
@@ -304,7 +306,10 @@ def resolve_config(
     config_dir: Path,
     cwd: Path,
 ) -> RootConfigResolved:
-    """Fully resolve a loaded RootConfig into a ready-to-run RootConfigResolved."""
+    """Fully resolve a loaded RootConfig into a ready-to-run RootConfigResolved.
+
+    If invoked standalone, ensures the global logger reflects the resolved log level.
+    If called after load_and_validate_config(), this is a harmless no-op re-sync."""
     logger = get_logger()
     root_cfg = cast_hint(RootConfig, dict(root_input))
 
@@ -331,12 +336,12 @@ def resolve_config(
     #  log_level: arg -> env -> build -> root -> default
     env_log = os.getenv(DEFAULT_ENV_LOG_LEVEL)
     root_log = root_cfg.get("log_level")
-    log_level = determine_log_level(args, root_log, None)
+    log_level = logger.determine_log_level(args=args, root_log_level=root_log)
     if env_log:
-        log_level = env_log  # environment wins over config if CLI missing
+        log_level = env_log.upper()  # environment wins over config if CLI missing
 
     # --- sync runtime ---
-    set_log_level(log_level)
+    logger.setLevel(log_level)
 
     # ------------------------------
     # Resolve builds

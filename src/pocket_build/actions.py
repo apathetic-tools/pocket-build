@@ -11,8 +11,8 @@ from pathlib import Path
 from .build import run_build
 from .config_types import BuildConfigResolved
 from .constants import DEFAULT_WATCH_INTERVAL
+from .logs import get_logger
 from .meta import PROGRAM_DISPLAY, PROGRAM_SCRIPT, Metadata
-from .utils_logs import get_logger
 from .utils_types import make_includeresolved, make_pathresolved
 
 
