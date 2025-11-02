@@ -14,8 +14,55 @@ For formatting guidelines, see the [DECISIONS.md Style Guide](./DECISIONS_STYLE_
 
 ---
 
+## 🪵 Adopt Standard Library `logging`
+<a id="dec12"></a>*DEC 12 — 2025-10-15 → revised 2025-10-31*  
+
+### Context  
+
+Early in development, the project required a **consistent and colorized logging system** that worked seamlessly in both modular and single-file builds.  
+At the time, the built-in Python `logging` module seemed overkill for such a small utility — especially since the tool needed lightweight log-level control and minimal setup.  
+We initially built a **custom logger** to provide:  
+
+- Compact, dependency-free logging.  
+- Inline color formatting for terminals.  
+- Simpler test injection and patching for trace output.  
+
+This approach fit the project's early ethos of *“small, inspectable, and standalone.”*  
+
+### Options Considered  
+
+| Option | Pros | Cons |
+|--------|------|------|
+| **Custom lightweight logger** | ✅ Fully under our control<br>✅ Compact and easily embedded<br>✅ Works identically in single-file builds | ⚠️ Duplicates standard functionality<br>⚠️ Harder to test and mock<br>⚠️ Configuration drift between modules |
+| **Standard Library `logging`** | ✅ Mature and battle-tested<br>✅ Configurable handlers, filters, and levels<br>✅ Works natively with external libraries<br>✅ Simple integration with pytest and CLI flags | ⚠️ Significantly more verbose setup for color and formatting |
+| **Third-party libraries (e.g. `loguru`, `rich.logging`)** | ✅ Rich formatting and features out-of-the-box | ❌ Adds runtime dependencies<br>❌ Conflicts with minimalism goal |
+
+### Decision — *2025-10-15*  
+
+Implement a **custom, lightweight logger** tailored for the project.  
+It would provide clear output, colorized levels, and simple hooks for tracing (`TRACE`) without bringing in external dependencies or complex handler hierarchies.  
+This custom module fit our goals of **portability** and **transparency**, keeping the tool’s behavior explicit and easy to inspect.  
+
+### Follow-up and Evolution (*2025-10-31*)
+
+As the codebase grew, the in-house logger **expanded significantly** — gaining configuration flags, test-time injection, and shims for different runtime modes.  
+It became increasingly **difficult to test, maintain, and integrate** with third-party tooling.  
+
+We also realized (belatedly) that the **standard `logging` module already supports** most of what we built manually — including level control, handler injection, and structured message formatting — all without external dependencies.  
+
+The custom logger was therefore deprecated and removed, and the project migrated fully to **Python’s built-in `logging`** system.  
+
+
+<br/><br/>
+
+---
+---
+
+<br/><br/>
+
+
 ## 🧩 Choose `Serger` for Single-File Builds
-<a id="dec11"></a>*DEC 11 — 2025-10-11*  
+<a id="dec11"></a>*DEC 11 — 2025-10-11 → revised 2025-10-13*  
 
 ### Context
 
@@ -178,7 +225,7 @@ Future builds may experiment with **`pyright` CLI** to align IDE and CI checks u
 
 
 ## 🪶 Adopt `editorconfig` and `Ruff` for Linting and Formatting  
-<a id="dec07"></a>*DEC 07 — 2025-10-10*  
+<a id="dec07"></a>*DEC 07 — 2025-10-10 → revised 2025-10-30*  
 
 ### Context
 
