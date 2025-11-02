@@ -37,9 +37,11 @@ test = ["test:pytest:installed", "test:pytest:script"]
 ]
 
 # 🧹 Automated fixing / formatting
-fix = ["fix:ruff", "lint:compile", "fix:format"]
-"fix:ruff" = "ruff check . --fix"
-"fix:format" = "ruff format ."
+fix = ["fix:ruff:installed", "fix:ruff:bin", "lint:compile", "fix:format:installed", "fix:format:bin"]
+"fix:ruff:installed" = "ruff check . --fix"
+"fix:ruff:bin" = "ruff check bin --fix"
+"fix:format:installed" = "ruff format ."
+"fix:format:bin" = "ruff format bin"
 
 # 🧩 Build and license
 "build:script" = "python dev/make_script.py"
@@ -70,6 +72,7 @@ dev = [
 # target-version = # project.requires-python instead
 line-length = 88
 fix = true
+respect-gitignore = true
 
 [tool.ruff.lint]
 select = ["ALL"]
@@ -94,8 +97,6 @@ ignore = [
   "D401", # First line of docstring should be in imperative mood
   "D413", # Missing blank line after last section ("Example")
   "D415", # First line should end with a period, question mark, or exclamation point
-
-
 
   "ERA001", # Found commented-out code (too aggresive)
 
