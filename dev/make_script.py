@@ -12,6 +12,7 @@ import argparse
 import ast
 import graphlib
 import importlib
+import json
 import os
 import py_compile
 import re
@@ -435,9 +436,9 @@ def build_single_file(
         f"{import_block}\n"
         "\n"
         # constants come *after* imports to avoid breaking __future__ rules
-        f"__version__ = {version!r}\n"
-        f"__commit__ = {commit!r}\n"
-        f"__build_date__ = {build_date!r}\n"
+        f"__version__ = {json.dumps(version)}\n"
+        f"__commit__ = {json.dumps(commit)}\n"
+        f"__build_date__ = {json.dumps(build_date)}\n"
         f"__STANDALONE__ = True\n"
         f"__STITCH_SOURCE__ = 'dev/make_script.py'\n"
         "\n"
