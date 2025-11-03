@@ -64,8 +64,6 @@ program flow
   - [ ] review/add/remove all debug/trace messages with an eye for issue reports
 
 CLI
-  - [ ] add [trace] Runtime: Python 3.12.3 (CPython)
-      platform.python_version(), platform.python_implementation(), sys.version
   - [ ] add runtime cache to store last python version run (or maybe in their config if available?)
       Path.home() / ".pocket_build" / "runtime.json"
   - [ ] does wrong parameters hint suggestions?

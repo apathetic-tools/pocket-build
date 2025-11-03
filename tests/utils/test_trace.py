@@ -23,13 +23,13 @@ _real_time = importlib.import_module("time")
 
 
 def make_test_trace(icon: str = "🧪") -> Callable[..., Any]:
-    def local_trace(label: str, *args: object) -> Any:
+    def local_trace(label: str, *args: Any) -> Any:
         return TEST_TRACE(label, *args, icon=icon)
 
     return local_trace
 
 
-def TEST_TRACE(label: str, *args: object, icon: str = "🧪") -> None:  # noqa: N802
+def TEST_TRACE(label: str, *args: Any, icon: str = "🧪") -> None:  # noqa: N802
     """Emit a synchronized, flush-safe diagnostic line.
 
     Args:

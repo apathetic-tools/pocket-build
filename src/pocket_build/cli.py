@@ -1,6 +1,7 @@
 # src/pocket_build/cli.py
 
 import argparse
+import platform
 import sys
 from pathlib import Path
 
@@ -213,6 +214,13 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
         logger.trace("[BOOT] log-level initialized: %s", logger.level_name)
 
         # You can now safely use log() anywhere below this line.
+
+        logger.debug(
+            "Runtime: Python %s (%s)\n    %s",
+            platform.python_version(),
+            platform.python_implementation(),
+            sys.version.replace("\n", " "),
+        )
 
         # --- Version flag ---
         if getattr(args, "version", None):
