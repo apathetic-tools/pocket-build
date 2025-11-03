@@ -66,7 +66,6 @@ program flow
 CLI
   - [ ] add runtime cache to store last python version run (or maybe in their config if available?)
       Path.home() / ".pocket_build" / "runtime.json"
-  - [ ] does wrong parameters hint suggestions?
 
 
 ## 💡 Ideas & Experiments

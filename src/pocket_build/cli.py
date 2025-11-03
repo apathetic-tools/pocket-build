@@ -3,6 +3,7 @@
 import argparse
 import platform
 import sys
+from difflib import get_close_matches
 from pathlib import Path
 
 from .actions import get_metadata, run_selftest, watch_for_changes
@@ -32,9 +33,36 @@ from .utils_types import cast_hint
 # --------------------------------------------------------------------------- #
 
 
+class HintingArgumentParser(argparse.ArgumentParser):
+    def error(self, message: str) -> None:  # type: ignore[override]
+        # Build known option strings: ["-v", "--verbose", "--log-level", ...]
+        known_opts: list[str] = []
+        for action in self._actions:
+            known_opts.extend([s for s in action.option_strings if s])
+
+        hint_lines: list[str] = []
+        # Argparse message for bad flags is typically
+        # "unrecognized arguments: --inclde ..."
+        if "unrecognized arguments:" in message:
+            bad = message.split("unrecognized arguments:", 1)[1].strip()
+            # Split conservatively on whitespace
+            bad_args = [tok for tok in bad.split() if tok.startswith("-")]
+            for arg in bad_args:
+                close = get_close_matches(arg, known_opts, n=1, cutoff=0.6)
+                if close:
+                    hint_lines.append(f"Hint: did you mean {close[0]}?")
+
+        # Print usage + the original error
+        self.print_usage(sys.stderr)
+        full = f"{self.prog}: error: {message}"
+        if hint_lines:
+            full += "\n" + "\n".join(hint_lines)
+        self.exit(2, full + "\n")
+
+
 def _setup_parser() -> argparse.ArgumentParser:
     """Define and return the CLI argument parser."""
-    parser = argparse.ArgumentParser(prog=PROGRAM_SCRIPT)
+    parser = HintingArgumentParser(prog=PROGRAM_SCRIPT)
 
     # --- Positional shorthand arguments ---
     parser.add_argument(
