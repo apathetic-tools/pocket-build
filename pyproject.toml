@@ -128,14 +128,16 @@ lines-after-imports = 2
 
 [tool.ruff.lint.per-file-ignores]
 "bin/**/*.py" = [
+  "INP001", # missing __init__.py
   "T201", # print found
 ]
 "dev/**/*.py" = [
+  "INP001", # missing __init__.py
   "T201", # print found
 ]
 "tests/**/*.py" = [
+  "INP001", # missing __init__.py
   "S101", # Use of `assert` detected
-
   "T201", # print found
 ]
 

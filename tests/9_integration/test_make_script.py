@@ -13,21 +13,11 @@ from pathlib import Path
 
 import pytest
 
+from tests.utils import PROJ_ROOT
+
 
 # --- only for singlefile runs ---
 __runtime_mode__ = "singlefile"
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-PROJ_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-
-
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize(

@@ -6,8 +6,9 @@ and matches the declared version from pyproject.toml.
 
 import os
 import re
-from pathlib import Path
 from typing import Any, cast
+
+from tests.utils import PROJ_ROOT
 
 
 try:
@@ -20,18 +21,6 @@ import pocket_build.meta as mod_meta
 
 # --- only for singlefile runs ---
 __runtime_mode__ = "singlefile"
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-PROJ_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-
-
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
 
 
 def test_standalone_script_metadata_and_execution() -> None:

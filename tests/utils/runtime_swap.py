@@ -18,15 +18,13 @@ from typing import TYPE_CHECKING
 import pytest
 
 import pocket_build.meta as mod_meta
+from tests.utils import PROJ_ROOT
 
 from .test_trace import make_test_trace
 
 
 if TYPE_CHECKING:
     from types import ModuleType
-
-# --- constants --------------------------------------------------------------------
-PROJ_ROOT = Path(__file__).resolve().parent.parent.parent
 
 
 # --- helpers --------------------------------------------------------------------

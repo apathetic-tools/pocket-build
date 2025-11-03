@@ -9,22 +9,11 @@ import tempfile
 from pathlib import Path
 
 import pocket_build.meta as mod_meta
+from tests.utils import PROJ_ROOT
 
 
 # --- only for singlefile runs ---
 __runtime_mode__ = "singlefile"
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-PROJ_ROOT = Path(__file__).resolve().parent.parent.parent.parent
-
-
-# ---------------------------------------------------------------------------
-# Tests
-# ---------------------------------------------------------------------------
 
 
 def test_standalone_script_metadata_and_execution() -> None:

@@ -18,7 +18,7 @@ import pytest
 import pocket_build as app_package
 import pocket_build.meta as mod_meta
 import pocket_build.utils as mod_utils
-from tests.utils import make_test_trace
+from tests.utils import PROJ_ROOT, make_test_trace
 
 
 # ---------------------------------------------------------------------------
@@ -27,7 +27,6 @@ from tests.utils import make_test_trace
 
 TEST_TRACE = make_test_trace("🪞")
 
-PROJ_ROOT = Path(__file__).resolve().parent.parent.parent
 SRC_ROOT = PROJ_ROOT / "src"
 BIN_ROOT = PROJ_ROOT / "bin"
 

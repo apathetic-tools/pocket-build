@@ -12,11 +12,11 @@ import os
 
 import pytest
 
-from tests.fixtures.log_fixtures import (
+from tests.utils import make_test_trace, runtime_swap
+from tests.utils.log_fixtures import (
     direct_logger,
     module_logger,
 )
-from tests.utils import make_test_trace, runtime_swap
 
 
 # These fixtures are intentionally re-exported so pytest can discover them.

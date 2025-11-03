@@ -8,8 +8,19 @@
 from typing import Any, TypedDict
 
 import pocket_build.utils_schema as mod_utils_schema
-from tests._30_utils_tests.schema_tests.utils import MiniBuild
 from tests.utils import make_summary
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+# --- Fixtures / Sample TypedDicts -------------------------------------------
+
+
+class MiniBuild(TypedDict):
+    include: list[str]
+    out: str
 
 
 def test_validate_typed_dict_accepts_dict() -> None:

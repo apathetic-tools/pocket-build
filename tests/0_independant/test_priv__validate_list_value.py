@@ -5,11 +5,22 @@
 # ruff: noqa: SLF001
 # pyright: reportPrivateUsage=false
 
-from typing import Any
+from typing import Any, TypedDict
 
 import pocket_build.utils_schema as mod_utils_schema
-from tests._30_utils_tests.schema_tests.utils import MiniBuild
 from tests.utils import make_summary
+
+
+# ---------------------------------------------------------------------------
+# Helpers
+# ---------------------------------------------------------------------------
+
+# --- Fixtures / Sample TypedDicts -------------------------------------------
+
+
+class MiniBuild(TypedDict):
+    include: list[str]
+    out: str
 
 
 def test_validate_list_value_accepts_list() -> None:
