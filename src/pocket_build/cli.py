@@ -24,6 +24,7 @@ from .meta import (
     PROGRAM_DISPLAY,
     PROGRAM_SCRIPT,
 )
+from .utils import get_sys_version_info
 from .utils_logs import LEVEL_ORDER, safe_log
 from .utils_types import cast_hint
 
@@ -262,7 +263,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
             return 0
 
         # --- Python version check ---
-        if sys.version_info < (3, 10):  # noqa: UP036
+        if get_sys_version_info() < (3, 10):
             # error before log-level exists
             logger.error("%s requires Python 3.10 or newer.", {PROGRAM_DISPLAY})
             return 1

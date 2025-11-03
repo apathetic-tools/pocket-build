@@ -7,7 +7,7 @@ import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from fnmatch import fnmatchcase, translate as _fnmatch_translate
+from fnmatch import fnmatchcase
 from functools import lru_cache
 from io import StringIO
 from pathlib import Path
@@ -45,6 +45,10 @@ class CapturedOutput:
 
 
 # --- utils --------------------------------------------------------------------
+
+
+def get_sys_version_info() -> tuple[int, int, int] | tuple[int, int, int, str, int]:
+    return sys.version_info
 
 
 def load_jsonc(path: Path) -> dict[str, Any] | list[Any] | None:
@@ -224,27 +228,72 @@ def is_excluded(path_entry: PathResolved, exclude_patterns: list[PathResolved]) 
 
 @lru_cache(maxsize=512)
 def _compile_glob_recursive(pattern: str) -> re.Pattern[str]:
-    r"""
-    Portable glob compiler:
-      - On Python ≥ 3.11 or when '**' is absent, use the stock translation.
-      - On Python ≤ 3.10 with '**', emulate recursive matching by joining
-        translated chunks with '.*' (which can cross path separators).
-    The returned regex uses the same '(?s:...)\Z' style as fnmatch.translate.
     """
-    if sys.version_info >= (3, 11) or "**" not in pattern:
-        return re.compile(_fnmatch_translate(pattern))
+    Compile a glob pattern to regex, backporting recursive '**' on Python < 3.11.
+    This translator handles literals, ?, *, **, and [] classes without relying on
+    slicing fnmatch.translate() output, avoiding unbalanced parentheses.
+    """
 
-    # Split around '**' and translate each chunk using the stock translator.
-    parts = pattern.split("**")
-    chunk_regexes: list[str] = []
-    for part in parts:
-        rx = _fnmatch_translate(part)
-        # fnmatch.translate returns '(?s:...)\Z'; we need the inner '...'
-        if rx.startswith("(?s:") and rx.endswith(")\\Z"):
-            rx = rx[4:-2]
-        chunk_regexes.append(rx)
+    def _escape_lit(ch: str) -> str:
+        # Escape regex metacharacters
+        if ch in ".^$+{}[]|()\\":
+            return "\\" + ch
+        return ch
 
-    inner = ".*".join(chunk_regexes)  # allow crossing '/' between chunks
+    i = 0
+    n = len(pattern)
+    pieces: list[str] = []
+    while i < n:
+        ch = pattern[i]
+
+        # Character class: copy through closing ']'
+        if ch == "[":
+            j = i + 1
+            if j < n and pattern[j] in "!^":
+                j += 1
+            # allow leading ']' inside class as a literal
+            if j < n and pattern[j] == "]":
+                j += 1
+            while j < n and pattern[j] != "]":
+                j += 1
+            if j < n and pattern[j] == "]":
+                # whole class, keep as-is (regex already)
+                pieces.append(pattern[i : j + 1])
+                i = j + 1
+            else:
+                # unmatched '[', treat literally
+                pieces.append("\\[")
+                i += 1
+            continue
+
+        # Recursive glob
+        if ch == "*" and i + 1 < n and pattern[i + 1] == "*":
+            # Collapse a run of consecutive '*' to detect '**'
+            k = i + 2
+            while k < n and pattern[k] == "*":
+                k += 1
+            # Treat any run >= 2 as recursive
+            pieces.append(".*")
+            i = k
+            continue
+
+        # Single-segment glob
+        if ch == "*":
+            pieces.append("[^/]*")
+            i += 1
+            continue
+
+        # Single character
+        if ch == "?":
+            pieces.append("[^/]")
+            i += 1
+            continue
+
+        # Path separator or literal
+        pieces.append(_escape_lit(ch))
+        i += 1
+
+    inner = "".join(pieces)
     return re.compile(f"(?s:{inner})\\Z")
 
 
@@ -252,7 +301,7 @@ def _fnmatch_portable(path: str, pattern: str) -> bool:
     """
     A drop-in replacement for fnmatch.fnmatch that backports '**' recursion on 3.10.
     """
-    if sys.version_info >= (3, 11) or "**" not in pattern:
+    if get_sys_version_info() >= (3, 11) or "**" not in pattern:
         return fnmatchcase(path, pattern)
     return bool(_compile_glob_recursive(pattern).match(path))
 

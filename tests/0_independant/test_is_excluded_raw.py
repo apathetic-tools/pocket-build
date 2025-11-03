@@ -13,9 +13,13 @@ Checklist:
 """
 
 from pathlib import Path
+from types import SimpleNamespace
+
+import pytest
 
 import pocket_build.utils as mod_utils
 import pocket_build.utils_types as mod_utils_types
+from tests.utils import patch_everywhere
 
 
 def test_is_excluded_raw_matches_patterns(tmp_path: Path) -> None:
@@ -162,21 +166,18 @@ def test_is_excluded_raw_mixed_patterns(tmp_path: Path) -> None:
     assert mod_utils.is_excluded_raw(file, patterns, root)
 
 
-def test_is_excluded_raw_gitignore_double_star_diff(tmp_path: Path) -> None:
-    """Document that gitignore's '**' recursion is NOT emulated.
+def test_is_excluded_raw_gitignore_double_star(tmp_path: Path) -> None:
+    """Document that gitignore's '**' recursion IS emulated.
 
     Example:
       path:     /tmp/.../dir/sub/file.py
       root:     /tmp/.../
       pattern:  ["dir/**/*.py"]
       Result:   True  (Python ≥3.11)
-                False (Python ≤3.10)
+                True  (Python ≤3.10)
       Explanation:
         - In Python ≤3.10, we backport 3.11 behaviour.
         - In Python ≥3.11, fnmatch matches recursively across directories.
-        - Our code uses fnmatch directly, so it inherits the platform behavior.
-          This test exists to document that difference, not to enforce one side.
-
     """
     # --- setup ---
     root = tmp_path
@@ -189,6 +190,28 @@ def test_is_excluded_raw_gitignore_double_star_diff(tmp_path: Path) -> None:
 
     # --- verify ---
     assert result, "Expected True on Python ≥3.11 where '**' is recursive"
+
+
+def test_gitignore_double_star_backport_py310(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    # --- setup ---
+    root = tmp_path
+    nested = root / "dir/sub/file.py"
+    nested.parent.mkdir(parents=True)
+    nested.touch()
+
+    # --- patch and execute ---
+    # Force utils to think it's running on Python 3.10
+    fake_sys = SimpleNamespace(version_info=(3, 10, 0))
+    patch_everywhere(
+        monkeypatch, mod_utils, "get_sys_version_info", lambda: fake_sys.version_info
+    )
+    result = mod_utils.is_excluded_raw(nested, ["dir/**/*.py"], root)
+
+    # --- verify ---
+    # Assert: backport should match recursively on 3.10
+    assert result is True
 
 
 def test_is_excluded_wrapper_delegates(tmp_path: Path) -> None:
