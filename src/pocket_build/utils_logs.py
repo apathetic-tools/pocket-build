@@ -84,13 +84,13 @@ def safe_log(msg: str) -> None:
 
 
 def make_test_trace(icon: str = "🧰") -> Callable[..., Any]:
-    def local_trace(label: str, *args: object) -> Any:
+    def local_trace(label: str, *args: Any) -> Any:
         return TEST_TRACE(label, *args, icon=icon)
 
     return local_trace
 
 
-def TEST_TRACE(label: str, *args: object, icon: str = "🧰") -> None:  # noqa: N802
+def TEST_TRACE(label: str, *args: Any, icon: str = "🧰") -> None:  # noqa: N802
     """Emit a synchronized, flush-safe diagnostic line.
 
     Args:
@@ -244,6 +244,26 @@ class ApatheticCLILogger(logging.Logger):
         """Return the current effective level name
         (see also: logging.getLevelName)."""
         return logging.getLevelName(self.getEffectiveLevel())
+
+    def error_if_not_debug(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        """Logs an exception with the real traceback starting from the caller.
+        Only shows full traceback if debug/trace is enabled."""
+        exc_info = kwargs.pop("exc_info", True)
+        stacklevel = kwargs.pop("stacklevel", 2)  # skip helper frame
+        if self.isEnabledFor(logging.DEBUG):
+            self.exception(msg, *args, exc_info=exc_info, stacklevel=stacklevel)
+        else:
+            self.error(msg, *args)
+
+    def critical_if_not_debug(self, msg: str, *args: Any, **kwargs: Any) -> None:
+        """Logs an exception with the real traceback starting from the caller.
+        Only shows full traceback if debug/trace is enabled."""
+        exc_info = kwargs.pop("exc_info", True)
+        stacklevel = kwargs.pop("stacklevel", 2)  # skip helper frame
+        if self.isEnabledFor(logging.DEBUG):
+            self.exception(msg, *args, exc_info=exc_info, stacklevel=stacklevel)
+        else:
+            self.critical(msg, *args)
 
     def colorize(
         self, text: str, color: str, *, enable_color: bool | None = None

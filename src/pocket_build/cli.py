@@ -319,7 +319,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
         silent = getattr(e, "silent", False)
         if not silent:
             try:
-                logger.error(str(e))  # noqa: TRY400
+                logger.error_if_not_debug(str(e))
             except Exception:  # noqa: BLE001
                 safe_log(f"[FATAL] Logging failed while reporting: {e}")
         return getattr(e, "code", 1)
@@ -327,12 +327,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
     except Exception as e:  # noqa: BLE001
         # unexpected internal error
         try:
-            if logger.level_name in {"DEBUG", "TRACE"}:  # how to get the name?
-                # Show traceback only in verbose/debug modes
-                logger.exception("Unexpected internal error:")
-            else:
-                # Just a one-line summary for normal users
-                logger.critical("Unexpected internal error: %s", e)
+            logger.critical_if_not_debug("Unexpected internal error: %s", e)
         except Exception:  # noqa: BLE001
             safe_log(f"[FATAL] Logging failed while reporting: {e}")
 

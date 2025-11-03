@@ -37,10 +37,6 @@ API
   - [ ] can utils/config be made into a single submodule? how does that play with the bundler?
   - [ ] do we want a way to dump the schema for documentation purposes?
 
-utils
-  - [ ] do things that call is_excluded need to check if root exists?
-  - [ ] improve the self-test to give specific errors along the way
-
 config_validate
   - [ ] key in wrong place: "Ignored watch_interval in build #0: applies only at root level (move it above your builds: block)." could use `ROOT_ONLY_HINTS = {"watch_interval": "move it above your builds list"}`
   - [ ] type examples for _infer_type_label(), TYPE_EXAMPLES, "key 'include' expected list[str], got int" could add "expected list[str] (e.g. ["src/", "lib/"]), got int"

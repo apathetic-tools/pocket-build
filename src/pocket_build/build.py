@@ -201,15 +201,15 @@ def copy_item(
     """Copy one file or directory entry, using built-in root info."""
     logger = get_logger()
     src = Path(src_entry["path"])
-    root_src = Path(src_entry["root"]).resolve()
-    src = (root_src / src).resolve() if not src.is_absolute() else src.resolve()
+    src_root = Path(src_entry["root"]).resolve()
+    src = (src_root / src).resolve() if not src.is_absolute() else src.resolve()
     dest = Path(dest_entry["path"])
-    root_dest = (dest_entry["root"]).resolve()
-    dest = (root_dest / dest).resolve() if not dest.is_absolute() else dest.resolve()
+    dest_root = (dest_entry["root"]).resolve()
+    dest = (dest_root / dest).resolve() if not dest.is_absolute() else dest.resolve()
     origin = src_entry.get("origin", "?")
 
     # Combine output directory with the precomputed dest (if relative)
-    dest = dest if dest.is_absolute() else (root_dest / dest)
+    dest = dest if dest.is_absolute() else (dest_root / dest)
 
     exclude_patterns_raw = [str(e["path"]) for e in exclude_patterns]
     pattern_str = str(src_entry.get("pattern", src_entry["path"]))
@@ -220,8 +220,8 @@ def copy_item(
     )
 
     # Exclusion check relative to its root
-    if is_excluded_raw(src, exclude_patterns_raw, root_src):
-        logger.debug("🚫  Skipped (excluded): %s", src.relative_to(root_src))
+    if is_excluded_raw(src, exclude_patterns_raw, src_root):
+        logger.debug("🚫  Skipped (excluded): %s", src.relative_to(src_root))
         return
 
     # Detect shallow single-star pattern
@@ -233,7 +233,7 @@ def copy_item(
     #  — copy only the directory itself, not its contents
     if src.is_dir() and is_shallow_star:
         logger.trace(
-            f"📁 (shallow from pattern={pattern_str!r}) {src.relative_to(root_src)}",
+            f"📁 (shallow from pattern={pattern_str!r}) {src.relative_to(src_root)}",
         )
         if not dry_run:
             dest.mkdir(parents=True, exist_ok=True)
@@ -245,14 +245,14 @@ def copy_item(
             src,
             dest,
             exclude_patterns_raw,
-            src_root=root_src,
+            src_root=src_root,
             dry_run=dry_run,
         )
     else:
         copy_file(
             src,
             dest,
-            src_root=root_src,
+            src_root=src_root,
             dry_run=dry_run,
         )
 

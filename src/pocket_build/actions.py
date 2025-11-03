@@ -196,66 +196,92 @@ def get_metadata() -> Metadata:
     return Metadata(version, commit)
 
 
-def run_selftest() -> bool:
+def run_selftest() -> bool:  #  noqa: PLR0915
     """Run a lightweight functional test of the tool itself."""
     logger = get_logger()
     logger.info("🧪 Running self-test...")
 
+    start_time = time.time()
     tmp_dir: Path | None = None
+
     try:
         tmp_dir = Path(tempfile.mkdtemp(prefix=f"{PROGRAM_SCRIPT}-selftest-"))
         src = tmp_dir / "src"
         out = tmp_dir / "out"
         src.mkdir()
 
-        # Create a tiny file to copy
-        file = src / "hello.txt"
-        file.write_text(f"hello {PROGRAM_DISPLAY}!", encoding="utf-8")
+        logger.debug("[SELFTEST] Temp dir: %s", tmp_dir)
 
-        # --- Construct minimal BuildConfigResolved using helpers ---
-        build_cfg: BuildConfigResolved = {
-            "include": [make_includeresolved(str(src / "**"), tmp_dir, "code")],
-            "exclude": [],
-            "out": make_pathresolved(out, tmp_dir, "code"),
-            "respect_gitignore": False,
-            "log_level": "info",
-            "dry_run": False,
-            "__meta__": {"cli_root": tmp_dir, "config_root": tmp_dir},
-        }
+        # --- Phase 1: Create input file ---
+        test_msg = f"hello {PROGRAM_DISPLAY}!"
+        file = src / "hello.txt"
+        file.write_text(test_msg, encoding="utf-8")
+        # file_write should raise an exception on failure making this check unnecesary
+        if not file.exists():
+            xmsg = f"Input file creation failed: {file}"
+            raise RuntimeError(xmsg)  # noqa: TRY301
+        logger.debug("[SELFTEST] Created input file: %s", file)
+
+        # --- Phase 2: Prepare config ---
+        try:
+            build_cfg: BuildConfigResolved = {
+                "include": [make_includeresolved(str(src / "**"), tmp_dir, "code")],
+                "exclude": [],
+                "out": make_pathresolved(out, tmp_dir, "code"),
+                "respect_gitignore": False,
+                "log_level": "info",
+                "dry_run": False,
+                "__meta__": {"cli_root": tmp_dir, "config_root": tmp_dir},
+            }
+        except Exception as e:
+            xmsg = f"Config construction failed: {e}"
+            raise RuntimeError(xmsg) from e
 
         logger.debug("[SELFTEST] using temp dir: %s", tmp_dir)
 
-        # --- Run the build directly ---
+        # --- Phase 3: Execute build (both dry and real) ---
         for dry_run in (True, False):
             build_cfg["dry_run"] = dry_run
-            run_build(build_cfg)
+            logger.debug("[SELFTEST] Running build (dry_run=%s)", dry_run)
+            try:
+                run_build(build_cfg)
+            except Exception as e:
+                xmsg = f"Build execution failed (dry_run={dry_run}): {e}"
+                raise RuntimeError(xmsg) from e
 
-        # Verify file copy
+        # --- Phase 4: Validate results ---
         copied = out / "hello.txt"
-        if (
-            copied.exists()
-            and copied.read_text().strip() == f"hello {PROGRAM_DISPLAY}!"
-        ):
-            logger.info(
-                "✅ Self-test passed — %s is working correctly.", PROGRAM_DISPLAY
-            )
-            return True
+        if not copied.exists():
+            xmsg = f"Expected output file missing: {copied}"
+            raise RuntimeError(xmsg)  # noqa: TRY301
 
-        logger.error("Self-test failed: output file not found or invalid.")
-        return False
+        actual = copied.read_text(encoding="utf-8").strip()
+        if actual != test_msg:
+            xmsg = f"Output content mismatch: got '{actual}', expected '{test_msg}'"
+            raise AssertionError(xmsg)  # noqa: TRY301
 
-    except PermissionError:
-        logger.error("Self-test failed: insufficient permissions.")  # noqa: TRY400
-        return False
-    except FileNotFoundError:
-        logger.error("Self-test failed: missing file or directory.")  # noqa: TRY400
-        return False
-    except Exception:
-        # Unexpected bug — show traceback and ask for a bug report
-        logger.exception(
-            "Unexpected self-test failure. "
-            "Please report this issue with the following traceback:"
+        elapsed = time.time() - start_time
+        logger.info(
+            "✅ Self-test passed in %.2fs — %s is working correctly.",
+            elapsed,
+            PROGRAM_DISPLAY,
         )
+        return True
+
+    except (PermissionError, FileNotFoundError) as e:
+        logger.error_if_not_debug("Self-test failed due to environment issue: %s", e)
+        return False
+
+    except RuntimeError as e:
+        logger.error_if_not_debug("Self-test failed: %s", e)
+        return False
+
+    except AssertionError as e:
+        logger.error_if_not_debug("Self-test failed validation: %s", e)
+        return False
+
+    except Exception:
+        logger.exception("Unexpected self-test failure. Please report this traceback:")
         return False
 
     finally:

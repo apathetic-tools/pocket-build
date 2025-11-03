@@ -231,6 +231,10 @@ def is_excluded_raw(  # noqa: PLR0911
     - Treats 'path' as relative to 'root' unless already absolute.
     - If 'root' is a file, match directly.
     - Handles absolute or relative glob patterns.
+
+    Note:
+    The function does not require `root` to exist; if it does not,
+    a debug message is logged and matching is purely path-based.
     """
     logger = get_logger()
     root = Path(root).resolve()
