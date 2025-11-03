@@ -7,7 +7,8 @@ import sys
 from collections.abc import Iterator
 from contextlib import contextmanager
 from dataclasses import dataclass
-from fnmatch import fnmatch
+from fnmatch import fnmatchcase, translate as _fnmatch_translate
+from functools import lru_cache
 from io import StringIO
 from pathlib import Path
 from typing import (
@@ -221,6 +222,41 @@ def is_excluded(path_entry: PathResolved, exclude_patterns: list[PathResolved]) 
     return is_excluded_raw(path, patterns, root)
 
 
+@lru_cache(maxsize=512)
+def _compile_glob_recursive(pattern: str) -> re.Pattern[str]:
+    r"""
+    Portable glob compiler:
+      - On Python ≥ 3.11 or when '**' is absent, use the stock translation.
+      - On Python ≤ 3.10 with '**', emulate recursive matching by joining
+        translated chunks with '.*' (which can cross path separators).
+    The returned regex uses the same '(?s:...)\Z' style as fnmatch.translate.
+    """
+    if sys.version_info >= (3, 11) or "**" not in pattern:
+        return re.compile(_fnmatch_translate(pattern))
+
+    # Split around '**' and translate each chunk using the stock translator.
+    parts = pattern.split("**")
+    chunk_regexes: list[str] = []
+    for part in parts:
+        rx = _fnmatch_translate(part)
+        # fnmatch.translate returns '(?s:...)\Z'; we need the inner '...'
+        if rx.startswith("(?s:") and rx.endswith(")\\Z"):
+            rx = rx[4:-2]
+        chunk_regexes.append(rx)
+
+    inner = ".*".join(chunk_regexes)  # allow crossing '/' between chunks
+    return re.compile(f"(?s:{inner})\\Z")
+
+
+def _fnmatch_portable(path: str, pattern: str) -> bool:
+    """
+    A drop-in replacement for fnmatch.fnmatch that backports '**' recursion on 3.10.
+    """
+    if sys.version_info >= (3, 11) or "**" not in pattern:
+        return fnmatchcase(path, pattern)
+    return bool(_compile_glob_recursive(pattern).match(path))
+
+
 def is_excluded_raw(  # noqa: PLR0911
     path: Path | str,
     exclude_patterns: list[str],
@@ -266,22 +302,17 @@ def is_excluded_raw(  # noqa: PLR0911
     for pattern in exclude_patterns:
         pat = pattern.replace("\\", "/")
 
-        if "**" in pat and sys.version_info < (3, 11):
-            logger.trace(
-                f"'**' behaves non-recursively on Python {sys.version_info[:2]}",
-            )
-
         # If pattern is absolute and under root, adjust to relative form
         if pat.startswith(str(root)):
             try:
                 pat_rel = str(Path(pat).relative_to(root)).replace("\\", "/")
             except ValueError:
                 pat_rel = pat  # not under root; treat as-is
-            if fnmatch(rel, pat_rel):
+            if _fnmatch_portable(rel, pat_rel):
                 return True
 
         # Otherwise treat pattern as relative glob
-        if fnmatch(rel, pat):
+        if _fnmatch_portable(rel, pat):
             return True
 
         # Optional directory-only semantics

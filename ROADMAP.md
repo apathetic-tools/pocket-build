@@ -21,7 +21,7 @@ Exploring bundling options for generating the single-file release:
 ## 🧪 Tests
 - verify every function has test coverage
 - check for redundant tests
-
+- improve test_is_excluded_raw_gitignore_double_star_diff to test our backport on py 3.10
 
 ## 🧑‍💻 Development
 

@@ -12,7 +12,6 @@ Checklist:
 - gitignore_double_star_diff — '**' not recursive unlike gitignore in ≤Py3.10.
 """
 
-import sys
 from pathlib import Path
 
 import pocket_build.utils as mod_utils
@@ -173,7 +172,7 @@ def test_is_excluded_raw_gitignore_double_star_diff(tmp_path: Path) -> None:
       Result:   True  (Python ≥3.11)
                 False (Python ≤3.10)
       Explanation:
-        - In Python ≤3.10, fnmatch treats '**' as simple '*', matching only one level.
+        - In Python ≤3.10, we backport 3.11 behaviour.
         - In Python ≥3.11, fnmatch matches recursively across directories.
         - Our code uses fnmatch directly, so it inherits the platform behavior.
           This test exists to document that difference, not to enforce one side.
@@ -189,12 +188,7 @@ def test_is_excluded_raw_gitignore_double_star_diff(tmp_path: Path) -> None:
     result = mod_utils.is_excluded_raw(nested, ["dir/**/*.py"], root)
 
     # --- verify ---
-    if sys.version_info >= (3, 11):
-        # Python 3.11+ uses recursive '**'
-        assert result, "Expected True on Python ≥3.11 where '**' is recursive"
-    else:
-        # Python 3.10 and earlier use single-level '*'
-        assert not result, "Expected False on Python ≤3.10 where '**' is shallow"
+    assert result, "Expected True on Python ≥3.11 where '**' is recursive"
 
 
 def test_is_excluded_wrapper_delegates(tmp_path: Path) -> None:
