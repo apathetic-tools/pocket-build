@@ -21,7 +21,6 @@ Exploring bundling options for generating the single-file release:
 ## 🧪 Tests
 - verify every function has test coverage
 - check for redundant tests
-- improve test_is_excluded_raw_gitignore_double_star_diff to test our backport on py 3.10
 
 ## 🧑‍💻 Development
 
@@ -38,8 +37,6 @@ API
   - [ ] do we want a way to dump the schema for documentation purposes?
 
 config_validate
-  - [ ] key in wrong place: "Ignored watch_interval in build #0: applies only at root level (move it above your builds: block)." could use `ROOT_ONLY_HINTS = {"watch_interval": "move it above your builds list"}`
-  - [ ] type examples for _infer_type_label(), TYPE_EXAMPLES, "key 'include' expected list[str], got int" could add "expected list[str] (e.g. ["src/", "lib/"]), got int"
   - [ ] if a build has no includes, warn
     - [ ] do we want a message if strict mode is off but we issued warnings reminding them about strict mode?
   - [ ] Return the summary object to your CLI for machine-readable reporting (--json).?
