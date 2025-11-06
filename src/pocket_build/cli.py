@@ -273,7 +273,7 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
         root_cfg: RootConfig | None = None
         config_result = load_and_validate_config(args)
         if config_result is not None:
-            config_path, root_cfg = config_result
+            config_path, root_cfg, _validation_summary = config_result
 
         # NOTE: log-level now fully set from config file
         logger.trace(

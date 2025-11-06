@@ -36,11 +36,6 @@ API
   - [ ] can utils/config be made into a single submodule? how does that play with the bundler?
   - [ ] do we want a way to dump the schema for documentation purposes?
 
-config_validate
-  - [ ] if a build has no includes, warn
-    - [ ] do we want a message if strict mode is off but we issued warnings reminding them about strict mode?
-  - [ ] Return the summary object to your CLI for machine-readable reporting (--json).?
-
 config_resolve
   - [ ] resolve_build_config takes args to get log_level, doesn't touch runtime, why?
   - [ ] maybe abstract _normalize_path_with_root in config_resolve for _include, _exclude, and _out for if statement clarity

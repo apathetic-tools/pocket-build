@@ -407,15 +407,15 @@ def _validation_summary(
 
 def load_and_validate_config(
     args: argparse.Namespace,
-) -> tuple[Path, RootConfig] | None:
+) -> tuple[Path, RootConfig, ValidationSummary] | None:
     """Find, load, parse, and validate the user's configuration.
 
     Also determines the effective log level (from CLI/env/config/default)
     early, so logging can initialize as soon as possible.
 
     Returns:
-        (config_path, root_cfg) if a config file was found and valid,
-        or None if no config was found.
+        (config_path, root_cfg, validation_summary)
+        if a config file was found and valid, or None if no config was found.
 
     """
     logger = get_logger()
@@ -469,4 +469,4 @@ def load_and_validate_config(
 
     # --- Upgrade to RootConfig type ---
     root_cfg: RootConfig = cast_hint(RootConfig, parsed_cfg)
-    return config_path, root_cfg
+    return config_path, root_cfg, validation_result
