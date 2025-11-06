@@ -44,6 +44,7 @@ def test_check_schema_conformance_matches_list_validator() -> None:
         strict=True,
         summary=summary1,
         prewarn=set(),
+        field_path="root.include",
     )
 
     summary2 = mod_utils_schema.ValidationSummary(True, [], [], [], True)

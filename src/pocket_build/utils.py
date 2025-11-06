@@ -232,6 +232,7 @@ def _compile_glob_recursive(pattern: str) -> re.Pattern[str]:
     Compile a glob pattern to regex, backporting recursive '**' on Python < 3.11.
     This translator handles literals, ?, *, **, and [] classes without relying on
     slicing fnmatch.translate() output, avoiding unbalanced parentheses.
+    Always case-sensitive.
     """
 
     def _escape_lit(ch: str) -> str:
@@ -297,9 +298,17 @@ def _compile_glob_recursive(pattern: str) -> re.Pattern[str]:
     return re.compile(f"(?s:{inner})\\Z")
 
 
-def _fnmatch_portable(path: str, pattern: str) -> bool:
+def fnmatch_portable(path: str, pattern: str) -> bool:
     """
     A drop-in replacement for fnmatch.fnmatch that backports '**' recursion on 3.10.
+    Always case-sensitive.
+
+    Args:
+        path: The path to match against the pattern
+        pattern: The glob pattern to match
+
+    Returns:
+        True if the path matches the pattern, False otherwise.
     """
     if get_sys_version_info() >= (3, 11) or "**" not in pattern:
         return fnmatchcase(path, pattern)
@@ -357,11 +366,11 @@ def is_excluded_raw(  # noqa: PLR0911
                 pat_rel = str(Path(pat).relative_to(root)).replace("\\", "/")
             except ValueError:
                 pat_rel = pat  # not under root; treat as-is
-            if _fnmatch_portable(rel, pat_rel):
+            if fnmatch_portable(rel, pat_rel):
                 return True
 
         # Otherwise treat pattern as relative glob
-        if _fnmatch_portable(rel, pat):
+        if fnmatch_portable(rel, pat):
             return True
 
         # Optional directory-only semantics

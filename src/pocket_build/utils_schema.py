@@ -6,7 +6,7 @@ from difflib import get_close_matches
 from typing import Any, TypedDict, cast, get_args, get_origin
 
 from .constants import DEFAULT_HINT_CUTOFF
-from .utils import plural
+from .utils import fnmatch_portable, plural
 from .utils_types import cast_hint, safe_isinstance, schema_from_typeddict
 
 
@@ -113,6 +113,33 @@ def flush_schema_aggregators(
 # ---------------------------------------------------------------------------
 
 
+def _get_example_for_field(
+    field_path: str,
+    field_examples: dict[str, str] | None = None,
+) -> str | None:
+    """Get example for field if available in field_examples.
+
+    Args:
+        field_path: The full field path
+            (e.g. "root.builds.*.include" or "root.watch_interval")
+        field_examples: Optional dict mapping field patterns to example values.
+        If None, returns None (no examples available).
+    """
+    if field_examples is None:
+        return None
+
+    # First, try exact match (O(1) lookup)
+    if field_path in field_examples:
+        return field_examples[field_path]
+
+    # Then try wildcard matches
+    for pattern, example in field_examples.items():
+        if "*" in pattern and fnmatch_portable(field_path, pattern):
+            return example
+
+    return None
+
+
 def _infer_type_label(
     expected_type: Any,
 ) -> str:
@@ -137,6 +164,8 @@ def _validate_scalar_value(
     *,
     strict: bool,
     summary: ValidationSummary,  # modified in function, not returned
+    field_path: str,
+    field_examples: dict[str, str] | None = None,
 ) -> bool:
     """Validate a single non-container value against its expected type."""
     try:
@@ -151,12 +180,15 @@ def _validate_scalar_value(
             return True
 
     exp_label = _infer_type_label(expected_type)
-    collect_msg(
-        f"{context}: key `{key}` expected {exp_label}, got {type(val).__name__}",
-        summary=summary,
-        strict=strict,
-        is_error=True,
+    example = _get_example_for_field(field_path, field_examples)
+    exmsg = ""
+    if example:
+        exmsg = f" (e.g. {example})"
+
+    msg = (
+        f"{context}: key `{key}` expected {exp_label}{exmsg}, got {type(val).__name__}"
     )
+    collect_msg(msg, summary=summary, strict=strict, is_error=True)
     return False
 
 
@@ -169,12 +201,22 @@ def _validate_list_value(
     strict: bool,
     summary: ValidationSummary,  # modified in function, not returned
     prewarn: set[str],
+    field_path: str,
+    field_examples: dict[str, str] | None = None,
 ) -> bool:
     """Validate a homogeneous list value, delegating to scalar/TypedDict validators."""
     if not isinstance(val, list):
         exp_label = f"list[{_infer_type_label(subtype)}]"
+        example = _get_example_for_field(field_path, field_examples)
+        exmsg = ""
+        if example:
+            exmsg = f" (e.g. {example})"
+        msg = (
+            f"{context}: key `{key}` expected {exp_label}{exmsg},"
+            f" got {type(val).__name__}"
+        )
         collect_msg(
-            f"{context}: key `{key}` expected {exp_label}, got {type(val).__name__}",
+            msg,
             strict=strict,
             summary=summary,
             is_error=True,
@@ -214,6 +256,8 @@ def _validate_list_value(
                 strict=strict,
                 summary=summary,
                 prewarn=prewarn,
+                field_path=f"{field_path}[{i}]",
+                field_examples=field_examples,
             )
         else:
             valid &= _validate_scalar_value(
@@ -223,6 +267,8 @@ def _validate_list_value(
                 subtype,
                 strict=strict,
                 summary=summary,
+                field_path=f"{field_path}[{i}]",
+                field_examples=field_examples,
             )
     return valid
 
@@ -272,6 +318,8 @@ def _dict_fields(
     summary: ValidationSummary,  # modified in function, not returned
     prewarn: set[str],
     ignore_keys: set[str],
+    field_path: str,
+    field_examples: dict[str, str] | None = None,
 ) -> bool:
     valid = True
 
@@ -284,6 +332,7 @@ def _dict_fields(
         origin = get_origin(expected_type)
         args = get_args(expected_type)
         exp_label = _infer_type_label(expected_type)
+        current_field_path = f"{field_path}.{field}" if field_path else field
 
         if origin is list:
             subtype = args[0] if args else Any
@@ -295,6 +344,8 @@ def _dict_fields(
                 strict=strict,
                 summary=summary,
                 prewarn=prewarn,
+                field_path=current_field_path,
+                field_examples=field_examples,
             )
         elif (
             isinstance(expected_type, type)
@@ -320,6 +371,8 @@ def _dict_fields(
                 strict=strict,
                 summary=summary,
                 prewarn=prewarn,
+                field_path=current_field_path,
+                field_examples=field_examples,
             )
         else:
             val_scalar = _validate_scalar_value(
@@ -329,6 +382,8 @@ def _dict_fields(
                 expected_type,
                 strict=strict,
                 summary=summary,
+                field_path=current_field_path,
+                field_examples=field_examples,
             )
             if not val_scalar:
                 collect_msg(
@@ -352,6 +407,8 @@ def _validate_typed_dict(
     summary: ValidationSummary,  # modified in function, not returned
     prewarn: set[str],
     ignore_keys: set[str] | None = None,
+    field_path: str = "",
+    field_examples: dict[str, str] | None = None,
 ) -> bool:
     """Validate a dict against a TypedDict schema recursively.
 
@@ -391,6 +448,8 @@ def _validate_typed_dict(
         summary=summary,
         prewarn=prewarn,
         ignore_keys=ignore_keys,
+        field_path=field_path,
+        field_examples=field_examples,
     ):
         valid = False
 
@@ -480,6 +539,8 @@ def check_schema_conformance(
     summary: ValidationSummary,  # modified in function, not returned
     prewarn: set[str] | None = None,
     ignore_keys: set[str] | None = None,
+    base_path: str = "root",
+    field_examples: dict[str, str] | None = None,
 ) -> bool:
     """Thin wrapper around _validate_typed_dict for root-level schema checks."""
     if prewarn is None:
@@ -502,4 +563,6 @@ def check_schema_conformance(
         summary=summary,
         prewarn=prewarn,
         ignore_keys=ignore_keys,
+        field_path=base_path,
+        field_examples=field_examples,
     )

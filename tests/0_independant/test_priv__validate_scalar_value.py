@@ -23,6 +23,7 @@ def test_validate_scalar_value_returns_bool() -> None:
         val="abc",
         expected_type=str,
         summary=make_summary(),
+        field_path="root.x",
     )
 
     # --- verify ---
@@ -41,6 +42,7 @@ def test_validate_scalar_value_accepts_correct_type() -> None:
         int,
         strict=True,
         summary=summary,
+        field_path="root.x",
     )
 
     # --- verify ---
@@ -62,6 +64,7 @@ def test_validate_scalar_value_rejects_wrong_type() -> None:
         int,
         strict=True,
         summary=summary,
+        field_path="root.x",
     )
 
     # --- verify ---
@@ -93,6 +96,7 @@ def test_validate_scalar_value_handles_fallback_path(
         int,
         strict=True,
         summary=make_summary(),
+        field_path="root.x",
     )
 
     # --- verify ---

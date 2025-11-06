@@ -27,6 +27,17 @@ DRYRUN_MSG = (
 ROOT_ONLY_KEYS = {"watch_interval"}
 ROOT_ONLY_MSG = "Ignored {keys} {ctx}: these options only apply at the root level."
 
+# Field-specific type examples for better error messages
+# Dict format: {field_pattern: example_value}
+# Wildcard patterns (with *) are supported for matching multiple fields
+FIELD_EXAMPLES: dict[str, str] = {
+    "root.builds.*.include": '["src/", "lib/"]',
+    "root.builds.*.out": '"dist"',
+    "root.watch_interval": "1.5",
+    "root.log_level": '"debug"',
+    "root.strict_config": "true",
+}
+
 
 # ---------------------------------------------------------------------------
 # main validator
@@ -86,6 +97,8 @@ def _validate_root(
         summary=summary,
         prewarn=prewarn_root,
         ignore_keys={"builds"},
+        base_path="root",
+        field_examples=FIELD_EXAMPLES,
     )
     if not ok and not (summary.errors or summary.strict_warnings):
         collect_msg(
@@ -185,6 +198,8 @@ def _validate_builds(
             strict_config=strict_config,
             summary=summary,
             prewarn=prewarn_build,
+            base_path="root.builds.*",
+            field_examples=FIELD_EXAMPLES,
         )
         if not ok and not (summary.errors or summary.strict_warnings):
             collect_msg(

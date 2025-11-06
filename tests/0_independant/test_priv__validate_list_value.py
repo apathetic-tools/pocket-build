@@ -33,6 +33,7 @@ def test_validate_list_value_accepts_list() -> None:
         strict=False,
         summary=make_summary(),
         prewarn=set(),
+        field_path="root.nums",
     )
 
     # --- verify ---
@@ -52,6 +53,7 @@ def test_validate_list_value_rejects_nonlist() -> None:
         strict=True,
         summary=summary,
         prewarn=set(),
+        field_path="root.nums",
     )
 
     # --- verify ---
@@ -72,6 +74,7 @@ def test_validate_list_value_rejects_wrong_element_type() -> None:
         strict=True,
         summary=summary,
         prewarn=set(),
+        field_path="root.nums",
     )
 
     # --- verify ---
@@ -96,6 +99,7 @@ def test_validate_list_value_handles_typed_dict_elements() -> None:
         strict=True,
         summary=summary,
         prewarn=set(),
+        field_path="root.builds",
     )
 
     # --- verify ---
@@ -115,6 +119,7 @@ def test_validate_list_value_accepts_empty_list() -> None:
             strict=True,
             summary=make_summary(),
             prewarn=set(),
+            field_path="root.empty",
         )
         is True
     )
@@ -134,6 +139,7 @@ def test_validate_list_value_rejects_nested_mixed_types() -> None:
         strict=True,
         summary=summary,
         prewarn=set(),
+        field_path="root.nums",
     )
 
     # --- verify ---
@@ -155,6 +161,7 @@ def test_validate_list_value_mixed_types_like_integration() -> None:
         strict=True,
         summary=summary,
         prewarn=set(),
+        field_path="root.include",
     )
 
     # --- verify ---
@@ -181,9 +188,41 @@ def test_validate_list_value_respects_prewarn() -> None:
         strict=True,
         summary=summary,
         prewarn=prewarn,
+        field_path="root.builds",
     )
 
     # --- verify ---
     assert ok is True
     pool = summary.errors + summary.strict_warnings + summary.warnings
     assert not any("dry_run" in m and "unknown key" in m for m in pool)
+
+
+def test_validate_list_value_includes_examples_in_error() -> None:
+    """Error messages for fields with examples should include the example."""
+    # --- setup ---
+    summary = make_summary()
+    field_examples = {
+        "root.builds.*.include": '["src/", "lib/"]',
+    }
+
+    # --- execute ---
+    ok = mod_utils_schema._validate_list_value(
+        "in build #1",
+        "include",
+        42,  # wrong type - should be list[str]
+        str,
+        strict=True,
+        summary=summary,
+        prewarn=set(),
+        field_path="root.builds.*.include",
+        field_examples=field_examples,
+    )
+
+    # --- verify ---
+    assert ok is False
+    assert summary.errors
+    error_msg = summary.errors[0]
+    # Should include the example for build.include
+    assert "expected list[str]" in error_msg
+    assert '["src/", "lib/"]' in error_msg
+    assert "(e.g." in error_msg

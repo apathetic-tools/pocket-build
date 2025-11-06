@@ -32,6 +32,7 @@ def test_validate_typed_dict_accepts_dict() -> None:
         strict=True,
         summary=make_summary(),
         prewarn=set(),
+        field_path="root",
     )
 
     # --- verify ---
@@ -50,6 +51,7 @@ def test_validate_typed_dict_rejects_non_dict() -> None:
         strict=True,
         summary=summary,
         prewarn=set(),
+        field_path="root",
     )
 
     # --- verify ---
@@ -69,6 +71,7 @@ def test_validate_typed_dict_detects_unknown_keys() -> None:
         strict=True,
         summary=summary,
         prewarn=set(),
+        field_path="root",
     )
 
     # --- verify ---
@@ -91,6 +94,7 @@ def test_validate_typed_dict_allows_missing_field() -> None:
         strict=True,
         summary=make_summary(),
         prewarn=set(),
+        field_path="root",
     )
 
     # --- verify ---
@@ -116,6 +120,7 @@ def test_validate_typed_dict_nested_recursion() -> None:
         strict=True,
         summary=summary1,
         prewarn=set(),
+        field_path="root",
     )
 
     summary2 = mod_utils_schema.ValidationSummary(True, [], [], [], True)
@@ -126,6 +131,7 @@ def test_validate_typed_dict_nested_recursion() -> None:
         strict=True,
         summary=summary2,
         prewarn=set(),
+        field_path="root",
     )
     assert summary2.errors  # collected from inner validation
 
@@ -145,6 +151,7 @@ def test_validate_typed_dict_respects_prewarn() -> None:
         strict=True,
         summary=summary,
         prewarn=prewarn,
+        field_path="root",
     )
 
     # --- verify ---
