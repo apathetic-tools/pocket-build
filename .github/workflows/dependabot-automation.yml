@@ -54,7 +54,7 @@ jobs:
           git push
 
       - name: Wait for CI to complete
-        uses: lewagon/wait-on-check-action@v1.3.4
+        uses: lewagon/wait-on-check-action@v1.4.1
         with:
           ref: ${{ github.head_ref }}
           check-regexp: '^checks \(.*\)$'
