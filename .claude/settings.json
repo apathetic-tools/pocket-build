@@ -12,7 +12,7 @@
       "Bash(ruff*)",
       "Bash(python*)",
       "Bash(git*)",
-      "Bash(git push)",
+      "Bash(git push*)",
       "Bash(git fetch origin)",
       "Bash(chmod*)",
       "Bash(gh pr view*)",
