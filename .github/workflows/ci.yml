@@ -10,7 +10,7 @@ jobs:
       matrix:
         python-version: ["3.10", "3.x"]
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         with:
           fetch-depth: 0  # Fetch all history for git rev-parse
       - uses: actions/setup-python@v5
