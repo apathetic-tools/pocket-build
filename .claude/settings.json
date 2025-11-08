@@ -12,7 +12,12 @@
       "Bash(ruff*)",
       "Bash(python*)",
       "Bash(git*)",
-      "Bash(chmod*)"
+      "Bash(git push)",
+      "Bash(chmod*)",
+      "Bash(gh pr view*)",
+      "Bash(gh pr checks*)",
+      "Bash(gh run view*)",
+      "Bash(gh pr comment*)",
     ]
   },
 
