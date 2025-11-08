@@ -39,9 +39,9 @@ test = ["test:pytest:installed", "test:pytest:script"]
 # 🧹 Automated fixing / formatting
 fix = ["fix:ruff:installed", "fix:ruff:bin", "lint:compile", "fix:format:installed", "fix:format:bin"]
 "fix:ruff:installed" = "ruff check . --fix"
-"fix:ruff:bin" = "ruff check bin --fix"
+"fix:ruff:bin" = { shell = "if [ -d bin ]; then ruff check bin --fix; fi" }
 "fix:format:installed" = "ruff format ."
-"fix:format:bin" = "ruff format bin"
+"fix:format:bin" = { shell = "if [ -d bin ]; then ruff format bin; fi" }
 
 # 🧩 Build and license
 "build:script" = "python dev/make_script.py"
