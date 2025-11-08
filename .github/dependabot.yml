@@ -1,0 +1,16 @@
+# .github/dependabot.yml
+version: 2
+updates:
+  # Monitor GitHub Actions for updates
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # Keeps actions like actions/checkout, actions/setup-python up to date
+
+  # Monitor Python dependencies in pyproject.toml
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    # Monitors dev dependencies: ruff, mypy, pytest, etc.

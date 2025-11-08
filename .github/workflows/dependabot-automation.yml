@@ -1,0 +1,67 @@
+# .github/workflows/dependabot-automation.yml
+#
+# Automates Dependabot PRs by:
+# 1. Updating poetry.lock to match new dependency versions in pyproject.toml
+# 2. Installing updated dependencies and running automated fixes (ruff format, type checks, tests)
+# 3. Committing any changes back to the Dependabot PR branch
+# 4. Waiting for CI checks (Python 3.10 and 3.x) to complete
+# 5. Auto-merging the PR if all checks pass
+#
+# Security: Only runs when github.actor == 'dependabot[bot]', which cannot be spoofed
+# by external users. This is a GitHub-guaranteed trusted identity.
+#
+name: Dependabot Automation
+
+on:
+  pull_request:
+    paths:
+      - 'pyproject.toml'
+
+jobs:
+  automate:
+    if: github.actor == 'dependabot[bot]'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.x"
+
+      - uses: abatilo/actions-poetry@v2
+
+      - name: Update poetry.lock
+        run: poetry lock --no-update
+
+      - name: Install dependencies
+        run: poetry install
+
+      - name: Run formatting and linting fixes
+        run: poetry run poe check:fix
+
+      - name: Commit changes
+        run: |
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add -A
+          git diff --staged --quiet || git commit -m "chore: update poetry.lock and apply auto-fixes"
+          git push
+
+      - name: Wait for CI to complete
+        uses: lewagon/wait-on-check-action@v1.3.4
+        with:
+          ref: ${{ github.head_ref }}
+          check-name: 'checks'
+          repo-token: ${{ secrets.GITHUB_TOKEN }}
+          wait-interval: 10
+
+      - name: Auto-merge Dependabot PR
+        run: gh pr merge --auto --squash "${{ github.event.pull_request.html_url }}"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
