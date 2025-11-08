@@ -346,7 +346,7 @@ class TagFormatter(logging.Formatter):
 # --- DualStreamHandler ---------------------------------------------------------
 
 
-class DualStreamHandler(logging.StreamHandler[TextIO]):
+class DualStreamHandler(logging.StreamHandler):  # type: ignore[type-arg]
     """Send info/debug/trace to stdout, everything else to stderr."""
 
     enable_color: bool = False
