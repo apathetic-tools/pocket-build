@@ -17,6 +17,7 @@ from .config_types import (
     RootConfig,
 )
 from .constants import (
+    DEFAULT_DRY_RUN,
     DEFAULT_WATCH_INTERVAL,
 )
 from .logs import get_logger
@@ -308,14 +309,66 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
         resolved_builds = resolved_root["builds"]
 
         # --- Sanity: missing includes ---
-        if (
-            all(not b.get("include") for b in resolved_builds)
-            and not getattr(args, "add_include", None)
-            and not getattr(args, "include", None)
-        ):
+        # Check for builds with missing includes. Respect per-build strict_config:
+        # - If ANY build with no includes has strict_config=true → error (abort)
+        # - If ALL builds with no includes have strict_config=false → warning (continue)
+        # - If builds=[] and root strict_config=true → error
+        # - If builds=[] and root strict_config=false → warning
+        #
+        # The presence of "include" key (even if empty) signals intentional choice:
+        #   [] or includes=[]                  → include:[] in build → no check
+        #   {"include": []}                    → include:[] in build → no check
+        #   {"builds": [{"include": []}]}      → include:[] in build → no check
+        #
+        # Missing "include" key likely means forgotten:
+        #   {} or ""                           → no include key → check
+        #   {"builds": []}                     → no include key → check
+        #   {"log_level": "debug"}             → no include key → check
+        #   {"builds": [{"out": "dist"}]}      → no include key → check
+        original_builds = root_cfg.get("builds", [])
+        has_explicit_include_key = any(
+            isinstance(b, dict) and "include" in b for b in original_builds
+        )
+
+        # Check if any builds have missing includes (respecting CLI overrides)
+        has_cli_includes = bool(
+            getattr(args, "add_include", None) or getattr(args, "include", None)
+        )
+
+        # Builds with no includes
+        builds_missing_includes = [b for b in resolved_builds if not b.get("include")]
+
+        # Check if ALL builds have no includes (including zero builds)
+        all_builds_missing = len(resolved_builds) == 0 or len(
+            builds_missing_includes
+        ) == len(resolved_builds)
+
+        if not has_explicit_include_key and not has_cli_includes and all_builds_missing:
+            # Determine if we should error or warn based on strict_config
+            # If builds exist, check ANY build for strict_config=true
+            # If no builds, use root-level strict_config
+            if builds_missing_includes:
+                any_strict = any(
+                    b.get("strict_config", True) for b in builds_missing_includes
+                )
+            else:
+                # No builds at all - use root strict_config
+                any_strict = resolved_root.get("strict_config", True)
+
+            if any_strict:
+                # Error: at least one build with missing includes is strict
+                logger.error(
+                    "No include patterns found "
+                    "(strict_config=true prevents continuing).\n"
+                    "   Use 'include' in your config or pass "
+                    "--include / --add-include.",
+                )
+                return 1
+            # Warning: builds have no includes but all are non-strict
             logger.warning(
                 "No include patterns found.\n"
-                "   Use 'include' in your config or pass --include / --add-include.",
+                "   Use 'include' in your config or pass "
+                "--include / --add-include.",
             )
 
         # --- Dry-run notice ---
@@ -340,14 +393,16 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
             watch_for_changes(
                 lambda: run_all_builds(
                     resolved_builds,
-                    dry_run=getattr(args, "dry_run", False),
+                    dry_run=getattr(args, "dry_run", DEFAULT_DRY_RUN),
                 ),
                 resolved_builds,
                 interval=watch_interval,
             )
 
         else:
-            run_all_builds(resolved_builds, dry_run=getattr(args, "dry_run", False))
+            run_all_builds(
+                resolved_builds, dry_run=getattr(args, "dry_run", DEFAULT_DRY_RUN)
+            )
 
     except (FileNotFoundError, ValueError, TypeError, RuntimeError) as e:
         # controlled termination

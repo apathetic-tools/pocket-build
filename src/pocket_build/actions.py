@@ -10,7 +10,11 @@ from pathlib import Path
 
 from .build import run_build
 from .config_types import BuildConfigResolved
-from .constants import DEFAULT_WATCH_INTERVAL
+from .constants import (
+    DEFAULT_LOG_LEVEL,
+    DEFAULT_STRICT_CONFIG,
+    DEFAULT_WATCH_INTERVAL,
+)
 from .logs import get_logger
 from .meta import PROGRAM_DISPLAY, PROGRAM_SCRIPT, Metadata
 from .utils_types import make_includeresolved, make_pathresolved
@@ -228,8 +232,10 @@ def run_selftest() -> bool:  #  noqa: PLR0912, PLR0915
                 "include": [make_includeresolved(str(src / "**"), tmp_dir, "code")],
                 "exclude": [],
                 "out": make_pathresolved(out, tmp_dir, "code"),
+                # Don't care about user's gitignore in selftest
                 "respect_gitignore": False,
-                "log_level": "info",
+                "log_level": DEFAULT_LOG_LEVEL,
+                "strict_config": DEFAULT_STRICT_CONFIG,
                 "dry_run": False,
                 "__meta__": {"cli_root": tmp_dir, "config_root": tmp_dir},
             }

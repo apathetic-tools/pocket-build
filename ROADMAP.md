@@ -38,11 +38,7 @@ API
   - do we want a way to dump the schema for documentation purposes?
   - 
 
-config_resolve
-  - maybe abstract _normalize_path_with_root in config_resolve for _include, _exclude, and _out for if statement clarity
-
 load_and_validate_config
-  - you must specify a build, even if that is no build. we warn otherwise
   - _validate_typed_dict likely needs to check if required fields are present
 
 documentation

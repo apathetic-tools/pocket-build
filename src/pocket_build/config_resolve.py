@@ -20,6 +20,7 @@ from .constants import (
     DEFAULT_ENV_WATCH_INTERVAL,
     DEFAULT_OUT_DIR,
     DEFAULT_RESPECT_GITIGNORE,
+    DEFAULT_STRICT_CONFIG,
     DEFAULT_WATCH_INTERVAL,
 )
 from .logs import get_logger
@@ -286,6 +287,19 @@ def resolve_build_config(
     resolved_cfg["log_level"] = logger.determine_log_level(
         args=args, root_log_level=root_log, build_log_level=build_log
     )
+
+    # ------------------------------
+    # Strict config
+    # ------------------------------
+    # Cascade: build-level → root-level → default
+    build_strict = resolved_cfg.get("strict_config")
+    root_strict = (root_cfg or {}).get("strict_config")
+    if isinstance(build_strict, bool):
+        resolved_cfg["strict_config"] = build_strict
+    elif isinstance(root_strict, bool):
+        resolved_cfg["strict_config"] = root_strict
+    else:
+        resolved_cfg["strict_config"] = DEFAULT_STRICT_CONFIG
 
     # ------------------------------
     # Attach provenance

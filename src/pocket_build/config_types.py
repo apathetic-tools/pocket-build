@@ -61,6 +61,7 @@ class BuildConfigResolved(TypedDict):
     exclude: list[PathResolved]
 
     # optional per-build override
+    strict_config: bool
     out: PathResolved
     respect_gitignore: bool
     log_level: str

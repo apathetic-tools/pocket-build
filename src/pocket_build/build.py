@@ -7,6 +7,7 @@ import shutil
 from pathlib import Path
 
 from .config_types import BuildConfigResolved, IncludeResolved, PathResolved
+from .constants import DEFAULT_DRY_RUN
 from .logs import get_logger
 from .utils import (
     has_glob_chars,
@@ -394,7 +395,7 @@ def run_build(
 ) -> None:
     """Execute a single build task using a fully resolved config."""
     logger = get_logger()
-    dry_run = build_cfg.get("dry_run", False)
+    dry_run = build_cfg.get("dry_run", DEFAULT_DRY_RUN)
     includes: list[IncludeResolved] = build_cfg["include"]
     excludes: list[PathResolved] = build_cfg["exclude"]
     out_entry: PathResolved = build_cfg["out"]
