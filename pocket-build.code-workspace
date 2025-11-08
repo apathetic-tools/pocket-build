@@ -1,4 +1,7 @@
 // pocket-build.code-workspace
+// exists so:
+// 1) we can disable all extensions in vscode and then enable them on a per-workspace basis (instead of profiles)
+// 2) we can double click the file to open vscode as a convenience (then click reopen in WSL)
 {
 	"folders": [
 		{

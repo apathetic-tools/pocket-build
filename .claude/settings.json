@@ -1,0 +1,48 @@
+{
+  "$schema": "https://code.claude.com/schemas/settings.json",
+  "description": "Shared Claude Code settings for pocket-build project",
+
+  "permissions": {
+    "allowedCommands": [
+      "poetry",
+      "poe",
+      "pytest",
+      "mypy",
+      "ruff",
+      "python",
+      "python3",
+      "git",
+      "bash",
+      "chmod"
+    ]
+  },
+
+  "hooks": {
+    "beforeEdit": {
+      "command": "echo 'Editing file...'",
+      "description": "Notify before editing files"
+    },
+    "afterWrite": {
+      "command": "ruff format {file} && ruff check {file} --fix",
+      "description": "Auto-format and fix with Ruff after writing files",
+      "filePatterns": ["**/*.py"]
+    }
+  },
+
+  "excludePatterns": [
+    "**/__pycache__/**",
+    "**/.pytest_cache/**",
+    "**/.mypy_cache/**",
+    "**/.ruff_cache/**",
+    "**/dist/**",
+    "**/tmp-dist/**",
+    "**/build/**",
+    "**/*.egg-info/**",
+    ".coverage.*",
+    "htmlcov/**"
+  ],
+
+  "systemPrompt": {
+    "append": "This is a Python build system project that creates a single-file executable script. Key conventions:\n- Use poethepoet tasks (poe) for common operations: `poe check`, `poe fix`, `poe test`\n- Follow strict Ruff and Mypy standards\n- Run `poe check:fix` before committing\n- The bin/pocket-build.py is a generated file (don't edit directly)\n- Target Python 3.10+ compatibility"
+  }
+}

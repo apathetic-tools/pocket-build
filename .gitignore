@@ -254,3 +254,6 @@ Desktop.ini
 
 # Github configuration
 !.github/
+
+# AI files
+.claude/settings.local.json

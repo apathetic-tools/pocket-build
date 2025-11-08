@@ -1,0 +1,17 @@
+{
+  "$schema": "https://code.claude.com/schemas/settings.json",
+  "description": "Example local settings (copy to settings.local.json and customize)",
+
+  "model": "sonnet",
+
+  "hooks": {
+    "beforeBash": {
+      "command": "echo 'Running bash command...'",
+      "description": "Log before bash commands (customize as needed)"
+    }
+  },
+
+  "permissions": {
+    "allowNetworkAccess": true
+  }
+}
