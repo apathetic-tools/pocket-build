@@ -37,7 +37,7 @@ jobs:
       - uses: abatilo/actions-poetry@v2
 
       - name: Update poetry.lock
-        run: poetry lock --no-update
+        run: poetry lock
 
       - name: Install dependencies
         run: poetry install
