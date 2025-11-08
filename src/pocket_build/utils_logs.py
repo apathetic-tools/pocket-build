@@ -1,6 +1,8 @@
 # src/pocket_build/utils_logs.py
 """Shared Apathetic CLI logger implementation."""
 
+from __future__ import annotations
+
 import argparse
 import builtins
 import importlib
@@ -329,7 +331,7 @@ class ApatheticCLILogger(logging.Logger):
 
 
 class TagFormatter(logging.Formatter):
-    def format(self: "TagFormatter", record: logging.LogRecord) -> str:
+    def format(self: TagFormatter, record: logging.LogRecord) -> str:
         tag_color, tag_text = TAG_STYLES.get(record.levelname, ("", ""))
         msg = super().format(record)
         if tag_text:

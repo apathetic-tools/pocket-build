@@ -124,6 +124,8 @@ ignore = [
   # "RUF002", # Docstring contains ambiguous -- allow specific ambiguous via lint.allowed-confusables
   # "RUF003", # Comment contains ambiguous -- allow specific ambiguous via lint.allowed-confusables
 
+  "TC003", # Move standard library import into TYPE_CHECKING block (too pedantic with __future__ annotations)
+
 #  "TRY300", # Consider moving this statement to an `else` block
 ]
 
