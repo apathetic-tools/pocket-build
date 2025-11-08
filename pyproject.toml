@@ -76,12 +76,23 @@ fix = true
 respect-gitignore = true
 
 [tool.ruff.lint]
-select = ["ALL"]
+allowed-confusables = [
+  "’", # ai uses produces this
+  "–", # ai uses produces this
+]
 
+# we select all then ignore so we can buy-into new rulesets we would otherwise miss
+select = [
+  "ALL"
+]
+
+
+# https://docs.astral.sh/ruff/rules/
 ignore = [
   "ANN401", # Dynamically typed expressions
 
   "COM812", # missing trailing comma (redundant with the formatter)
+  "COM819", # trailing comma prohibited (redundant with the formatter)
 
   "D100", # Missing docstring in public module
   "D101", # Missing docstring in public class
@@ -89,6 +100,7 @@ ignore = [
   "D103", # Missing docstring in public function
   "D104", # Missing docstring in public package
   "D105", # Missing docstring in magic method
+  "D106", # Missing docstring in public nested class
   "D107", # Missing docstring in `__init__`
   "D200", # One-line docstring should fit on one line
   "D203", # Force blank between class and docstring
@@ -105,38 +117,29 @@ ignore = [
 
   "EXE001", # shebang files must be executable
 
-  "FBT003", # Boolean positional value in function call
+  "FBT003", # Boolean positional value in function call (too aggresive, includes class instantiation)
 
   "RET504", # Unnecessary assignment to `var` before `return` statement
 
-  "RUF002", # Docstring contains ambiguous
-  "RUF003", # Comment contains ambiguous
+  # "RUF002", # Docstring contains ambiguous -- allow specific ambiguous via lint.allowed-confusables
+  # "RUF003", # Comment contains ambiguous -- allow specific ambiguous via lint.allowed-confusables
 
-  "TRY300", # Consider moving this statement to an `else` block
+#  "TRY300", # Consider moving this statement to an `else` block
 ]
-
-[tool.ruff.lint.pylint]
-max-args = 10
-max-returns = 5
-
-[tool.ruff.lint.mccabe]
-# Flag errors (`C901`) whenever the complexity level exceeds 15.
-max-complexity = 15
-
-[tool.ruff.lint.isort]
-combine-as-imports = true
-known-first-party = ["pocket_build"]
-force-single-line = false
-lines-after-imports = 2
 
 [tool.ruff.lint.per-file-ignores]
 "bin/**/*.py" = [
+  "ICN001", # Allow from imports in bin
   "INP001", # missing __init__.py
   "T201", # print found
 ]
 "dev/**/*.py" = [
+  "ICN001", # Allow from imports in dev
   "INP001", # missing __init__.py
   "T201", # print found
+]
+"src/**/*.py" = [
+  "ICN001", # Allow from imports in src
 ]
 "tests/**/*.py" = [
   "INP001", # missing __init__.py
@@ -148,6 +151,22 @@ lines-after-imports = 2
 quote-style = "double"
 indent-style = "space"
 
+[tool.ruff.lint.flake8-import-conventions]
+banned-from = ["pocket_build"] # only in tests, see per-file ignores
+
+[tool.ruff.lint.isort]
+combine-as-imports = true
+known-first-party = ["pocket_build"]
+force-single-line = false
+lines-after-imports = 2
+
+[tool.ruff.lint.mccabe]
+# Flag errors (`C901`) whenever the complexity level exceeds 15.
+max-complexity = 15
+
+[tool.ruff.lint.pylint]
+max-args = 10
+max-returns = 5
 
 # --- isort: kept in case someone runs it by accident in their editor ---
 [tool.isort]

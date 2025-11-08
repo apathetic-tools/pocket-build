@@ -56,10 +56,13 @@ def _compute_dest(  # noqa: PLR0911
             rel = src.relative_to(root / src_pattern)
             result = out_dir / rel
             logger.trace(f"[DEST] trailing-slash include → rel={rel}, result={result}")
-            return result
+
         except ValueError:
             logger.trace("[DEST] trailing-slash fallback (ValueError)")
             return out_dir / src.name
+
+        else:
+            return result
 
     try:
         if has_glob_chars(src_pattern):
@@ -75,11 +78,14 @@ def _compute_dest(  # noqa: PLR0911
         rel = src.relative_to(root)
         result = out_dir / rel
         logger.trace(f"[DEST] literal include → rel={rel}, result={result}")
-        return result
+
     except ValueError:
         # Fallback when src isn't under root
         logger.trace(f"[DEST] fallback (src not under root) → using name={src.name}")
         return out_dir / src.name
+
+    else:
+        return result
 
 
 def _non_glob_prefix(pattern: str) -> Path:

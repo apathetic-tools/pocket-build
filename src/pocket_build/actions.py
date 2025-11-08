@@ -196,7 +196,7 @@ def get_metadata() -> Metadata:
     return Metadata(version, commit)
 
 
-def run_selftest() -> bool:  #  noqa: PLR0915
+def run_selftest() -> bool:  #  noqa: PLR0912, PLR0915
     """Run a lightweight functional test of the tool itself."""
     logger = get_logger()
     logger.info("🧪 Running self-test...")
@@ -233,6 +233,7 @@ def run_selftest() -> bool:  #  noqa: PLR0915
                 "dry_run": False,
                 "__meta__": {"cli_root": tmp_dir, "config_root": tmp_dir},
             }
+
         except Exception as e:
             xmsg = f"Config construction failed: {e}"
             raise RuntimeError(xmsg) from e
@@ -266,7 +267,6 @@ def run_selftest() -> bool:  #  noqa: PLR0915
             elapsed,
             PROGRAM_DISPLAY,
         )
-        return True
 
     except (PermissionError, FileNotFoundError) as e:
         logger.error_if_not_debug("Self-test failed due to environment issue: %s", e)
@@ -283,6 +283,9 @@ def run_selftest() -> bool:  #  noqa: PLR0915
     except Exception:
         logger.exception("Unexpected self-test failure. Please report this traceback:")
         return False
+
+    else:
+        return True
 
     finally:
         if tmp_dir and tmp_dir.exists():

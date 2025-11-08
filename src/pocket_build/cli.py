@@ -349,8 +349,6 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
         else:
             run_all_builds(resolved_builds, dry_run=getattr(args, "dry_run", False))
 
-        return 0
-
     except (FileNotFoundError, ValueError, TypeError, RuntimeError) as e:
         # controlled termination
         silent = getattr(e, "silent", False)
@@ -369,3 +367,6 @@ def main(argv: list[str] | None = None) -> int:  # noqa: C901, PLR0911, PLR0912,
             safe_log(f"[FATAL] Logging failed while reporting: {e}")
 
         return getattr(e, "code", 1)
+
+    else:
+        return 0
