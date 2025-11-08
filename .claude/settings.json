@@ -13,6 +13,7 @@
       "Bash(python*)",
       "Bash(git*)",
       "Bash(git push)",
+      "Bash(git fetch origin)",
       "Bash(chmod*)",
       "Bash(gh pr view*)",
       "Bash(gh pr checks*)",
