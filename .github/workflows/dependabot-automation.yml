@@ -1,11 +1,13 @@
 # .github/workflows/dependabot-automation.yml
 #
 # Automates Dependabot PRs by:
-# 1. Updating poetry.lock to match new dependency versions in pyproject.toml
-# 2. Installing updated dependencies and running automated fixes (ruff format, type checks, tests)
+# 1. Updating poetry.lock to match new dependency versions (for Python dependency updates)
+# 2. Installing dependencies and running automated fixes (ruff format, type checks, tests)
 # 3. Committing any changes back to the Dependabot PR branch
 # 4. Waiting for CI checks (Python 3.10 and 3.x) to complete
 # 5. Auto-merging the PR if all checks pass
+#
+# Runs for all dependabot PRs (Python dependencies and GitHub Actions updates).
 #
 # Security: Only runs when github.actor == 'dependabot[bot]', which cannot be spoofed
 # by external users. This is a GitHub-guaranteed trusted identity.
@@ -14,8 +16,6 @@ name: Dependabot Automation
 
 on:
   pull_request:
-    paths:
-      - 'pyproject.toml'
 
 jobs:
   automate:
