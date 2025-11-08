@@ -17,7 +17,6 @@ from .config_types import (
     RootConfigResolved,
 )
 from .constants import (
-    DEFAULT_ENV_LOG_LEVEL,
     DEFAULT_ENV_WATCH_INTERVAL,
     DEFAULT_OUT_DIR,
     DEFAULT_RESPECT_GITIGNORE,
@@ -334,11 +333,8 @@ def resolve_config(
     # Log level
     # ------------------------------
     #  log_level: arg -> env -> build -> root -> default
-    env_log = os.getenv(DEFAULT_ENV_LOG_LEVEL)
     root_log = root_cfg.get("log_level")
     log_level = logger.determine_log_level(args=args, root_log_level=root_log)
-    if env_log:
-        log_level = env_log.upper()  # environment wins over config if CLI missing
 
     # --- sync runtime ---
     logger.setLevel(log_level)

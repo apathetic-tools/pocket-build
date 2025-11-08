@@ -39,7 +39,6 @@ API
   - 
 
 config_resolve
-  - resolve_build_config takes args to get log_level, doesn't touch runtime, why?
   - maybe abstract _normalize_path_with_root in config_resolve for _include, _exclude, and _out for if statement clarity
 
 load_and_validate_config

@@ -5,7 +5,7 @@ import logging
 import os
 from typing import cast
 
-from .constants import DEFAULT_LOG_LEVEL
+from .constants import DEFAULT_ENV_LOG_LEVEL, DEFAULT_LOG_LEVEL
 from .meta import PROGRAM_ENV, PROGRAM_PACKAGE
 from .utils_logs import TEST_TRACE, ApatheticCLILogger
 from .utils_types import cast_hint
@@ -27,7 +27,9 @@ class AppLogger(ApatheticCLILogger):
         if args_level is not None and args_level:
             return cast_hint(str, args_level).upper()
 
-        env_log_level = os.getenv(f"{PROGRAM_ENV}_LOG_LEVEL") or os.getenv("LOG_LEVEL")
+        env_log_level = os.getenv(
+            f"{PROGRAM_ENV}_{DEFAULT_ENV_LOG_LEVEL}"
+        ) or os.getenv(DEFAULT_ENV_LOG_LEVEL)
         if env_log_level:
             return env_log_level.upper()
 
