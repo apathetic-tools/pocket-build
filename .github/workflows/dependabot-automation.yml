@@ -57,7 +57,7 @@ jobs:
         uses: lewagon/wait-on-check-action@v1.3.4
         with:
           ref: ${{ github.head_ref }}
-          check-name: 'checks'
+          check-regexp: '^checks \(.*\)$'
           repo-token: ${{ secrets.GITHUB_TOKEN }}
           wait-interval: 10
 
