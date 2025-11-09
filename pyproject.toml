@@ -40,8 +40,27 @@ test = ["test:pytest:installed", "test:pytest:script"]
 ]
 
 # 📊 Coverage reporting
-"coverage" = "pytest --cov=src --cov-report=html --cov-report=term-missing"
-"coverage:html" = "pytest --cov=src --cov-report=html"
+"coverage:clean" = { shell = "rm -f .coverage .coverage.*" }
+"coverage:run:installed" = { cmd = "pytest --cov=src --cov-report= --cov-context=test", env = { COVERAGE_FILE=".coverage.installed" } }
+"coverage:run:singlefile" = { cmd = "pytest --cov=src --cov-report= --cov-context=test", env = { RUNTIME_MODE="singlefile", COVERAGE_FILE=".coverage.singlefile" } }
+"coverage:combine" = { cmd = "coverage combine .coverage.installed .coverage.singlefile" }
+"coverage:base" = [
+  "coverage:clean",
+  "coverage:run:installed",
+  "build:script",
+  "coverage:run:singlefile",
+  "coverage:combine",
+]
+
+"coverage" = [
+  "coverage:base",
+  { cmd = "coverage report --show-missing" },
+  { cmd = "coverage html" },
+]
+"coverage:html" = [
+  "coverage:base",
+  { cmd = "coverage html" },
+]
 
 # 🧹 Automated fixing / formatting
 fix = ["fix:ruff:installed", "fix:ruff:bin", "lint:compile", "fix:format:installed", "fix:format:bin"]
@@ -198,6 +217,29 @@ strict = true
 [tool.pyright]
 pythonVersion = "3.10"
 typeCheckingMode = "strict"
+
+# --- Coverage: code coverage tracking ---
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/test_*.py"]
+# Enable subprocess coverage tracking (for python -m pocket_build calls)
+concurrency = ["thread", "multiprocessing"]
+sigterm = true
+
+[tool.coverage.report]
+exclude_lines = [
+    "pragma: no cover",
+    "def __repr__",
+    "raise AssertionError",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+    "if TYPE_CHECKING:",
+    "class .*\\bProtocol\\):",
+    "@(abc\\.)?abstractmethod",
+]
+
+[tool.coverage.html]
+directory = "htmlcov"
 
 # --- pytest: testing framework ---
 # see pytest.ini
