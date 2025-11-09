@@ -15,6 +15,9 @@ This project can be deployed in two ways:
   - `poetry run poe check:fix` - Fix, type check, and test (run before committing)
   - `poetry run poe build:script` - Generate the single-file bin/pocket-build.py
 
+- **Python execution:**
+  - Always use `poetry run python3` (not bare `python3`) to ensure execution in the project's virtual environment
+
 - **Code quality standards:**
   - Strict Ruff (linting) and Mypy (type checking) compliance required
   - **Maximum line length: 88 characters (enforced by Ruff)**
