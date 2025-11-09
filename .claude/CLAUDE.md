@@ -21,6 +21,10 @@ This project can be deployed in two ways:
   - Target Python 3.10+ compatibility
   - All changes must pass `poetry run poe check:fix`
 
+- **Git commit conventions:**
+  - NEVER include Claude Code attribution or Co-Authored-By trailers in commit messages
+  - Write clean, conventional commit messages without any AI tool attribution
+
 - **Important files:**
   - `bin/pocket-build.py` is **generated** - never edit directly
   - Generate it using `poetry run poe build:script` (runs `python dev/make_script.py`)

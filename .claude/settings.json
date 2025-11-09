@@ -14,6 +14,7 @@
       "Bash(git*)",
       "Bash(git push*)",
       "Bash(git fetch origin)",
+      "Bash(git config --list)",
       "Bash(chmod*)",
       "Bash(gh pr view*)",
       "Bash(gh pr checks*)",
