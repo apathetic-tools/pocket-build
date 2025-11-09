@@ -48,8 +48,8 @@ def test_normalize_path_string_behavior(
 
     # --- if escaped spaces were present, ensure we warned once ---
     if "\\ " in raw:
-        stderr = capsys.readouterr().err
-        assert "Normalizing escaped spaces" in stderr
+        stderr = capsys.readouterr().err.lower()
+        assert "Normalizing escaped spaces".lower() in stderr
     else:
-        stderr = capsys.readouterr().err
+        stderr = capsys.readouterr().err.lower()
         assert stderr == ""

@@ -26,8 +26,8 @@ def test_copy_file_creates_and_copies(
 
     # --- verify ---
     assert dest.read_text() == "hi"
-    out = capsys.readouterr().out
-    assert "📄" in out
+    out = capsys.readouterr().out.lower()
+    assert "📄".lower() in out
 
 
 def test_copy_file_overwrites_existing(

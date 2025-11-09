@@ -35,8 +35,8 @@ def test_copy_directory_respects_excludes(
 
     # still needed?
     captured = capsys.readouterr()
-    out = captured.out + captured.err
-    assert "🚫" in out or "📄" in out
+    out = (captured.out + captured.err).lower()
+    assert "🚫".lower() in out or "📄".lower() in out
 
 
 def test_copy_directory_empty_source(

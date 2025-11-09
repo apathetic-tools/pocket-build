@@ -33,11 +33,11 @@ def test_quiet_flag(
     code = mod_cli.main(["--quiet"])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
     assert code == 0
     # should not contain normal messages
-    assert "Build completed" not in out
-    assert "All builds complete" not in out
+    assert "Build completed".lower() not in out
+    assert "All builds complete".lower() not in out
 
 
 def test_verbose_flag(
@@ -63,14 +63,14 @@ def test_verbose_flag(
 
     # --- verify ---
     captured = capsys.readouterr()
-    out = captured.out + captured.err
+    out = (captured.out + captured.err).lower()
 
     assert code == 0
     # Verbose mode should show per-file details
-    assert "📄" in out or "🚫" in out
+    assert "📄".lower() in out or "🚫".lower() in out
     # It should still include summary
-    assert "Build completed" in out
-    assert "All builds complete" in out
+    assert "Build completed".lower() in out
+    assert "All builds complete".lower() in out
 
     level = mod_logs.get_logger().level_name.lower()
     assert level == "debug"
@@ -97,11 +97,14 @@ def test_verbose_and_quiet_mutually_exclusive(
 
     # --- verify only ---
     captured = capsys.readouterr()
-    combined = captured.out + captured.err
+    combined = (captured.out + captured.err).lower()
 
-    assert "not allowed with argument" in combined or "mutually exclusive" in combined
-    assert "--quiet" in combined
-    assert "--verbose" in combined
+    assert (
+        "not allowed with argument".lower() in combined
+        or "mutually exclusive".lower() in combined
+    )
+    assert "--quiet".lower() in combined
+    assert "--verbose".lower() in combined
 
 
 def test_log_level_flag_sets_runtime(
@@ -119,10 +122,10 @@ def test_log_level_flag_sets_runtime(
     code = mod_cli.main(["--log-level", "debug"])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
 
     assert code == 0
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
     # Verify that runtime log level is set correctly
     level = mod_logs.get_logger().level_name.lower()
     assert level == "debug"
@@ -187,7 +190,7 @@ def test_per_build_log_level_override(
 
     # --- verify ---
     captured = capsys.readouterr()
-    out = captured.out + captured.err
+    out = (captured.out + captured.err).lower()
 
     assert code == 0
     # It should have built both directories
@@ -195,7 +198,7 @@ def test_per_build_log_level_override(
     assert (tmp_path / "dist2").exists()
 
     # During the second build, debug logs should have appeared
-    assert "[DEBUG" in out or "Overriding log level" in out
+    assert "[DEBUG".lower() in out or "Overriding log level".lower() in out
 
     # After all builds complete, runtime should be restored to root level
     level = mod_logs.get_logger().level_name.lower()

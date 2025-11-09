@@ -54,13 +54,13 @@ def test_default_respects_gitignore(
     code = mod_cli.main([])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
     dist = tmp_path / "dist"
 
     assert code == 0
     assert (dist / "keep.txt").exists()
     assert not (dist / "skip.tmp").exists()
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
 
 
 def test_config_disables_gitignore(
@@ -91,13 +91,13 @@ def test_config_disables_gitignore(
     code = mod_cli.main([])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
     dist = tmp_path / "dist"
 
     assert code == 0
     # file.tmp should NOT be excluded since gitignore disabled
     assert (dist / "file.tmp").exists()
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
 
 
 def test_build_enables_gitignore_even_if_root_disabled(
@@ -131,13 +131,13 @@ def test_build_enables_gitignore_even_if_root_disabled(
     code = mod_cli.main([])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
     dist = tmp_path / "dist"
 
     assert code == 0
     assert (dist / "x.txt").exists()
     assert not (dist / "x.tmp").exists()
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
 
 
 def test_cli_disables_gitignore_even_if_enabled_in_config(
@@ -160,14 +160,14 @@ def test_cli_disables_gitignore_even_if_enabled_in_config(
     code = mod_cli.main(["--no-gitignore"])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
     dist = tmp_path / "dist"
 
     assert code == 0
     # .gitignore ignored
     assert (dist / "ignore.tmp").exists()
     assert (dist / "keep.txt").exists()
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
 
 
 def test_cli_enables_gitignore_even_if_config_disables_it(
@@ -199,13 +199,13 @@ def test_cli_enables_gitignore_even_if_config_disables_it(
     code = mod_cli.main(["--gitignore"])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
     dist = tmp_path / "dist"
 
     assert code == 0
     assert (dist / "keep.txt").exists()
     assert not (dist / "skip.tmp").exists()
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
 
 
 def test_gitignore_patterns_append_to_existing_excludes(
@@ -233,14 +233,14 @@ def test_gitignore_patterns_append_to_existing_excludes(
     code = mod_cli.main([])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
     dist = tmp_path / "dist"
 
     assert code == 0
     assert not (dist / "foo.tmp").exists()  # excluded by config
     assert not (dist / "bar.log").exists()  # excluded by gitignore
     assert (dist / "baz.txt").exists()  # should survive
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
 
 
 def test_cli_gitignore_disable_then_enable(

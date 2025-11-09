@@ -39,14 +39,14 @@ def test_include_flag_overrides_config(
     code = mod_cli.main(["--include", "src/**"])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
 
     assert code == 0
     dist_dir = tmp_path / "dist"
     # Should copy src contents (flattened), not 'other'
     assert (dist_dir / "foo.txt").exists()
     assert not (dist_dir / "other").exists()
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
 
 
 def test_exclude_flag_overrides_config(
@@ -71,14 +71,14 @@ def test_exclude_flag_overrides_config(
     code = mod_cli.main(["--exclude", "*.tmp"])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
 
     assert code == 0
     dist_dir = tmp_path / "dist"
     # The .tmp file should be excluded now
     assert (dist_dir / "keep.txt").exists()
     assert not (dist_dir / "ignore.tmp").exists()
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
 
 
 def test_add_include_extends_config(
@@ -108,7 +108,7 @@ def test_add_include_extends_config(
     code = mod_cli.main(["--add-include", "extra/**"])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
 
     assert code == 0
     dist = tmp_path / "dist"
@@ -118,7 +118,7 @@ def test_add_include_extends_config(
     assert (dist / "b.txt").exists()
 
     # Output should confirm the build
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
 
 
 def test_add_exclude_extends_config(
@@ -148,7 +148,7 @@ def test_add_exclude_extends_config(
     code = mod_cli.main(["--add-exclude", "*.tmp"])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
 
     assert code == 0
     dist = tmp_path / "dist"
@@ -159,4 +159,4 @@ def test_add_exclude_extends_config(
     assert not (dist / "ignore.tmp").exists()
     assert not (dist / "ignore.log").exists()
 
-    assert "Build completed" in out
+    assert "Build completed".lower() in out

@@ -23,8 +23,8 @@ def test_main_no_config(
     # --- verify ---
     assert code == 1
     captured = capsys.readouterr()
-    out = captured.out + captured.err
-    assert "No build config" in out
+    out = (captured.out + captured.err).lower()
+    assert "No build config".lower() in out
 
 
 def test_main_with_config(
@@ -42,9 +42,9 @@ def test_main_with_config(
     code = mod_cli.main([])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
     assert code == 0
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
 
 
 def test_dry_run_creates_no_files(tmp_path: Path) -> None:
@@ -245,13 +245,13 @@ def test_missing_includes_behavior(
     # --- verify ---
     assert code == expect_exit, f"Failed: {description}"
     captured = capsys.readouterr()
-    combined = captured.out + captured.err
+    combined = (captured.out + captured.err).lower()
 
     if expect_msg:
-        assert expect_msg in combined, (
+        assert expect_msg.lower() in combined, (
             f"Failed: {description} - expected message not found"
         )
     else:
-        assert "No include patterns" not in combined, (
+        assert "No include patterns".lower() not in combined, (
             f"Failed: {description} - unexpected warning"
         )

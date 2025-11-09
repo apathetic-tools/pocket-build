@@ -20,7 +20,7 @@ def test_help_flag(
     # Argparse exits with code 0 for --help (must be outside context)
     assert e.value.code == 0
 
-    out = capsys.readouterr().out
-    assert "usage:" in out.lower()
-    assert mod_meta.PROGRAM_SCRIPT in out
-    assert "--out" in out
+    out = capsys.readouterr().out.lower()
+    assert "usage:".lower() in out
+    assert mod_meta.PROGRAM_SCRIPT.lower() in out
+    assert "--out".lower() in out

@@ -7,6 +7,8 @@
     "allow": [
       "Read(bin/pocket-build.py)",
       "Bash(poetry*)",
+      "Bash(poetry run poe*)",
+      "Bash(poetry run poe check:fix)",
       "Bash(pytest*)",
       "Bash(mypy*)",
       "Bash(ruff*)",

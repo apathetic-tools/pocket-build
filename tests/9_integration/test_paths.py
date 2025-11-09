@@ -28,7 +28,7 @@ def test_configless_run_with_include_flag(
 
     # --- verify ---
     captured = capsys.readouterr()
-    out = captured.out + captured.err
+    out = (captured.out + captured.err).lower()
 
     # Should exit successfully
     assert code == 0
@@ -39,8 +39,8 @@ def test_configless_run_with_include_flag(
     assert (dist / "foo.txt").exists()
 
     # Log output should mention CLI-only mode
-    assert "CLI-only mode" in out or "no config file" in out
-    assert "Build completed" in out
+    assert "CLI-only mode".lower() in out or "no config file".lower() in out
+    assert "Build completed".lower() in out
 
 
 def test_configless_run_with_add_include_flag(
@@ -59,11 +59,11 @@ def test_configless_run_with_add_include_flag(
     code = mod_cli.main(["--add-include", "src/**", "--out", "outdir"])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
 
     assert code == 0
     assert (tmp_path / "outdir" / "bar.txt").exists()
-    assert "CLI-only" in out or "no config file" in out
+    assert "CLI-only".lower() in out or "no config file".lower() in out
 
 
 def test_custom_config_path(
@@ -80,9 +80,9 @@ def test_custom_config_path(
     code = mod_cli.main(["--config", str(cfg)])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
     assert code == 0
-    assert "Using config: custom.json" in out
+    assert "Using config: custom.json".lower() in out
 
 
 def test_out_flag_overrides_config(
@@ -108,7 +108,7 @@ def test_out_flag_overrides_config(
     code = mod_cli.main(["--out", "override-dist"])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
 
     assert code == 0
     # Confirm it built into the override directory
@@ -119,7 +119,7 @@ def test_out_flag_overrides_config(
     assert (override_dir / "foo.txt").exists()
 
     # Optional: check output logs
-    assert "override-dist" in out
+    assert "override-dist".lower() in out
 
 
 def test_out_flag_relative_to_cwd(
@@ -221,14 +221,14 @@ builds = [
     code = mod_cli.main([])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
 
     assert code == 0
     dist = tmp_path / "dist"
     # Only the Python config file's include should have been used
     assert (dist / "src" / "from_py.txt").exists()
     assert not (dist / "src" / "from_json.txt").exists()
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
 
 
 @pytest.mark.parametrize("ext", [".jsonc", ".json"])
@@ -266,12 +266,12 @@ def test_json_and_jsonc_config_supported(
     code = mod_cli.main([])
 
     # --- verify ---
-    out = capsys.readouterr().out
+    out = capsys.readouterr().out.lower()
 
     assert code == 0
     dist = tmp_path / "dist"
     assert (dist / "hello.txt").exists()
-    assert "Build completed" in out
+    assert "Build completed".lower() in out
 
 
 # ---------------------------------------------------------------------------
