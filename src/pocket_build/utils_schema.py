@@ -6,7 +6,7 @@ from difflib import get_close_matches
 from typing import Any, TypedDict, cast, get_args, get_origin
 
 from .constants import DEFAULT_HINT_CUTOFF
-from .utils import fnmatch_portable, plural
+from .utils import fnmatchcase_portable, plural
 from .utils_types import cast_hint, safe_isinstance, schema_from_typeddict
 
 
@@ -134,7 +134,7 @@ def _get_example_for_field(
 
     # Then try wildcard matches
     for pattern, example in field_examples.items():
-        if "*" in pattern and fnmatch_portable(field_path, pattern):
+        if "*" in pattern and fnmatchcase_portable(field_path, pattern):
             return example
 
     return None

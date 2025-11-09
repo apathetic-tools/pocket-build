@@ -298,10 +298,12 @@ def _compile_glob_recursive(pattern: str) -> re.Pattern[str]:
     return re.compile(f"(?s:{inner})\\Z")
 
 
-def fnmatch_portable(path: str, pattern: str) -> bool:
+def fnmatchcase_portable(path: str, pattern: str) -> bool:
     """
-    A drop-in replacement for fnmatch.fnmatch that backports '**' recursion on 3.10.
-    Always case-sensitive.
+    Case-sensitive glob pattern matching with Python 3.10 '**' backport.
+
+    Uses fnmatchcase (case-sensitive) as the base, with backported support
+    for recursive '**' patterns on Python 3.10.
 
     Args:
         path: The path to match against the pattern
@@ -366,11 +368,11 @@ def is_excluded_raw(  # noqa: PLR0911
                 pat_rel = str(Path(pat).relative_to(root)).replace("\\", "/")
             except ValueError:
                 pat_rel = pat  # not under root; treat as-is
-            if fnmatch_portable(rel, pat_rel):
+            if fnmatchcase_portable(rel, pat_rel):
                 return True
 
         # Otherwise treat pattern as relative glob
-        if fnmatch_portable(rel, pat):
+        if fnmatchcase_portable(rel, pat):
             return True
 
         # Optional directory-only semantics

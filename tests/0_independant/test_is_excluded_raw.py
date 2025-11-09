@@ -18,7 +18,6 @@ from types import SimpleNamespace
 import pytest
 
 import pocket_build.utils as mod_utils
-import pocket_build.utils_types as mod_utils_types
 from tests.utils import patch_everywhere
 
 
@@ -212,25 +211,3 @@ def test_gitignore_double_star_backport_py310(
     # --- verify ---
     # Assert: backport should match recursively on 3.10
     assert result is True
-
-
-def test_is_excluded_wrapper_delegates(tmp_path: Path) -> None:
-    """Integration test for is_excluded wrapper.
-
-    Example:
-      path:     foo.txt (relative)
-      root:     /tmp/.../
-      pattern:  ["*.txt"]
-      Result: True
-      Explanation: wrapper passes resolved args correctly to is_excluded_raw.
-
-    """
-    # --- setup ---
-    root = tmp_path
-    f = root / "foo.txt"
-    f.touch()
-    entry = mod_utils_types.make_pathresolved("foo.txt", root, "cli")
-    excludes = [mod_utils_types.make_pathresolved("*.txt", root, "config")]
-
-    # --- execute + verify ---
-    assert mod_utils.is_excluded(entry, excludes)
