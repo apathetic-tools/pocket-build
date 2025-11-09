@@ -28,9 +28,6 @@ Exploring bundling options for generating the single-file release:
 
 deployment
   - Deploy action when I tag a release should create a release and attach it to the tagged release.
-
-review
-  - main is just high level orchestration and making sure the right command is run
   
 API
   - put utils into a submodule (as long as our sticher can handle it)
