@@ -331,3 +331,181 @@ def test_resolve_build_config_warns_for_missing_relative_include(
     # --- validate ---
     out = capsys.readouterr().err.lower()
     assert "Include path does not exist".lower() in out
+
+
+def test_resolve_build_config_include_with_dest_from_config(
+    tmp_path: Path,
+    module_logger: mod_logs.AppLogger,
+) -> None:
+    """Config includes with dest should propagate to resolved config."""
+    # --- setup ---
+    raw = make_build_input(
+        include=[
+            "src/**",
+            {"path": "assets/", "dest": "static"},
+            {"path": "docs/", "dest": "help"},
+        ],
+    )
+    args = _args()
+
+    # --- execute ---
+    with module_logger.use_level("info"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+
+    # --- validate ---
+    inc_list = resolved["include"]
+    expected_count = 3
+    assert len(inc_list) == expected_count
+
+    # First include: no dest
+    assert inc_list[0]["path"] == "src/**"
+    assert inc_list[0]["origin"] == "config"
+    assert "dest" not in inc_list[0]
+
+    # Second include: with dest
+    assert inc_list[1]["path"] == "assets/"
+    assert inc_list[1]["origin"] == "config"
+    assert inc_list[1]["dest"] == Path("static")
+
+    # Third include: with dest
+    assert inc_list[2]["path"] == "docs/"
+    assert inc_list[2]["origin"] == "config"
+    assert inc_list[2]["dest"] == Path("help")
+
+
+def test_resolve_build_config_include_with_dest_from_cli(
+    tmp_path: Path,
+    module_logger: mod_logs.AppLogger,
+) -> None:
+    """CLI includes with dest (path:dest format) should be parsed."""
+    # --- setup ---
+    raw = make_build_input(include=["config_src/**"])
+    args = _args(include=["src/**", "assets/:static", "docs/:help"])
+
+    # --- execute ---
+    with module_logger.use_level("info"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+
+    # --- validate ---
+    inc_list = resolved["include"]
+    expected_count = 3
+    assert len(inc_list) == expected_count
+
+    # First include: no dest
+    assert inc_list[0]["path"] == "src/**"
+    assert inc_list[0]["origin"] == "cli"
+    assert "dest" not in inc_list[0]
+
+    # Second include: with dest
+    assert inc_list[1]["path"] == "assets/"
+    assert inc_list[1]["origin"] == "cli"
+    assert inc_list[1]["dest"] == Path("static")
+
+    # Third include: with dest
+    assert inc_list[2]["path"] == "docs/"
+    assert inc_list[2]["origin"] == "cli"
+    assert inc_list[2]["dest"] == Path("help")
+
+
+def test_resolve_build_config_add_include_with_dest(
+    tmp_path: Path,
+    module_logger: mod_logs.AppLogger,
+) -> None:
+    """--add-include with dest should extend config includes."""
+    # --- setup ---
+    raw = make_build_input(include=["src/**"])
+    args = _args(add_include=["assets/:static", "docs/:help"])
+
+    # --- execute ---
+    with module_logger.use_level("info"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+
+    # --- validate ---
+    inc_list = resolved["include"]
+    expected_count = 3
+    assert len(inc_list) == expected_count
+
+    # Config include
+    assert inc_list[0]["path"] == "src/**"
+    assert inc_list[0]["origin"] == "config"
+    assert "dest" not in inc_list[0]
+
+    # Add-includes with dest
+    assert inc_list[1]["path"] == "assets/"
+    assert inc_list[1]["origin"] == "cli"
+    assert inc_list[1]["dest"] == Path("static")
+
+    assert inc_list[2]["path"] == "docs/"
+    assert inc_list[2]["origin"] == "cli"
+    assert inc_list[2]["dest"] == Path("help")
+
+
+def test_resolve_build_config_include_windows_path_with_dest(
+    tmp_path: Path,
+    module_logger: mod_logs.AppLogger,
+) -> None:
+    """Windows absolute paths with dest should be parsed correctly."""
+    # --- setup ---
+    raw = make_build_input(include=["config_src/**"])
+    # Test various Windows path formats with dest
+    args = _args(
+        include=[
+            r"C:\Users\test\src:renamed",
+            "D:\\project\\assets\\:static",
+            r"E:\docs:help",
+        ]
+    )
+
+    # --- execute ---
+    with module_logger.use_level("info"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+
+    # --- validate ---
+    inc_list = resolved["include"]
+    expected_count = 3
+    assert len(inc_list) == expected_count
+
+    # First: C: drive with nested path
+    assert inc_list[0]["path"] == r"C:\Users\test\src"
+    assert inc_list[0]["origin"] == "cli"
+    assert inc_list[0]["dest"] == Path("renamed")
+
+    # Second: D: drive with trailing backslash
+    assert inc_list[1]["path"] == "D:\\project\\assets\\"
+    assert inc_list[1]["origin"] == "cli"
+    assert inc_list[1]["dest"] == Path("static")
+
+    # Third: E: drive simple path
+    assert inc_list[2]["path"] == r"E:\docs"
+    assert inc_list[2]["origin"] == "cli"
+    assert inc_list[2]["dest"] == Path("help")
+
+
+def test_resolve_build_config_include_windows_drive_only(
+    tmp_path: Path,
+    module_logger: mod_logs.AppLogger,
+) -> None:
+    """Windows drive letters without dest should not be parsed as dest."""
+    # --- setup ---
+    raw = make_build_input(include=["config_src/**"])
+    # Test drive letters - these should NOT be split as path:dest
+    args = _args(include=["C:", "D:\\"])
+
+    # --- execute ---
+    with module_logger.use_level("info"):
+        resolved = mod_resolve.resolve_build_config(raw, args, tmp_path, tmp_path)
+
+    # --- validate ---
+    inc_list = resolved["include"]
+    expected_count = 2
+    assert len(inc_list) == expected_count
+
+    # Drive letter only - not split
+    assert inc_list[0]["path"] == "C:"
+    assert inc_list[0]["origin"] == "cli"
+    assert "dest" not in inc_list[0]
+
+    # Drive with backslash - not split
+    assert inc_list[1]["path"] == "D:\\"
+    assert inc_list[1]["origin"] == "cli"
+    assert "dest" not in inc_list[1]

@@ -36,10 +36,6 @@ API
   - put utils into a submodule (as long as our sticher can handle it)
   - can utils/config be made into a single submodule? how does that play with the bundler?
   - do we want a way to dump the schema for documentation purposes?
-  - 
-
-load_and_validate_config
-  - _validate_typed_dict likely needs to check if required fields are present
 
 documentation
   - where do we document the structure of the project? what do we document inside it vs here?

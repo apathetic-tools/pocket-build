@@ -81,7 +81,11 @@ def _setup_parser() -> argparse.ArgumentParser:
     )
 
     # --- Standard flags ---
-    parser.add_argument("--include", nargs="+", help="Override include patterns.")
+    parser.add_argument(
+        "--include",
+        nargs="+",
+        help="Override include patterns. Format: path or path:dest",
+    )
     parser.add_argument("--exclude", nargs="+", help="Override exclude patterns.")
     parser.add_argument("-o", "--out", help="Override output directory.")
     parser.add_argument(
@@ -94,7 +98,10 @@ def _setup_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--add-include",
         nargs="+",
-        help="Additional include paths (relative to cwd). Extends config includes.",
+        help=(
+            "Additional include paths (relative to cwd). "
+            "Format: path or path:dest. Extends config includes."
+        ),
     )
     parser.add_argument(
         "--add-exclude",

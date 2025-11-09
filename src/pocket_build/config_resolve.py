@@ -44,6 +44,45 @@ def _load_gitignore_patterns(path: Path) -> list[str]:
     return patterns
 
 
+def _parse_include_with_dest(
+    raw: str, context_root: Path
+) -> tuple[IncludeResolved, bool]:
+    """Parse include string with optional :dest suffix.
+
+    Returns:
+        (IncludeResolved, has_dest) tuple
+    """
+    has_dest = False
+    path_str = raw
+    dest_str = None
+
+    # Handle "path:dest" format - split on last colon
+    if ":" in raw:
+        parts = raw.rsplit(":", 1)
+        path_part, dest_part = parts[0], parts[1]
+
+        # Check if this is a Windows drive letter (C:, D:, etc.)
+        # Drive letters are 1-2 chars, possibly with backslash
+        is_drive_letter = len(path_part) <= 2 and (  # noqa: PLR2004
+            len(path_part) == 1 or path_part.endswith("\\")
+        )
+
+        if not is_drive_letter:
+            # Valid dest separator found
+            path_str = path_part
+            dest_str = dest_part
+            has_dest = True
+
+    # Normalize the path
+    root, rel = _normalize_path_with_root(path_str, context_root)
+    inc = make_includeresolved(rel, root, "cli")
+
+    if has_dest and dest_str:
+        inc["dest"] = Path(dest_str)
+
+    return inc, has_dest
+
+
 def _normalize_path_with_root(
     raw: Path | str,
     context_root: Path | str,
@@ -87,7 +126,7 @@ def _normalize_path_with_root(
 # --------------------------------------------------------------------------- #
 
 
-def _resolve_includes(
+def _resolve_includes(  # noqa: PLR0912
     resolved_cfg: dict[str, Any],
     *,
     args: argparse.Namespace,
@@ -100,20 +139,33 @@ def _resolve_includes(
     if getattr(args, "include", None):
         # Full override → relative to cwd
         for raw in args.include:
-            root, rel = _normalize_path_with_root(raw, cwd)
-            includes.append(make_includeresolved(rel, root, "cli"))
+            inc, _ = _parse_include_with_dest(raw, cwd)
+            includes.append(inc)
 
     elif "include" in resolved_cfg:
         # From config → relative to config_dir
         for raw in resolved_cfg["include"]:
-            root, rel = _normalize_path_with_root(raw, config_dir)
-            includes.append(make_includeresolved(rel, root, "config"))
+            # Handle both string and object formats
+            if isinstance(raw, dict):
+                # Object format: {"path": "...", "dest": "..."}
+                path_str = raw["path"]
+                dest_str = raw.get("dest")
+                root, rel = _normalize_path_with_root(path_str, config_dir)
+                inc = make_includeresolved(rel, root, "config")
+                if dest_str:
+                    # dest is relative to output dir, no normalization
+                    inc["dest"] = Path(dest_str)
+                includes.append(inc)
+            else:
+                # String format: "path/to/files"
+                root, rel = _normalize_path_with_root(raw, config_dir)
+                includes.append(make_includeresolved(rel, root, "config"))
 
     # Add-on includes (extend, not override)
     if getattr(args, "add_include", None):
         for raw in args.add_include:
-            root, rel = _normalize_path_with_root(raw, cwd)
-            includes.append(make_includeresolved(rel, root, "cli"))
+            inc, _ = _parse_include_with_dest(raw, cwd)
+            includes.append(inc)
 
     # unique path+root
     seen_inc: set[tuple[Path | str, Path]] = set()

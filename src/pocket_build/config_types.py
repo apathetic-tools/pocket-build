@@ -29,8 +29,13 @@ class MetaBuildConfigResolved(TypedDict):
     config_root: Path
 
 
+class IncludeConfig(TypedDict):
+    path: str
+    dest: NotRequired[str]
+
+
 class BuildConfig(TypedDict, total=False):
-    include: list[str]
+    include: list[str | IncludeConfig]
     exclude: list[str]
 
     # optional per-build override

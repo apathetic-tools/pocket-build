@@ -17,6 +17,7 @@ This project can be deployed in two ways:
 
 - **Code quality standards:**
   - Strict Ruff (linting) and Mypy (type checking) compliance required
+  - **Maximum line length: 88 characters (enforced by Ruff)**
   - Code must pass both Pylance (IDE) and Mypy (CI) type checking
   - Target Python 3.10+ compatibility
   - All changes must pass `poetry run poe check:fix`
