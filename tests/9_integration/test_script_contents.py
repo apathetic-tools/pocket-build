@@ -45,7 +45,7 @@ def test_standalone_script_metadata_and_execution() -> None:
         # tomllib/tomli lack type stubs; cast and ignore unknown member types
         pyproject_data = cast(
             "dict[str, Any]",
-            tomllib.load(f),  # pyright: ignore[reportUnknownMemberType,unused-ignore]
+            tomllib.load(f),  # type: ignore[redundant-cast,unused-ignore] # pyright: ignore[reportUnknownMemberType]
         )
 
     project_section = cast("dict[str, Any]", pyproject_data.get("project", {}))
