@@ -17,7 +17,7 @@ if sys.version_info >= (3, 11):
     import tomllib  # type: ignore[import-not-found]
 else:
     # tomli (fallback for Python <3.11); also has no type stubs
-    import tomli as tomllib  # type: ignore[import-not-found]
+    import tomli as tomllib  # type: ignore[import-not-found,unused-ignore]
 
 import pocket_build.meta as mod_meta
 
@@ -45,7 +45,7 @@ def test_standalone_script_metadata_and_execution() -> None:
         # tomllib/tomli lack type stubs; cast and ignore unknown member types
         pyproject_data = cast(
             "dict[str, Any]",
-            tomllib.load(f),  # pyright: ignore[reportUnknownMemberType]
+            tomllib.load(f),  # pyright: ignore[reportUnknownMemberType,unused-ignore]
         )
 
     project_section = cast("dict[str, Any]", pyproject_data.get("project", {}))
