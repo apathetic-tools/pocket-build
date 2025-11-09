@@ -12,6 +12,7 @@ This project can be deployed in two ways:
   - `poetry run poe check` - Run linting, type checking, and tests
   - `poetry run poe fix` - Auto-format and fix linting issues
   - `poetry run poe test` - Run test suite
+  - `poetry run poe coverage` - Generate code coverage report (dual runtime coverage)
   - `poetry run poe check:fix` - Fix, type check, and test (run before committing)
   - `poetry run poe build:script` - Generate the single-file bin/pocket-build.py
 
