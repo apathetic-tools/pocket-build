@@ -67,11 +67,12 @@ def make_build_cfg(
         "respect_gitignore": respect_gitignore,
         "log_level": log_level,
         "dry_run": dry_run,
+        "strict_config": False,
     }
 
 
 def make_build_input(
-    include: list[str] | None = None,
+    include: list[str | dict[str, str]] | None = None,
     exclude: list[str] | None = None,
     out: str | None = None,
     **extra: object,

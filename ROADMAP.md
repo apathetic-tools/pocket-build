@@ -20,7 +20,6 @@ Exploring bundling options for generating the single-file release:
 
 ## 🧪 Tests
 - verify every function has test coverage
-- check for redundant tests
 - test coverage report
 
 ## 🧑‍💻 Development

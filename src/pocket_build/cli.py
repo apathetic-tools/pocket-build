@@ -300,7 +300,8 @@ def _validate_includes(
     #   {"builds": [{"out": "dist"}]}      → no include key → check
     original_builds = root_cfg.get("builds", [])
     has_explicit_include_key = any(
-        isinstance(b, dict) and "include" in b for b in original_builds
+        isinstance(b, dict) and "include" in b  # pyright: ignore[reportUnnecessaryIsInstance]
+        for b in original_builds
     )
 
     # Check if any builds have missing includes (respecting CLI overrides)

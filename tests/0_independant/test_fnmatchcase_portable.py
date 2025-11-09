@@ -262,15 +262,15 @@ def test_fnmatchcase_portable_no_glob_chars_delegates_to_fnmatchcase(
     """
     # --- setup: track fnmatchcase calls ---
     call_count = 0
-    original_fnmatchcase = mod_utils.fnmatchcase
+    original_fnmatchcase = fnmatchcase
 
     def counting_fnmatchcase(name: str, pattern: str) -> bool:
         nonlocal call_count
         call_count += 1
         return original_fnmatchcase(name, pattern)
 
-    # --- patch ---
-    monkeypatch.setattr(mod_utils, "fnmatchcase", counting_fnmatchcase)
+    # --- patch  ---
+    patch_everywhere(monkeypatch, mod_utils, "fnmatchcase", counting_fnmatchcase)
 
     # --- execute ---
     # Pattern without '**' should use fnmatchcase

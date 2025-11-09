@@ -365,12 +365,12 @@ def test_resolve_build_config_include_with_dest_from_config(
     # Second include: with dest
     assert inc_list[1]["path"] == "assets/"
     assert inc_list[1]["origin"] == "config"
-    assert inc_list[1]["dest"] == Path("static")
+    assert inc_list[1].get("dest") == Path("static")
 
     # Third include: with dest
     assert inc_list[2]["path"] == "docs/"
     assert inc_list[2]["origin"] == "config"
-    assert inc_list[2]["dest"] == Path("help")
+    assert inc_list[2].get("dest") == Path("help")
 
 
 def test_resolve_build_config_include_with_dest_from_cli(
@@ -399,12 +399,12 @@ def test_resolve_build_config_include_with_dest_from_cli(
     # Second include: with dest
     assert inc_list[1]["path"] == "assets/"
     assert inc_list[1]["origin"] == "cli"
-    assert inc_list[1]["dest"] == Path("static")
+    assert inc_list[1].get("dest") == Path("static")
 
     # Third include: with dest
     assert inc_list[2]["path"] == "docs/"
     assert inc_list[2]["origin"] == "cli"
-    assert inc_list[2]["dest"] == Path("help")
+    assert inc_list[2].get("dest") == Path("help")
 
 
 def test_resolve_build_config_add_include_with_dest(
@@ -433,11 +433,11 @@ def test_resolve_build_config_add_include_with_dest(
     # Add-includes with dest
     assert inc_list[1]["path"] == "assets/"
     assert inc_list[1]["origin"] == "cli"
-    assert inc_list[1]["dest"] == Path("static")
+    assert inc_list[1].get("dest") == Path("static")
 
     assert inc_list[2]["path"] == "docs/"
     assert inc_list[2]["origin"] == "cli"
-    assert inc_list[2]["dest"] == Path("help")
+    assert inc_list[2].get("dest") == Path("help")
 
 
 def test_resolve_build_config_include_windows_path_with_dest(
@@ -468,17 +468,17 @@ def test_resolve_build_config_include_windows_path_with_dest(
     # First: C: drive with nested path
     assert inc_list[0]["path"] == r"C:\Users\test\src"
     assert inc_list[0]["origin"] == "cli"
-    assert inc_list[0]["dest"] == Path("renamed")
+    assert inc_list[0].get("dest") == Path("renamed")
 
     # Second: D: drive with trailing backslash
     assert inc_list[1]["path"] == "D:\\project\\assets\\"
     assert inc_list[1]["origin"] == "cli"
-    assert inc_list[1]["dest"] == Path("static")
+    assert inc_list[1].get("dest") == Path("static")
 
     # Third: E: drive simple path
     assert inc_list[2]["path"] == r"E:\docs"
     assert inc_list[2]["origin"] == "cli"
-    assert inc_list[2]["dest"] == Path("help")
+    assert inc_list[2].get("dest") == Path("help")
 
 
 def test_resolve_build_config_include_windows_drive_only(

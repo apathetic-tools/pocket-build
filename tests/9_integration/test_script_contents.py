@@ -12,9 +12,11 @@ from tests.utils import PROJ_ROOT
 
 
 try:
-    import tomllib  # Python 3.11+
+    # tomllib has no type stubs
+    import tomllib  # type: ignore[import-not-found]
 except ModuleNotFoundError:
-    import tomli as tomllib  # type: ignore[no-redef]
+    # tomli (fallback for Python <3.11) has no type stubs
+    import tomli as tomllib  # type: ignore[import-not-found]
 
 import pocket_build.meta as mod_meta
 
@@ -39,7 +41,11 @@ def test_standalone_script_metadata_and_execution() -> None:
 
     # - Load declared version from pyproject.toml -
     with pyproject.open("rb") as f:
-        pyproject_data = cast("dict[str, Any]", tomllib.load(f))  # type: ignore[attr-defined]
+        # tomllib/tomli lack type stubs; cast and ignore unknown member types
+        pyproject_data = cast(
+            "dict[str, Any]",
+            tomllib.load(f),  # pyright: ignore[reportUnknownMemberType]
+        )
 
     project_section = cast("dict[str, Any]", pyproject_data.get("project", {}))
     declared_version = cast("str", project_section.get("version"))

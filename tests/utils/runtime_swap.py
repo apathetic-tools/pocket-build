@@ -105,10 +105,11 @@ def runtime_swap() -> bool:
         TEST_TRACE(f"Loaded standalone module from {bin_path}")
     except Exception as e:
         # Fail fast with context; this is a config/runtime problem.
+        error_name = type(e).__name__
         xmsg = (
             f"Failed to import standalone module from {bin_path}.\n"
-            f"Original error: {type(e).__name__}: {e}\n"
-            f"Tip: rebuild the bundle and re-run.",
+            f"Original error: {error_name}: {e}\n"
+            f"Tip: rebuild the bundle and re-run."
         )
         raise pytest.UsageError(xmsg) from e
 

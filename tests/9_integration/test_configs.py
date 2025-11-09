@@ -95,7 +95,7 @@ def test_main_invalid_config(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     ("config_content", "cli_args", "expect_exit", "expect_msg", "description"),
-    [
+    [  # pyright: ignore[reportUnknownArgumentType]
         # Explicit include:[] means intentional empty - no warning
         (
             {"builds": [{"include": [], "out": "dist"}]},
@@ -218,7 +218,7 @@ def test_missing_includes_behavior(
     tmp_path: Path,
     monkeypatch: pytest.MonkeyPatch,
     capsys: pytest.CaptureFixture[str],
-    config_content: dict | str,
+    config_content: dict[str, object] | str,
     cli_args: list[str],
     expect_exit: int,
     expect_msg: str | None,

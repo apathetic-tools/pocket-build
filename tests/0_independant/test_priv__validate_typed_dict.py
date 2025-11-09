@@ -109,7 +109,7 @@ def test_validate_typed_dict_nested_recursion() -> None:
         inner: MiniBuild
 
     good: Outer = {"inner": {"include": ["src"], "out": "dist"}}
-    bad: Outer = {"inner": {"include": [123], "out": "dist"}}  # type: ignore[assignment]
+    bad: Outer = {"inner": {"include": [123], "out": "dist"}}  # type: ignore[list-item]
 
     # --- patch, execute and verify ---
     summary1 = mod_utils_schema.ValidationSummary(True, [], [], [], True)

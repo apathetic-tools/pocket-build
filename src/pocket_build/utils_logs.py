@@ -352,8 +352,8 @@ class DualStreamHandler(logging.StreamHandler):  # type: ignore[type-arg]
     enable_color: bool = False
 
     def __init__(self) -> None:
-        # default to stdout, overridden per record
-        super().__init__(stream=sys.stdout)
+        # default to stdout, overridden per record in emit()
+        super().__init__()  # pyright: ignore[reportUnknownMemberType]
 
     def emit(self, record: logging.LogRecord) -> None:
         level = record.levelno

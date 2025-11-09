@@ -4,7 +4,7 @@
 import argparse
 import os
 from pathlib import Path
-from typing import Any
+from typing import Any, cast
 
 from .config_types import (
     BuildConfig,
@@ -144,11 +144,15 @@ def _resolve_includes(  # noqa: PLR0912
 
     elif "include" in resolved_cfg:
         # From config → relative to config_dir
-        for raw in resolved_cfg["include"]:
+        # Type narrowing: resolved_cfg is dict[str, Any], narrow the include list
+        include_list: list[str | dict[str, str]] = cast(
+            "list[str | dict[str, str]]", resolved_cfg["include"]
+        )
+        for raw in include_list:
             # Handle both string and object formats
             if isinstance(raw, dict):
                 # Object format: {"path": "...", "dest": "..."}
-                path_str = raw["path"]
+                path_str = raw.get("path", "")
                 dest_str = raw.get("dest")
                 root, rel = _normalize_path_with_root(path_str, config_dir)
                 inc = make_includeresolved(rel, root, "config")

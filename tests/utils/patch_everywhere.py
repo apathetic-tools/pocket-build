@@ -56,7 +56,7 @@ def patch_everywhere(
     for m in list(sys.modules.values()):
         if (
             m is mod_env
-            or not isinstance(m, ModuleType)  # type: ignore[unnecessary-isinstance]
+            or not isinstance(m, ModuleType)  # pyright: ignore[reportUnnecessaryIsInstance]
             or not hasattr(m, "__dict__")
         ):
             continue

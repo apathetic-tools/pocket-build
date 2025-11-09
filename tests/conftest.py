@@ -93,8 +93,8 @@ def _filter_runtime_mode_tests(
             included_map[file_path] = included_map.get(file_path, 0) + 1
 
     # Store results for later reporting
-    config._included_map = included_map  # noqa: SLF001 # pyright: ignore[reportAttributeAccessIssue]
-    config._runtime_mode = mode  # noqa: SLF001 # pyright: ignore[reportAttributeAccessIssue]
+    config._included_map = included_map  # type: ignore[attr-defined] # noqa: SLF001
+    config._runtime_mode = mode  # type: ignore[attr-defined] # noqa: SLF001
 
 
 # ----------------------------------------------------------------------
