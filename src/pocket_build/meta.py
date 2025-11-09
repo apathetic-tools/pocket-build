@@ -10,6 +10,9 @@ _BASE = "pocket-build"
 # CLI script name (the executable or `poetry run` entrypoint)
 PROGRAM_SCRIPT = _BASE
 
+# config file name
+PROGRAM_CONFIG = _BASE
+
 # Human-readable name for banners, help text, etc.
 PROGRAM_DISPLAY = _BASE.replace("-", " ").title()
 

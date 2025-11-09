@@ -32,7 +32,7 @@ def test_watch_flag_invokes_watch_mode(
     That means we must patch the *namespace of main()*, not the module itself.
     """
     # --- setup ---
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     called: dict[str, bool] = {}
@@ -58,7 +58,7 @@ def test_watch_uses_config_interval_when_flag_passed(
 ) -> None:
     """Ensure that --watch (no value) uses watch_interval from config when defined."""
     # --- setup ---
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text(
         '{"watch_interval": 0.42, "builds": [{"include": [], "out": "dist"}]}',
     )
@@ -96,7 +96,7 @@ def test_watch_falls_back_to_default_interval_when_no_config(
 ) -> None:
     """Ensure --watch uses DEFAULT_WATCH_INTERVAL when no config interval is defined."""
     # --- setup ---
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     called: dict[str, float] = {}

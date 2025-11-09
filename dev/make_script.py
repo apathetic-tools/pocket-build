@@ -55,7 +55,7 @@ EXCLUDE_NAMES: list[str] = []
 
 LICENSE_HEADER = """\
 # Pocket Build — a tiny build system that fits in your pocket.
-# License: MIT-NOAI
+# License: MIT-aNOAI
 # Full text: https://github.com/apathetic-tools/pocket-build/blob/main/LICENSE
 """
 

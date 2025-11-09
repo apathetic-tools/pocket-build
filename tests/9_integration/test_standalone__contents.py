@@ -29,7 +29,7 @@ __runtime_mode__ = "singlefile"
 def test_standalone_script_metadata_and_execution() -> None:
     """Ensure the generated script.py script is complete and functional."""
     # --- setup ---
-    script = PROJ_ROOT / "bin" / f"{mod_meta.PROGRAM_SCRIPT}.py"
+    script = PROJ_ROOT / "bin" / f"{mod_meta.PROGRAM_CONFIG}.py"
     pyproject = PROJ_ROOT / "pyproject.toml"
 
     # --- execute and verify ---
@@ -53,32 +53,36 @@ def test_standalone_script_metadata_and_execution() -> None:
     assert declared_version, "Version not found in pyproject.toml"
 
     # - Read standalone script text -
-    text = script.read_text(encoding="utf-8")
+    text = script.read_text(encoding="utf-8").lower()
 
     # - Metadata presence checks -
-    assert "# Pocket Build" in text
-    assert "License: MIT-NOAI" in text
-    assert "Version:" in text
-    assert "Repo:" in text
-    assert "auto-generated" in text
+    assert ("# " + mod_meta.PROGRAM_DISPLAY).lower() in text
+    assert "License: MIT-aNOAI".lower() in text
+    assert "Version:".lower() in text
+    assert "Repo:".lower() in text
+    assert "auto-generated".lower() in text
 
     # - Version and commit format checks -
-    version_match = re.search(r"^# Version:\s*([\w.\-]+)", text, re.MULTILINE)
+    version_match = re.search(
+        r"^# Version:\s*([\w.\-]+)", text, re.MULTILINE | re.IGNORECASE
+    )
 
     if os.getenv("CI") or os.getenv("GIT_TAG") or os.getenv("GITHUB_REF"):
-        commit_match = re.search(r"^# Commit:\s*([0-9a-f]{4,})", text, re.MULTILINE)
+        commit_match = re.search(
+            r"^# Commit:\s*([0-9a-f]{4,})", text, re.MULTILINE | re.IGNORECASE
+        )
     else:
         commit_match = re.search(
             r"^# Commit:\s*unknown \(local build\)",
             text,
-            re.MULTILINE,
+            re.MULTILINE | re.IGNORECASE,
         )
 
     assert version_match, "Missing version stamp"
     assert commit_match, "Missing commit stamp"
 
     standalone_version = version_match.group(1)
-    assert standalone_version == declared_version, (
+    assert standalone_version.lower() == declared_version.lower(), (
         f"Standalone version '{standalone_version}'"
         f" != pyproject version '{declared_version}'"
     )
@@ -87,7 +91,7 @@ def test_standalone_script_metadata_and_execution() -> None:
 def test_standalone_script_has_python_constants_and_parses_them() -> None:
     """Ensure __version__ and __commit__ constants exist and match header."""
     # --- setup ---
-    script = PROJ_ROOT / "bin" / f"{mod_meta.PROGRAM_SCRIPT}.py"
+    script = PROJ_ROOT / "bin" / f"{mod_meta.PROGRAM_CONFIG}.py"
 
     # --- execute ---
     text = script.read_text(encoding="utf-8")

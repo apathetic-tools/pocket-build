@@ -19,7 +19,7 @@ __runtime_mode__ = "singlefile"
 def test_standalone_script_metadata_and_execution() -> None:
     """Ensure the generated script.py script is complete and functional."""
     # --- setup ---
-    script = PROJ_ROOT / "bin" / f"{mod_meta.PROGRAM_SCRIPT}.py"
+    script = PROJ_ROOT / "bin" / f"{mod_meta.PROGRAM_CONFIG}.py"
 
     # --- execute and verify ---
 
@@ -34,7 +34,7 @@ def test_standalone_script_metadata_and_execution() -> None:
         dummy = tmp / "dummy.txt"
         dummy.write_text("hi", encoding="utf-8")
 
-        config = tmp / f".{mod_meta.PROGRAM_SCRIPT}.json"
+        config = tmp / f".{mod_meta.PROGRAM_CONFIG}.json"
         config.write_text(
             '{"builds":[{"include":["dummy.txt"],"out":"dist"}]}',
             encoding="utf-8",

@@ -59,7 +59,7 @@ def test_find_config_warns_for_multiple_candidates(
 ) -> None:
     """If multiple config files exist, should warn and use the first."""
     # --- setup ---
-    prefix = mod_meta.PROGRAM_SCRIPT
+    prefix = mod_meta.PROGRAM_CONFIG
     py = tmp_path / f".{prefix}.py"
     json = tmp_path / f".{prefix}json"
     jsonc = tmp_path / f".{prefix}.jsonc"

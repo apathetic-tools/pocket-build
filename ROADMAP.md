@@ -66,5 +66,5 @@ Potential quality-of-life features:
 > ✨ *AI was used to help draft language, formatting, and code — plus we just love em dashes.*
 
 <p align="center">
-  <sub>😐 <a href="https://apathetic-tools.github.io/">Apathetic Tools</a> © <a href="./LICENSE">MIT-NOAI</a></sub>
+  <sub>😐 <a href="https://apathetic-tools.github.io/">Apathetic Tools</a> © <a href="./LICENSE">MIT-aNOAI</a></sub>
 </p>

@@ -425,7 +425,7 @@ Future distributions may include `.pyz` or bundled binary releases as the projec
 <br/><br/>
 
 
-## ⚖️ Choose `MIT-NOAI` License
+## ⚖️ Choose `MIT-aNOAI` License
 <a id="dec02"></a>*DEC 02 — 2025-10-09*  
 
 ### Context
@@ -438,11 +438,11 @@ The project uses AI tools but distinguishes between **using AI** and **being use
 ### Options Considered
 
 - **MIT License (standard)** — simple and permissive, but allows unrestricted AI scraping.
-- **MIT + “No-AI Use” rider (MIT-NOAI)** — preserves openness while prohibiting dataset inclusion or model training; untested legally and not OSI-certified.
+- **MIT + “No-AI Use” rider (MIT-aNOAI)** — preserves openness while prohibiting dataset inclusion or model training; untested legally and not OSI-certified.
 
 ### Decision
 
-Adopt the **MIT-NOAI license** — the standard MIT license plus an explicit clause banning AI/ML training or dataset inclusion.
+Adopt the **MIT-aNOAI license** — the standard MIT license plus an explicit clause banning AI/ML training or dataset inclusion.
 This keeps the project open for human collaboration while defining clear ethical boundaries.
 
 While this may deter adopters requiring OSI-certified licenses, it can later be dual-licensed if consent-based frameworks emerge.
@@ -504,5 +504,5 @@ _This document records **why** we build things the way we do — not just **what
 > ✨ *AI was used to help draft language, formatting, and code — plus we just love em dashes.*
 
 <p align="center">
-  <sub>😐 <a href="https://apathetic-tools.github.io/">Apathetic Tools</a> © <a href="./LICENSE">MIT-NOAI</a></sub>
+  <sub>😐 <a href="https://apathetic-tools.github.io/">Apathetic Tools</a> © <a href="./LICENSE">MIT-aNOAI</a></sub>
 </p>

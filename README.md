@@ -2,7 +2,7 @@
 
 
 [![CI](https://github.com/apathetic-tools/pocket-build/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/goldilocks/pocket-build/actions/workflows/ci.yml)
-[![License: MIT-NOAI](https://img.shields.io/badge/License-MIT--NOAI-blueviolet.svg)](LICENSE)
+[![License: MIT-aNOAI](https://img.shields.io/badge/License-MIT--NOAI-blueviolet.svg)](LICENSE)
 [![Discord](https://img.shields.io/badge/Discord-%235865F2.svg?logo=discord&logoColor=white)](https://discord.gg/PW6GahZ7)
 
 📘 **[Roadmap](./ROADMAP.md)** · 📝 **[Release Notes](https://github.com/apathetic-tools/pocket-build/releases)**
@@ -42,7 +42,7 @@ If you see a ✅ “Self-test passed” message, your installation is working pe
 ---
 
 ### ⚖️ License
-- [MIT-NOAI License](LICENSE)
+- [MIT-aNOAI License](LICENSE)
 
 You’re free to use, copy, and modify the script under the standard MIT terms.  
 The additional rider simply requests that this project not be used to train or fine-tune AI/ML systems until the author deems fair compensation frameworks exist.  
@@ -76,5 +76,5 @@ It’s MIT-licensed, minimal, and meant to stay out of your way — just with on
 > ✨ *AI was used to help draft language, formatting, and code — plus we just love em dashes.*
 
 <p align="center">
-  <sub>😐 <a href="https://apathetic-tools.github.io/">Apathetic Tools</a> © <a href="./LICENSE">MIT-NOAI</a></sub>
+  <sub>😐 <a href="https://apathetic-tools.github.io/">Apathetic Tools</a> © <a href="./LICENSE">MIT-aNOAI</a></sub>
 </p>

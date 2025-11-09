@@ -18,7 +18,7 @@ import pocket_build.meta as mod_meta
 
 def make_config(tmp_path: Path, builds: list[dict[str, object]]) -> Path:
     """Helper to write a .script.json file."""
-    cfg = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    cfg = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     cfg.write_text(json.dumps({"builds": builds}))
     return cfg
 
@@ -76,7 +76,7 @@ def test_config_disables_gitignore(
 
     write_gitignore(tmp_path, "*.tmp\n")
 
-    cfg = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    cfg = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     cfg.write_text(
         json.dumps(
             {
@@ -114,7 +114,7 @@ def test_build_enables_gitignore_even_if_root_disabled(
 
     write_gitignore(tmp_path, "*.tmp\n")
 
-    cfg = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    cfg = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     cfg.write_text(
         json.dumps(
             {
@@ -184,7 +184,7 @@ def test_cli_enables_gitignore_even_if_config_disables_it(
 
     write_gitignore(tmp_path, "*.tmp\n")
 
-    cfg = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    cfg = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     cfg.write_text(
         json.dumps(
             {

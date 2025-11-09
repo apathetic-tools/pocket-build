@@ -26,7 +26,7 @@ def test_include_flag_overrides_config(
     (other_dir / "bar.txt").write_text("nope")
 
     # Config originally points to wrong folder
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text(
         json.dumps(
             {"builds": [{"include": ["other/**"], "exclude": [], "out": "dist"}]},
@@ -62,7 +62,7 @@ def test_exclude_flag_overrides_config(
     (src_dir / "ignore.tmp").write_text("ignore me")
 
     # Config has no exclude rules
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text(json.dumps({"builds": [{"include": ["src/**"], "out": "dist"}]}))
 
     # --- patch and execute ---
@@ -97,7 +97,7 @@ def test_add_include_extends_config(
     (extra_dir / "b.txt").write_text("B")
 
     # Config includes only src/**
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text(
         json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]}),
     )
@@ -135,7 +135,7 @@ def test_add_exclude_extends_config(
     (src_dir / "ignore.log").write_text("ignore2")
 
     # Config excludes *.log files
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text(
         json.dumps(
             {"builds": [{"include": ["src/**"], "exclude": ["*.log"], "out": "dist"}]},

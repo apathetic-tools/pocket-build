@@ -41,7 +41,7 @@ def _mode() -> str:
 # ------------------------------------------------------------
 def ensure_standalone_script_up_to_date(root: Path) -> Path:
     """Rebuild `bin/script.py` if missing or outdated."""
-    bin_path = root / "bin" / f"{mod_meta.PROGRAM_SCRIPT}.py"
+    bin_path = root / "bin" / f"{mod_meta.PROGRAM_CONFIG}.py"
     src_dir = root / "src" / f"{mod_meta.PROGRAM_PACKAGE}"
     builder = root / "dev" / "make_script.py"
 

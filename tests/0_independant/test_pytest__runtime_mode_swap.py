@@ -87,7 +87,7 @@ def test_pytest_runtime_cache_integrity() -> None:
     # --- setup ---
     mode = os.getenv("RUNTIME_MODE", "unknown")
     utils_file = str(inspect.getsourcefile(mod_utils))
-    expected_script = BIN_ROOT / f"{mod_meta.PROGRAM_SCRIPT}.py"
+    expected_script = BIN_ROOT / f"{mod_meta.PROGRAM_CONFIG}.py"
 
     # --- execute ---
     TEST_TRACE(f"RUNTIME_MODE={mode}")

@@ -14,7 +14,7 @@ from .config_types import (
 from .config_validate import validate_config
 from .logs import get_logger
 from .meta import (
-    PROGRAM_SCRIPT,
+    PROGRAM_CONFIG,
 )
 from .utils import load_jsonc, plural, remove_path_in_error_message
 from .utils_schema import ValidationSummary
@@ -50,7 +50,7 @@ def find_config(
     Search order:
       1. Explicit path from CLI (--config)
       2. Default candidates in the current working directory:
-         .{PROGRAM_SCRIPT}.py, .{PROGRAM_SCRIPT}.jsonc, .{PROGRAM_SCRIPT}.json
+         .{PROGRAM_CONFIG}.py, .{PROGRAM_CONFIG}.jsonc, .{PROGRAM_CONFIG}.json
 
     Returns the first matching path, or None if no config was found.
     """
@@ -76,9 +76,9 @@ def find_config(
 
     # --- 2. Default candidate files ---
     candidates: list[Path] = [
-        cwd / f".{PROGRAM_SCRIPT}.py",
-        cwd / f".{PROGRAM_SCRIPT}.jsonc",
-        cwd / f".{PROGRAM_SCRIPT}.json",
+        cwd / f".{PROGRAM_CONFIG}.py",
+        cwd / f".{PROGRAM_CONFIG}.jsonc",
+        cwd / f".{PROGRAM_CONFIG}.json",
     ]
     found = [p for p in candidates if p.exists()]
 

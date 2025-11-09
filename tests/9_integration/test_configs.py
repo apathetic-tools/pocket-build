@@ -34,7 +34,7 @@ def test_main_with_config(
 ) -> None:
     """Should detect config, run one build, and exit cleanly."""
     # --- setup ---
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
 
     # --- patch and execute ---
@@ -53,7 +53,7 @@ def test_dry_run_creates_no_files(tmp_path: Path) -> None:
     src_dir.mkdir()
     (src_dir / "foo.txt").write_text("data")
 
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text('{"builds": [{"include": ["src/**"], "out": "dist"}]}')
 
     # --- execute ---
@@ -66,7 +66,7 @@ def test_dry_run_creates_no_files(tmp_path: Path) -> None:
 
 def test_main_with_custom_config(tmp_path: Path) -> None:
     # --- setup ---
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text('{"builds": [{"include": ["src"], "out": "dist"}]}')
 
     # --- execute ---
@@ -78,7 +78,7 @@ def test_main_with_custom_config(tmp_path: Path) -> None:
 
 def test_main_invalid_config(tmp_path: Path) -> None:
     # --- setup ---
-    bad = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    bad = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     bad.write_text("{not valid json}")
 
     # --- execute ---
@@ -226,7 +226,7 @@ def test_missing_includes_behavior(
 ) -> None:
     """Test missing includes warning/error with various configurations."""
     # --- setup ---
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     if isinstance(config_content, str):
         config.write_text(config_content)
     else:

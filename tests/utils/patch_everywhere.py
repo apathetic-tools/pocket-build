@@ -49,7 +49,7 @@ def patch_everywhere(
     mp.setattr(mod_env, func_name, replacement_func)
     TEST_TRACE(f"Patched {mod_name}.{func_name}")
 
-    stitch_hints = {"/bin/", "standalone", f"{mod_meta.PROGRAM_SCRIPT}.py"}
+    stitch_hints = {"/bin/", "standalone", f"{mod_meta.PROGRAM_CONFIG}.py"}
     package_prefix = mod_meta.PROGRAM_PACKAGE
     patched_ids: set[int] = set()
 

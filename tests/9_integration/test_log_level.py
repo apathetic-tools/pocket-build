@@ -25,7 +25,7 @@ def test_quiet_flag(
 ) -> None:
     """Should suppress most output but still succeed."""
     # --- setup ---
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
 
     # --- patch and execute ---
@@ -52,7 +52,7 @@ def test_verbose_flag(
     src_dir.mkdir()
     (src_dir / "foo.txt").write_text("hello")
 
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text(
         json.dumps({"builds": [{"include": ["src/**"], "exclude": [], "out": "dist"}]}),
     )
@@ -83,7 +83,7 @@ def test_verbose_and_quiet_mutually_exclusive(
 ) -> None:
     """Should fail when both --verbose and --quiet are provided."""
     # --- setup ---
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text(json.dumps({"builds": [{"include": [], "out": "dist"}]}))
 
     # --- patch, execute and verify ---
@@ -114,7 +114,7 @@ def test_log_level_flag_sets_runtime(
 ) -> None:
     """--log-level should override config and environment."""
     # --- setup ---
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     # --- patch and execute ---
@@ -137,7 +137,7 @@ def test_log_level_from_env_var(
 ) -> None:
     """LOG_LEVEL and {PROGRAM_ENV}_LOG_LEVEL should be respected when flag not given."""
     # --- setup ---
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text('{"builds": [{"include": [], "out": "dist"}]}')
 
     # --- patch, execute and verify ---
@@ -171,7 +171,7 @@ def test_per_build_log_level_override(
     """A build's own log_level should temporarily override the runtime level."""
     # --- setup ---
     # Root config sets info, but the build overrides to debug
-    config = tmp_path / f".{mod_meta.PROGRAM_SCRIPT}.json"
+    config = tmp_path / f".{mod_meta.PROGRAM_CONFIG}.json"
     config.write_text(
         json.dumps(
             {

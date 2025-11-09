@@ -62,6 +62,7 @@ from .logs import (
     get_logger,
 )
 from .meta import (
+    PROGRAM_CONFIG,
     PROGRAM_DISPLAY,
     PROGRAM_ENV,
     PROGRAM_PACKAGE,
@@ -124,6 +125,7 @@ __all__ = [  # noqa: RUF022
     "PROGRAM_ENV",
     "PROGRAM_PACKAGE",
     "PROGRAM_SCRIPT",
+    "PROGRAM_CONFIG",
     #
     # --- logs ---
     "LEVEL_ORDER",

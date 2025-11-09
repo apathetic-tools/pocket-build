@@ -25,6 +25,7 @@ from .constants import (
 )
 from .logs import get_logger
 from .meta import (
+    PROGRAM_CONFIG,
     PROGRAM_DISPLAY,
     PROGRAM_SCRIPT,
 )
@@ -403,7 +404,7 @@ def _load_and_resolve_config(
     if root_cfg is None and not can_run_configless(args):
         logger.error(
             "No build config found (.%s.json) and no includes provided.",
-            PROGRAM_SCRIPT,
+            PROGRAM_CONFIG,
         )
         xmsg = "No config file or CLI includes provided"
         raise RuntimeError(xmsg)
