@@ -6,16 +6,17 @@ and matches the declared version from pyproject.toml.
 
 import os
 import re
+import sys
 from typing import Any, cast
 
 from tests.utils import PROJ_ROOT
 
 
-try:
+if sys.version_info >= (3, 11):
     # tomllib has no type stubs
     import tomllib  # type: ignore[import-not-found]
-except ModuleNotFoundError:
-    # tomli (fallback for Python <3.11) has no type stubs
+else:
+    # tomli (fallback for Python <3.11); also has no type stubs
     import tomli as tomllib  # type: ignore[import-not-found]
 
 import pocket_build.meta as mod_meta
