@@ -95,12 +95,12 @@ def test_pytest_runtime_cache_integrity() -> None:
 
     if os.getenv("TRACE"):
         dump_snapshot()
-    standalone = mod_utils.is_standalone()
+    runtime_mode = mod_utils.detect_runtime_mode()
 
     if mode == "singlefile":
         # --- verify singlefile ---
         # what does the module itself think?
-        assert standalone
+        assert runtime_mode == "standalone"
 
         # path peeks
         assert utils_file.startswith(str(BIN_ROOT)), f"{utils_file} not in bin/"
@@ -123,7 +123,7 @@ def test_pytest_runtime_cache_integrity() -> None:
     else:
         # --- verify module ---
         # what does the module itself think?
-        assert not standalone
+        assert runtime_mode != "standalone"
 
         # path peeks
         assert utils_file.startswith(str(SRC_ROOT)), f"{utils_file} not in src/"

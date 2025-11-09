@@ -97,11 +97,6 @@ def load_jsonc(path: Path) -> dict[str, Any] | list[Any] | None:
     return cast("dict[str, Any] | list[Any]", data)
 
 
-def is_standalone() -> bool:
-    """Return True if running from a standalone single-file build."""
-    return bool(globals().get("__STANDALONE__", False))
-
-
 def remove_path_in_error_message(inner_msg: str, path: Path) -> str:
     """Remove redundant file path mentions (and nearby filler)
     from error messages.
