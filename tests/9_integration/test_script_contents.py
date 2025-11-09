@@ -43,9 +43,9 @@ def test_standalone_script_metadata_and_execution() -> None:
     # - Load declared version from pyproject.toml -
     with pyproject.open("rb") as f:
         # tomllib/tomli lack type stubs; cast and ignore unknown member types
-        pyproject_data = cast(
+        pyproject_data = cast(  # type: ignore[redundant-cast,unused-ignore]
             "dict[str, Any]",
-            tomllib.load(f),  # type: ignore[redundant-cast,unused-ignore] # pyright: ignore[reportUnknownMemberType]
+            tomllib.load(f),  # pyright: ignore[reportUnknownMemberType]
         )
 
     project_section = cast("dict[str, Any]", pyproject_data.get("project", {}))
