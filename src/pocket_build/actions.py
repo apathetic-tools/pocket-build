@@ -22,8 +22,6 @@ from .utils_types import make_includeresolved, make_pathresolved
 
 def _collect_included_files(resolved_builds: list[BuildConfigResolved]) -> list[Path]:
     """Flatten all include globs into a unique list of files."""
-    logger = get_logger()
-    logger.trace("_collect_included_files", __name__, id(_collect_included_files))
     files: set[Path] = set()
 
     for b in resolved_builds:
@@ -52,22 +50,18 @@ def watch_for_changes(
     """Poll file modification times and rebuild when changes are detected.
 
     Features:
-    - Skips files inside each build’s output directory.
+    - Skips files inside each build's output directory.
     - Re-expands include patterns every loop to detect newly created files.
     - Polling interval defaults to 1 second (tune 0.5–2.0 for balance).
     Stops on KeyboardInterrupt.
     """
     logger = get_logger()
-    logger.trace("_watch_for_changes", __name__, id(watch_for_changes))
     logger.info(
         "👀 Watching for changes (interval=%.2fs)... Press Ctrl+C to stop.", interval
     )
 
     # discover at start
     included_files = _collect_included_files(resolved_builds)
-    logger.trace(
-        "_watch_for_changes", "initial files", [str(f) for f in included_files]
-    )
 
     mtimes: dict[Path, float] = {
         f: f.stat().st_mtime for f in included_files if f.exists()
@@ -82,21 +76,17 @@ def watch_for_changes(
 
     try:
         while True:
-            logger.trace("watch_for_changes", "sleep")
             time.sleep(interval)
-            logger.trace("watch_for_changes", "loop")
 
             # 🔁 re-expand every tick so new/removed files are tracked
             included_files = _collect_included_files(resolved_builds)
 
             changed: list[Path] = []
             for f in included_files:
-                logger.trace("watch_for_changes", "could be out dir?", f)
                 # skip anything inside any build's output directory
                 if any(f.is_relative_to(out_dir) for out_dir in out_dirs):
                     continue  # ignore output folder
                 old_m = mtimes.get(f)
-                logger.trace("watch_for_changes", "check", f, old_m)
                 if not f.exists():
                     if old_m is not None:
                         changed.append(f)

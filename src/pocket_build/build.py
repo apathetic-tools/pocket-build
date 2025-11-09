@@ -13,7 +13,6 @@ from .utils import (
     has_glob_chars,
     is_excluded_raw,
 )
-from .utils_logs import TEST_TRACE
 from .utils_types import cast_hint, make_pathresolved
 
 
@@ -107,12 +106,6 @@ def copy_file(
     dry_run: bool,
 ) -> None:
     logger = get_logger()
-    TEST_TRACE(
-        "enter copy_file",
-        f"id={id(logger)}",
-        f"level={logger.level_name}",
-        f"handlers={[type(h).__name__ for h in logger.handlers]}",
-    )
     src = Path(src)
     dest = Path(dest)
     src_root = Path(src_root)
@@ -148,12 +141,6 @@ def copy_directory(
     Exclude patterns ending with '/' are treated as directory-wide excludes.
     """
     logger = get_logger()
-    TEST_TRACE(
-        "enter copy_directory",
-        f"id={id(logger)}",
-        f"level={logger.level_name}",
-        f"handlers={[type(h).__name__ for h in logger.handlers]}",
-    )
     src = Path(src)
     src_root = Path(src_root).resolve()
     src = (src_root / src).resolve() if not src.is_absolute() else src.resolve()

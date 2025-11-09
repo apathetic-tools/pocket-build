@@ -44,7 +44,6 @@ documentation
   - API docs
 
 program flow
-  - review the run_build flow and private functions to make sure they are not full of while-debugging logic.
   - review/add/remove all debug/trace messages with an eye for issue reports
 
 CLI
