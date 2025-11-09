@@ -268,6 +268,42 @@ def test_run_build_respects_dest_override(
     assert not (dist / "source" / "f.txt").exists()
 
 
+def test_run_build_respects_nested_dest_override(
+    tmp_path: Path,
+    module_logger: mod_logs.AppLogger,
+) -> None:
+    """Dest with nested subdirs should create all parent directories."""
+    # --- setup ---
+    src = tmp_path / "source"
+    src.mkdir()
+    (src / "file.txt").write_text("content")
+    (src / "nested" / "deep").mkdir(parents=True)
+    (src / "nested" / "deep" / "data.json").write_text('{"key": "value"}')
+
+    cfg = make_build_cfg(
+        tmp_path,
+        [make_include_resolved("source", tmp_path, dest="assets/static/files")],
+    )
+
+    # --- patch and execute ---
+    with module_logger.use_level("info"):
+        mod_build.run_build(cfg)
+
+    # --- verify ---
+    dist = tmp_path / "dist"
+    # All intermediate directories should be created
+    assert (dist / "assets").is_dir()
+    assert (dist / "assets" / "static").is_dir()
+    assert (dist / "assets" / "static" / "files").is_dir()
+    # Files should be in the nested destination
+    assert (dist / "assets" / "static" / "files" / "file.txt").exists()
+    assert (
+        dist / "assets" / "static" / "files" / "nested" / "deep" / "data.json"
+    ).exists()
+    # Original path should not exist
+    assert not (dist / "source").exists()
+
+
 def test_run_build_dry_run_does_not_write(
     tmp_path: Path,
     module_logger: mod_logs.AppLogger,

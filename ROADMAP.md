@@ -44,8 +44,6 @@ documentation
   - API docs
 
 program flow
-  - how do include path dest parameters get transfered in? from the CLI? from the config? do they work?
-  - how does the "include dest" affect exclude paths?
   - review the run_build flow and private functions to make sure they are not full of while-debugging logic.
   - review/add/remove all debug/trace messages with an eye for issue reports
 
