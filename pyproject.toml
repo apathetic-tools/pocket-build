@@ -39,6 +39,10 @@ test = ["test:pytest:installed", "test:pytest:script"]
   { cmd = "pytest", env = { RUNTIME_MODE="singlefile" } }
 ]
 
+# 📊 Coverage reporting
+"coverage" = "pytest --cov=src --cov-report=html --cov-report=term-missing"
+"coverage:html" = "pytest --cov=src --cov-report=html"
+
 # 🧹 Automated fixing / formatting
 fix = ["fix:ruff:installed", "fix:ruff:bin", "lint:compile", "fix:format:installed", "fix:format:bin"]
 "fix:ruff:installed" = "ruff check . --fix"

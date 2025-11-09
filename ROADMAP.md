@@ -19,7 +19,6 @@ Exploring bundling options for generating the single-file release:
 - zip file: zipapp / shiv / pyinstaller --onefile
 
 ## 🧪 Tests
-- test coverage report
 
 ## 🧑‍💻 Development
 
