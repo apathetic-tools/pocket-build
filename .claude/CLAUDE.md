@@ -34,6 +34,18 @@ This project can be deployed in two ways:
   - `bin/pocket-build.py` is **generated** - never edit directly
   - Generate it using `poetry run poe build:script` (runs `python dev/make_script.py`)
 
+## AI Model Strategy
+
+When identifying tasks that require complex reasoning, planning, or analysis, ask for confirmation before proceeding:
+
+> "This task appears to require significant planning and reasoning. Would you like me to use Claude Sonnet 4.5 to create a detailed execution plan first, then switch to Haiku 4.5 for implementation?"
+
+If confirmed, follow this workflow:
+1. **Planning phase**: Use the Task tool with `model: "sonnet"` and `subagent_type: "general-purpose"` to create a detailed execution plan and document the approach
+2. **Execution phase**: After receiving the plan, use Claude Haiku 4.5 to implement the plan following the documented steps
+
+This hybrid approach combines Sonnet's superior reasoning for complex problems with Haiku's speed for straightforward implementation.
+
 ## Project Structure
 
 - `src/pocket_build/` - Main source code
