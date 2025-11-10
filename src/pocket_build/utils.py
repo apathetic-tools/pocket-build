@@ -53,6 +53,9 @@ def get_sys_version_info() -> tuple[int, int, int] | tuple[int, int, int, str, i
 
 def load_jsonc(path: Path) -> dict[str, Any] | list[Any] | None:
     """Load JSONC (JSON with comments and trailing commas)."""
+    logger = get_logger()
+    logger.trace(f"[load_jsonc] Loading from {path}")
+
     if not path.exists():
         xmsg = f"JSONC file not found: {path}"
         raise FileNotFoundError(xmsg)
@@ -94,7 +97,12 @@ def load_jsonc(path: Path) -> dict[str, Any] | list[Any] | None:
         raise ValueError(xmsg)  # noqa: TRY004
 
     # narrow type
-    return cast("dict[str, Any] | list[Any]", data)
+    result = cast("dict[str, Any] | list[Any]", data)
+    logger.trace(
+        f"[load_jsonc] Loaded {type(result).__name__} with"
+        f" {len(result) if hasattr(result, '__len__') else 'N/A'} items"
+    )
+    return result
 
 
 def remove_path_in_error_message(inner_msg: str, path: Path) -> str:
@@ -214,11 +222,17 @@ def is_excluded(path_entry: PathResolved, exclude_patterns: list[PathResolved]) 
     """High-level helper for internal use.
     Accepts PathResolved entries and delegates to the smart matcher.
     """
+    logger = get_logger()
     path = path_entry["path"]
     root = path_entry["root"]
     # Patterns are always normalized to PathResolved["path"] under config_resolve
     patterns = [str(e["path"]) for e in exclude_patterns]
-    return is_excluded_raw(path, patterns, root)
+    result = is_excluded_raw(path, patterns, root)
+    logger.trace(
+        f"[is_excluded] path={path}, root={root},"
+        f" patterns={len(patterns)}, excluded={result}"
+    )
+    return result
 
 
 @lru_cache(maxsize=512)
@@ -331,6 +345,11 @@ def is_excluded_raw(  # noqa: PLR0911
     root = Path(root).resolve()
     path = Path(path)
 
+    logger.trace(
+        f"[is_excluded_raw] Checking path={path} against"
+        f" {len(exclude_patterns)} patterns"
+    )
+
     # the callee really should deal with this, otherwise we might spam
     if not Path(root).exists():
         logger.debug("Exclusion root does not exist: %s", root)
@@ -357,6 +376,8 @@ def is_excluded_raw(  # noqa: PLR0911
     for pattern in exclude_patterns:
         pat = pattern.replace("\\", "/")
 
+        logger.trace(f"[is_excluded_raw] Testing pattern {pattern!r} against {rel}")
+
         # If pattern is absolute and under root, adjust to relative form
         if pat.startswith(str(root)):
             try:
@@ -364,14 +385,17 @@ def is_excluded_raw(  # noqa: PLR0911
             except ValueError:
                 pat_rel = pat  # not under root; treat as-is
             if fnmatchcase_portable(rel, pat_rel):
+                logger.trace(f"[is_excluded_raw] MATCHED pattern {pattern!r}")
                 return True
 
         # Otherwise treat pattern as relative glob
         if fnmatchcase_portable(rel, pat):
+            logger.trace(f"[is_excluded_raw] MATCHED pattern {pattern!r}")
             return True
 
         # Optional directory-only semantics
         if pat.endswith("/") and rel.startswith(pat.rstrip("/") + "/"):
+            logger.trace(f"[is_excluded_raw] MATCHED pattern {pattern!r}")
             return True
 
     return False

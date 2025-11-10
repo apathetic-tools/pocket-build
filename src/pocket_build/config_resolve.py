@@ -134,6 +134,11 @@ def _resolve_includes(  # noqa: PLR0912
     cwd: Path,
 ) -> list[IncludeResolved]:
     logger = get_logger()
+    logger.trace(
+        f"[resolve_includes] Starting with"
+        f" {len(resolved_cfg.get('include', []))} config includes"
+    )
+
     includes: list[IncludeResolved] = []
 
     if getattr(args, "include", None):
@@ -210,6 +215,11 @@ def _resolve_excludes(
     root_cfg: RootConfig | None,
 ) -> list[PathResolved]:
     logger = get_logger()
+    logger.trace(
+        f"[resolve_excludes] Starting with"
+        f" {len(resolved_cfg.get('exclude', []))} config excludes"
+    )
+
     excludes: list[PathResolved] = []
 
     def _add_excludes(paths: list[str], context: Path, origin: OriginType) -> None:
@@ -273,6 +283,9 @@ def _resolve_output(
     config_dir: Path,
     cwd: Path,
 ) -> PathResolved:
+    logger = get_logger()
+    logger.trace("[resolve_output] Resolving output directory")
+
     if getattr(args, "out", None):
         # Full override → relative to cwd
         root, rel = _normalize_path_with_root(args.out, cwd)
@@ -301,6 +314,8 @@ def resolve_build_config(
     and attaches provenance metadata.
     """
     logger = get_logger()
+    logger.trace("[resolve_build_config] Starting resolution for build config")
+
     # Make a mutable copy
     resolved_cfg: dict[str, Any] = dict(build_cfg)
 
@@ -317,6 +332,9 @@ def resolve_build_config(
         config_dir=config_dir,
         cwd=cwd,
     )
+    logger.trace(
+        f"[resolve_build_config] Resolved {len(resolved_cfg['include'])} include(s)"
+    )
 
     # --- Excludes ---------------------------
     resolved_cfg["exclude"] = _resolve_excludes(
@@ -325,6 +343,9 @@ def resolve_build_config(
         config_dir=config_dir,
         cwd=cwd,
         root_cfg=root_cfg,
+    )
+    logger.trace(
+        f"[resolve_build_config] Resolved {len(resolved_cfg['exclude'])} exclude(s)"
     )
 
     # --- Output ---------------------------
@@ -382,6 +403,11 @@ def resolve_config(
     logger = get_logger()
     root_cfg = cast_hint(RootConfig, dict(root_input))
 
+    builds_input = root_cfg.get("builds", [])
+    logger.trace(
+        f"[resolve_config] Resolving root config with {len(builds_input)} build(s)"
+    )
+
     # ------------------------------
     # Watch interval
     # ------------------------------
@@ -399,6 +425,8 @@ def resolve_config(
     else:
         watch_interval = root_cfg.get("watch_interval", DEFAULT_WATCH_INTERVAL)
 
+    logger.trace(f"[resolve_config] Watch interval resolved to {watch_interval}s")
+
     # ------------------------------
     # Log level
     # ------------------------------
@@ -412,7 +440,6 @@ def resolve_config(
     # ------------------------------
     # Resolve builds
     # ------------------------------
-    builds_input = root_cfg.get("builds", [])
     resolved_builds = [
         resolve_build_config(b, args, config_dir, cwd, root_cfg) for b in builds_input
     ]

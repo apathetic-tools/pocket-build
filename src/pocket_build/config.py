@@ -65,6 +65,7 @@ def find_config(
     # --- 1. Explicit config path ---
     if getattr(args, "config", None):
         config = Path(args.config).expanduser().resolve()
+        logger.trace(f"[find_config] Checking explicit path: {config}")
         if not config.exists():
             # Explicit path → hard failure
             xmsg = f"Specified config file not found: {config}"
@@ -80,6 +81,7 @@ def find_config(
         cwd / f".{PROGRAM_CONFIG}.jsonc",
         cwd / f".{PROGRAM_CONFIG}.json",
     ]
+    logger.trace(f"[find_config] Checking {len(candidates)} candidate files")
     found = [p for p in candidates if p.exists()]
 
     if not found:
@@ -114,6 +116,7 @@ def load_config(config_path: Path) -> dict[str, Any] | list[Any] | None:
     """
     # NOTE: We only have early no-config Log-Level
     logger = get_logger()
+    logger.trace(f"[load_config] Loading from {config_path} ({config_path.suffix})")
 
     # --- Python config ---
     if config_path.suffix == ".py":
@@ -296,6 +299,9 @@ def parse_config(  # noqa: PLR0911
     # NOTE: This function only normalizes shape — it does NOT validate or restrict keys.
     #       Unknown keys are preserved for the validation phase.
 
+    logger = get_logger()
+    logger.trace(f"[parse_config] Parsing {type(raw_config).__name__}")
+
     # --- Case 1: empty config → one blank build ---
     # Includes None (empty file / config = None), [] (no builds), and {} (empty object)
     if not raw_config or raw_config == {}:  # handles None, [], {}
@@ -303,10 +309,12 @@ def parse_config(  # noqa: PLR0911
 
     # --- Case 2: naked list of strings → single build's include ---
     if isinstance(raw_config, list) and all(isinstance(x, str) for x in raw_config):
+        logger.trace("[parse_config] Detected case: list of strings")
         return _parse_case_2_list_of_strings(raw_config)
 
     # --- Case 3: naked list of dicts (no root) → multi-build shorthand ---
     if isinstance(raw_config, list) and all(isinstance(x, dict) for x in raw_config):
+        logger.trace("[parse_config] Detected case: list of dicts")
         return _parse_case_3_list_of_dicts(raw_config)
 
     # --- better error message for mixed lists ---

@@ -81,6 +81,8 @@ def watch_for_changes(
             # 🔁 re-expand every tick so new/removed files are tracked
             included_files = _collect_included_files(resolved_builds)
 
+            logger.trace(f"[watch] Checking {len(included_files)} files for changes")
+
             changed: list[Path] = []
             for f in included_files:
                 # skip anything inside any build's output directory

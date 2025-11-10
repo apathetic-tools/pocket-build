@@ -11,7 +11,6 @@ Planned command-line flags for future releases:
 
 - Add key to disable update checks directly in config
 - Provide a JSON Schema for validation and autocomplete
-- How is IncludePath dest configured in the config file and handled?
 
 ## 🧩 Joiner Scripts (Build System)
 Exploring bundling options for generating the single-file release:
@@ -36,9 +35,6 @@ documentation
   - where do we do longer usage documentation? README can get a bit big
   - logo? images? icon? readme banner?
   - API docs
-
-program flow
-  - review/add/remove all debug/trace messages with an eye for issue reports
 
 ## 💡 Ideas & Experiments
 Potential quality-of-life features:

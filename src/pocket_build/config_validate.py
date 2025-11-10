@@ -5,6 +5,7 @@ from typing import Any
 
 from .config_types import BuildConfig, RootConfig
 from .constants import DEFAULT_STRICT_CONFIG
+from .logs import get_logger
 from .utils_schema import (
     SchemaErrorAggregator,
     ValidationSummary,
@@ -63,6 +64,9 @@ def _validate_root(
     summary: ValidationSummary,  # modified
     agg: SchemaErrorAggregator,  # modified
 ) -> ValidationSummary | None:
+    logger = get_logger()
+    logger.trace(f"[validate_root] Validating root with {len(parsed_cfg)} keys")
+
     strict_config: bool = summary.strict
     # --- Determine strictness from arg or root config or default ---
     strict_from_root: Any = parsed_cfg.get("strict_config")
@@ -118,8 +122,11 @@ def _validate_builds(
     summary: ValidationSummary,  # modified
     agg: SchemaErrorAggregator,  # modified
 ) -> ValidationSummary | None:
-    root_strict = summary.valid
+    logger = get_logger()
     builds_raw: Any = parsed_cfg.get("builds", [])
+    logger.trace("[validate_builds] Validating builds")
+
+    root_strict = summary.valid
     if not isinstance(builds_raw, list):
         collect_msg(
             "`builds` must be a list of builds.",
@@ -146,6 +153,7 @@ def _validate_builds(
     build_schema = schema_from_typeddict(BuildConfig)
 
     for i, b in enumerate(builds):
+        logger.trace(f"[validate_builds] Checking build #{i + 1}")
         if not isinstance(b, dict):
             collect_msg(
                 f"Build #{i + 1} must be an object"
@@ -228,6 +236,9 @@ def validate_config(
 
     Returns a ValidationSummary object.
     """
+    logger = get_logger()
+    logger.trace(f"[validate_config] Starting validation (strict={strict})")
+
     summary = ValidationSummary(
         valid=True,
         errors=[],

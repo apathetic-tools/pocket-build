@@ -110,6 +110,8 @@ def copy_file(
     dest = Path(dest)
     src_root = Path(src_root)
 
+    logger.trace(f"[copy_file] {src} → {dest}")
+
     try:
         rel_src = src.relative_to(src_root)
     except ValueError:
@@ -145,6 +147,8 @@ def copy_directory(
     src_root = Path(src_root).resolve()
     src = (src_root / src).resolve() if not src.is_absolute() else src.resolve()
     dest = Path(dest)  # relative, we resolve later
+
+    logger.trace(f"[copy_directory] Copying {src} to {dest}")
 
     # Normalize excludes: 'name/' → also match '**/name' and '**/name/**'
     normalized_excludes: list[str] = []
@@ -183,6 +187,8 @@ def copy_directory(
             if not dry_run:
                 target.parent.mkdir(parents=True, exist_ok=True)
                 shutil.copy2(item, target)
+
+    logger.debug("📁 Copied directory: %s", src.relative_to(src_root))
 
 
 def copy_item(
@@ -411,7 +417,7 @@ def run_all_builds(
 ) -> None:
     logger = get_logger()
     root_level = logger.level_name
-    logger.trace(f"[run_all_builds] Resolved build: {resolved_builds}")
+    logger.trace(f"[run_all_builds] Processing {len(resolved_builds)} build(s)")
 
     for i, build_cfg in enumerate(resolved_builds, 1):
         build_log_level = build_cfg.get("log_level")
