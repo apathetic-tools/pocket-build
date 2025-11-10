@@ -44,7 +44,6 @@ Potential quality-of-life features:
 - split out and depend on (dev-only) a list-project CLI
 - split out and depend on (dev-only) a pytest multi-target plugin
 - publish to PyPI, NPM, PACKAGIST, others?
-- Add partial “Gitignore-like” behavior for '**' matches in py3.10
 
 ## make_script TODO
 

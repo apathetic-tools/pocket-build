@@ -1,7 +1,7 @@
 # Custom Notice
 This repository is licensed under the MIT License **with additional terms**
-restricting AI/ML training use.  See the “Additional Terms – No-AI Use Rider”
-section at the end of this file for details.
+restricting AI/ML training use. See the “Additional Terms – Apathetic No-AI Use
+Rider v1.0 or later” section at the end of this file for details.
 
 ------------------------------------------------------------
 
@@ -27,14 +27,14 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 
-------------------------------------------------------------
-Additional Terms – No-AI Use Rider
-------------------------------------------------------------
+-----------------------------------------------------------------------
+Additional Terms – Apathetic No-AI Use Rider v1 or later, 2025-11-09
+-----------------------------------------------------------------------
 
-In addition to the permissions and conditions of the MIT License above:
+In addition to the permissions and conditions of the Base License:
 
-1. You may **not** use this repository, in whole or in part, including its
-   source code or derivatives, to train, fine-tune, or otherwise improve any
+1. You may **not** use this repository, in whole or in part, including its source
+   code or derivatives, to train, fine-tune, or otherwise improve any
    machine-learning or artificial-intelligence system.
 
 2. You may **not** include this repository or its contents in any dataset or
@@ -42,5 +42,12 @@ In addition to the permissions and conditions of the MIT License above:
    purpose.
 
 3. These restrictions apply to both commercial and non-commercial use.
+
+4. This Rider is **Version 1 or later**, as published by the **Apathetic License
+   Collective**. You may use this version or any later version, which may modify,
+   replace, or entirely remove these restrictions. The canonical source for the
+   latest version is: [https://github.com/apathetic-license/apathetic-noai](https://
+   github.com/apathetic-license/apathetic-noai)
+
 
 Alternative licensing terms may be available directly from the author.
